@@ -169,8 +169,7 @@ export default function Layout() {
               <span>{n.icon}</span> {n.label}
             </NavLink>
           ))}
-          <p className="px-2 pt-4 text-[11px] font-bold text-slate-400 tracking-wider">BILLS AND INVENTORY</p>
-          <p className="px-2 pb-2 text-[10px] text-slate-400">(To be discontinued)</p>
+          <p className="px-2 pt-4 text-[11px] font-bold text-slate-400 tracking-wider mb-2">BILLS AND INVENTORY</p>
           {BILLS_NAV.map((n) => (
             <NavLink
               key={n.to}
