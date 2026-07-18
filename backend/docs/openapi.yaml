@@ -1,0 +1,364 @@
+openapi: 3.0.3
+info:
+  title: BizKhata API
+  version: 1.0.0
+  description: |
+    Shared REST backend for the BizKhata web (React) and mobile (Flutter) apps.
+    A Khatabook-inspired digital ledger: parties, credit/debit entries, cashbook,
+    expenses, inventory, billing, staff roles, reminders and reports.
+
+    **Auth**: obtain a JWT via `/auth/login` (email + password), then send
+    `Authorization: Bearer <accessToken>`. All business-scoped routes are nested
+    under `/businesses/{businessId}/…` and require membership of that business.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+tags:
+  - { name: Auth }
+  - { name: Businesses }
+  - { name: Parties }
+  - { name: Transactions }
+  - { name: Cashbook }
+  - { name: Expenses }
+  - { name: Items }
+  - { name: Invoices }
+  - { name: Staff }
+  - { name: Reminders }
+  - { name: Reports }
+  - { name: Notifications }
+  - { name: Activity }
+
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Register with name, email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name: { type: string }
+                email: { type: string, example: "owner@bizkhata.dev" }
+                password: { type: string, minLength: 6 }
+      responses:
+        "201": { description: Created — returns user + token pair }
+  /auth/login:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Login with email + password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        "200": { description: Token pair }
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Rotate refresh token
+      responses:
+        "200": { description: New token pair }
+  /auth/logout:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Revoke refresh token
+      responses:
+        "200": { description: Logged out }
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Current user profile
+      responses: { "200": { description: User } }
+    patch:
+      tags: [Auth]
+      summary: Update profile (name, email, language)
+      responses: { "200": { description: Updated user } }
+  /auth/me/avatar:
+    post:
+      tags: [Auth]
+      summary: Upload avatar (multipart field `file`)
+      responses: { "200": { description: Updated user } }
+
+  /businesses:
+    get:
+      tags: [Businesses]
+      summary: List my books (with role + party counts)
+      responses: { "200": { description: Businesses } }
+    post:
+      tags: [Businesses]
+      summary: Create a new book
+      responses: { "201": { description: Business } }
+  /businesses/{businessId}:
+    parameters: [{ $ref: "#/components/parameters/businessId" }]
+    get: { tags: [Businesses], summary: Get one, responses: { "200": { description: Business } } }
+    patch: { tags: [Businesses], summary: Update (owner/partner), responses: { "200": { description: Business } } }
+    delete: { tags: [Businesses], summary: Soft-delete (owner only), responses: { "200": { description: Deleted } } }
+
+  /businesses/{businessId}/parties:
+    parameters: [{ $ref: "#/components/parameters/businessId" }]
+    get:
+      tags: [Parties]
+      summary: List parties with computed balances
+      parameters:
+        - { name: type, in: query, schema: { type: string, enum: [CUSTOMER, SUPPLIER] } }
+        - { name: search, in: query, schema: { type: string }, description: name or phone }
+        - { name: sort, in: query, schema: { type: string, enum: [recent, name, highest, lowest] } }
+        - { name: page, in: query, schema: { type: integer } }
+        - { name: limit, in: query, schema: { type: integer } }
+      responses: { "200": { description: "Paged parties; balance>0 means you will get" } }
+    post:
+      tags: [Parties]
+      summary: Add customer/supplier (with optional GSTIN + address)
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PartyInput" }
+      responses: { "201": { description: Party } }
+  /businesses/{businessId}/parties/summary:
+    parameters: [{ $ref: "#/components/parameters/businessId" }]
+    get:
+      tags: [Parties]
+      summary: You-will-give / you-will-get totals per tab
+      parameters:
+        - { name: type, in: query, schema: { type: string, enum: [CUSTOMER, SUPPLIER] } }
+      responses: { "200": { description: Totals } }
+  /businesses/{businessId}/parties/bulk:
+    parameters: [{ $ref: "#/components/parameters/businessId" }]
+    post:
+      tags: [Parties]
+      summary: Bulk import parties (contact book)
+      responses: { "201": { description: Count created } }
+  /businesses/{businessId}/parties/{partyId}:
+    parameters:
+      - { $ref: "#/components/parameters/businessId" }
+      - { $ref: "#/components/parameters/partyId" }
+    get: { tags: [Parties], summary: Party with balance, responses: { "200": { description: Party } } }
+    patch: { tags: [Parties], summary: Update party, responses: { "200": { description: Party } } }
+    delete: { tags: [Parties], summary: Soft-delete party, responses: { "200": { description: Deleted } } }
+
+  /businesses/{businessId}/parties/{partyId}/transactions:
+    parameters:
+      - { $ref: "#/components/parameters/businessId" }
+      - { $ref: "#/components/parameters/partyId" }
+    get:
+      tags: [Transactions]
+      summary: Party ledger with running balance and totals
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+        - { name: type, in: query, schema: { type: string, enum: [GAVE, GOT] } }
+        - { name: search, in: query, schema: { type: string } }
+      responses: { "200": { description: "{party, entries[], totals}" } }
+    post:
+      tags: [Transactions]
+      summary: Add entry — GAVE (you gave ₹) or GOT (you got ₹). Multipart with optional `billImage`. Auto-creates a cashbook entry and sends transactional SMS.
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TransactionInput" }
+      responses: { "201": { description: Transaction } }
+  /businesses/{businessId}/parties/{partyId}/statement.pdf:
+    parameters:
+      - { $ref: "#/components/parameters/businessId" }
+      - { $ref: "#/components/parameters/partyId" }
+    get:
+      tags: [Transactions]
+      summary: Download party statement PDF
+      responses: { "200": { description: application/pdf } }
+  /businesses/{businessId}/transactions/{txId}:
+    parameters:
+      - { $ref: "#/components/parameters/businessId" }
+      - { name: txId, in: path, required: true, schema: { type: string } }
+    get: { tags: [Transactions], summary: Entry details, responses: { "200": { description: Transaction } } }
+    patch: { tags: [Transactions], summary: Edit entry, responses: { "200": { description: Transaction } } }
+    delete: { tags: [Transactions], summary: Soft-delete entry, responses: { "200": { description: Deleted } } }
+
+  /businesses/{businessId}/cashbook:
+    parameters: [{ $ref: "#/components/parameters/businessId" }]
+    get:
+      tags: [Cashbook]
+      summary: List entries (filters — date, from/to, paymentMode)
+      responses: { "200": { description: Paged entries } }
+    post:
+      tags: [Cashbook]
+      summary: Add IN/OUT entry
+      responses: { "201": { description: Entry } }
+  /businesses/{businessId}/cashbook/summary:
+    parameters: [{ $ref: "#/components/parameters/businessId" }]
+    get: { tags: [Cashbook], summary: "Total + today's balance", responses: { "200": { description: Summary } } }
+  /businesses/{businessId}/cashbook/report.pdf:
+    parameters: [{ $ref: "#/components/parameters/businessId" }]
+    get: { tags: [Cashbook], summary: Cashbook PDF report, responses: { "200": { description: application/pdf } } }
+
+  /businesses/{businessId}/expenses:
+    parameters: [{ $ref: "#/components/parameters/businessId" }]
+    get: { tags: [Expenses], summary: "List (+ total)", responses: { "200": { description: Paged expenses } } }
+    post: { tags: [Expenses], summary: "Add expense (multipart attachment optional)", responses: { "201": { description: Expense } } }
+  /businesses/{businessId}/expenses/by-category:
+    parameters: [{ $ref: "#/components/parameters/businessId" }]
+    get: { tags: [Expenses], summary: Category-wise totals, responses: { "200": { description: Categories } } }
+  /businesses/{businessId}/expenses/items:
+    parameters: [{ $ref: "#/components/parameters/businessId" }]
+    get: { tags: [Expenses], summary: "Reusable expense items (?search=) — do not affect inventory", responses: { "200": { description: Expense items } } }
+    post: { tags: [Expenses], summary: "Create expense item {name, price?}", responses: { "201": { description: Expense item } } }
+  /businesses/{businessId}/expenses/items/{itemId}:
+    parameters:
+      - { $ref: "#/components/parameters/businessId" }
+      - { name: itemId, in: path, required: true, schema: { type: string } }
+    delete: { tags: [Expenses], summary: Delete expense item, responses: { "200": { description: Deleted } } }
+
+  /businesses/{businessId}/items:
+    parameters: [{ $ref: "#/components/parameters/businessId" }]
+    get: { tags: [Items], summary: "List items (search, lowStock=true)", responses: { "200": { description: Paged items } } }
+    post: { tags: [Items], summary: Create item, responses: { "201": { description: Item } } }
+  /businesses/{businessId}/items/{itemId}/stock:
+    parameters:
+      - { $ref: "#/components/parameters/businessId" }
+      - { name: itemId, in: path, required: true, schema: { type: string } }
+    post:
+      tags: [Items]
+      summary: Adjust stock (IN / OUT / ADJUST)
+      responses: { "200": { description: Item with new qty } }
+
+  /businesses/{businessId}/invoices:
+    parameters: [{ $ref: "#/components/parameters/businessId" }]
+    get: { tags: [Invoices], summary: "List invoices (+ billed/collected summary)", responses: { "200": { description: Paged invoices } } }
+    post:
+      tags: [Invoices]
+      summary: Create invoice — computes totals, deducts stock
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InvoiceInput" }
+      responses: { "201": { description: Invoice } }
+  /businesses/{businessId}/invoices/{invoiceId}/payments:
+    parameters:
+      - { $ref: "#/components/parameters/businessId" }
+      - { name: invoiceId, in: path, required: true, schema: { type: string } }
+    post:
+      tags: [Invoices]
+      summary: Collect payment (rolls status → PARTIAL/PAID, cash-in entry)
+      responses: { "201": { description: Payment } }
+  /businesses/{businessId}/invoices/{invoiceId}/pdf:
+    parameters:
+      - { $ref: "#/components/parameters/businessId" }
+      - { name: invoiceId, in: path, required: true, schema: { type: string } }
+    get: { tags: [Invoices], summary: Invoice PDF, responses: { "200": { description: application/pdf } } }
+
+  /businesses/{businessId}/staff:
+    parameters: [{ $ref: "#/components/parameters/businessId" }]
+    get: { tags: [Staff], summary: List members with roles/permissions, responses: { "200": { description: Members } } }
+    post:
+      tags: [Staff]
+      summary: Add staff/partner by email with permission flags
+      responses: { "201": { description: Member } }
+  /businesses/{businessId}/staff/{memberId}:
+    parameters:
+      - { $ref: "#/components/parameters/businessId" }
+      - { name: memberId, in: path, required: true, schema: { type: string } }
+    patch: { tags: [Staff], summary: Change role/permissions, responses: { "200": { description: Member } } }
+    delete: { tags: [Staff], summary: Remove member, responses: { "200": { description: Removed } } }
+
+  /businesses/{businessId}/reminders:
+    parameters: [{ $ref: "#/components/parameters/businessId" }]
+    get: { tags: [Reminders], summary: List reminders, responses: { "200": { description: Reminders } } }
+    post: { tags: [Reminders], summary: Schedule SMS/WhatsApp payment reminder, responses: { "201": { description: Reminder } } }
+  /businesses/{businessId}/reminders/{reminderId}/send:
+    parameters:
+      - { $ref: "#/components/parameters/businessId" }
+      - { name: reminderId, in: path, required: true, schema: { type: string } }
+    post: { tags: [Reminders], summary: Send now via gateway, responses: { "200": { description: Sent } } }
+
+  /businesses/{businessId}/reports/dashboard:
+    parameters: [{ $ref: "#/components/parameters/businessId" }]
+    get: { tags: [Reports], summary: Dashboard headline numbers, responses: { "200": { description: Dashboard data } } }
+  /businesses/{businessId}/reports/transactions:
+    parameters: [{ $ref: "#/components/parameters/businessId" }]
+    get: { tags: [Reports], summary: "Transactions report (range, partyType, search)", responses: { "200": { description: Report } } }
+  /businesses/{businessId}/reports/transactions.pdf:
+    parameters: [{ $ref: "#/components/parameters/businessId" }]
+    get: { tags: [Reports], summary: "Transactions report as downloadable PDF (same filters)", responses: { "200": { description: application/pdf } } }
+
+  /businesses/{businessId}/activity:
+    parameters: [{ $ref: "#/components/parameters/businessId" }]
+    get: { tags: [Activity], summary: Audit trail of actions, responses: { "200": { description: Paged logs } } }
+
+  /notifications:
+    get: { tags: [Notifications], summary: My notifications + unread count, responses: { "200": { description: Notifications } } }
+  /notifications/read-all:
+    post: { tags: [Notifications], summary: Mark all read, responses: { "200": { description: OK } } }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    businessId:
+      name: businessId
+      in: path
+      required: true
+      schema: { type: string }
+    partyId:
+      name: partyId
+      in: path
+      required: true
+      schema: { type: string }
+  schemas:
+    PartyInput:
+      type: object
+      required: [name]
+      properties:
+        type: { type: string, enum: [CUSTOMER, SUPPLIER], default: CUSTOMER }
+        name: { type: string }
+        phone: { type: string }
+        email: { type: string }
+        gstin: { type: string }
+        addressLine: { type: string }
+        area: { type: string }
+        city: { type: string }
+        state: { type: string }
+        pincode: { type: string }
+        smsEnabled: { type: boolean }
+    TransactionInput:
+      type: object
+      required: [type, amount]
+      properties:
+        type: { type: string, enum: [GAVE, GOT] }
+        amount: { type: number }
+        description: { type: string }
+        paymentMode: { type: string, enum: [CASH, ONLINE, CHEQUE, UPI, BANK] }
+        entryDate: { type: string, format: date-time }
+    InvoiceInput:
+      type: object
+      required: [partyId, items]
+      properties:
+        partyId: { type: string }
+        discount: { type: number }
+        dueDate: { type: string, format: date }
+        notes: { type: string }
+        status: { type: string, enum: [DRAFT, UNPAID] }
+        items:
+          type: array
+          items:
+            type: object
+            required: [name, qty, price]
+            properties:
+              itemId: { type: string }
+              name: { type: string }
+              qty: { type: number }
+              price: { type: number }
+              taxRate: { type: number }

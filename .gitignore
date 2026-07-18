@@ -1,0 +1,15 @@
+node_modules/
+dist/
+build/
+.env
+*.log
+uploads/*
+!uploads/.gitkeep
+.DS_Store
+web/node_modules/
+backend/node_modules/
+mobile/.dart_tool/
+mobile/build/
+mobile/.flutter-plugins*
+mobile/.packages
+coverage/
