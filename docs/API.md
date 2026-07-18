@@ -1,4 +1,4 @@
-# BizKhata API — quick reference
+# FinBook API — quick reference
 
 Full interactive docs: **`http://localhost:4000/api/docs`** (Swagger UI, served
 from [`backend/docs/openapi.yaml`](../backend/docs/openapi.yaml)).

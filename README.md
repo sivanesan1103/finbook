@@ -1,4 +1,4 @@
-# BizKhata — FinBook Business Management Suite
+# FinBook Business Management Suite
 
 A complete digital-ledger ("khata") platform for small businesses, built from the
 reference screenshots in this workspace and the public FinBook feature set —
@@ -50,10 +50,10 @@ docker compose up --build
 | http://localhost:8080 | React web app |
 | http://localhost:4000/api/docs | Swagger UI |
 | http://localhost:4000/api/health | API health |
-| localhost:3306 | MySQL (`bizkhata` / `bizkhata_pw`) |
+| localhost:3306 | MySQL (`finbook` / `finbook_pw`) |
 
 The API container runs migrations (`prisma db push` on first boot) and seeds a
-demo account: **email `owner@bizkhata.dev` / password `demo123`** — or register
+demo account: **email `owner@finbook.dev` / password `demo123`** — or register
 a new account from the login screen.
 
 ## Local development
@@ -121,4 +121,3 @@ middleware.
 - Uploaded files persist in the `api_uploads` volume; put them behind S3/CDN
   for scale.
 - Web container proxies `/api` and `/uploads` to the API service via nginx.
-# finbook

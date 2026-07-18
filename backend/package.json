@@ -1,7 +1,7 @@
 {
-  "name": "bizkhata-backend",
+  "name": "finbook-backend",
   "version": "1.0.0",
-  "description": "BizKhata — shared Node.js backend for the Khatabook-inspired business ledger (web + mobile)",
+  "description": "FinBook — shared Node.js backend for the Khatabook-inspired business ledger (web + mobile)",
   "type": "module",
   "main": "src/server.js",
   "scripts": {

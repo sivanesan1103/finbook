@@ -1,5 +1,5 @@
 /**
- * Seed: demo owner (email owner@bizkhata.dev, password demo123), one business,
+ * Seed: demo owner (email owner@finbook.dev, password demo123), one business,
  * customers/suppliers, ledger entries, items, an invoice and expenses.
  * Run: npm run seed
  */
@@ -10,11 +10,11 @@ const prisma = new PrismaClient();
 
 const main = async () => {
   const owner = await prisma.user.upsert({
-    where: { email: 'owner@bizkhata.dev' },
+    where: { email: 'owner@finbook.dev' },
     update: {},
     create: {
       name: 'Demo Owner',
-      email: 'owner@bizkhata.dev',
+      email: 'owner@finbook.dev',
       phone: null,
       passwordHash: await bcrypt.hash('demo123', 10),
       role: 'ADMIN',
@@ -27,7 +27,7 @@ const main = async () => {
       data: {
         name: 'Sri Ganesh Traders',
         ownerId: owner.id,
-        email: 'owner@bizkhata.dev',
+        email: 'owner@finbook.dev',
         address: '12 Market Road, Chennai',
         gstin: '33ABCDE1234F1Z5',
         category: 'Kirana / General Store',
@@ -86,7 +86,7 @@ const main = async () => {
     });
   }
 
-  console.log('Seed complete. Login: email owner@bizkhata.dev / password demo123');
+  console.log('Seed complete. Login: email owner@finbook.dev / password demo123');
 };
 
 main().finally(() => prisma.$disconnect());

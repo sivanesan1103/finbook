@@ -1,4 +1,4 @@
-package com.example.bizkhata
+package com.example.finbook
 
 import io.flutter.embedding.android.FlutterActivity
 

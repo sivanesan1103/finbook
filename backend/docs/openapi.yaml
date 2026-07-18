@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
-  title: BizKhata API
+  title: FinBook API
   version: 1.0.0
   description: |
-    Shared REST backend for the BizKhata web (React) and mobile (Flutter) apps.
+    Shared REST backend for the FinBook web (React) and mobile (Flutter) apps.
     A Khatabook-inspired digital ledger: parties, credit/debit entries, cashbook,
     expenses, inventory, billing, staff roles, reminders and reports.
 
@@ -44,7 +44,7 @@ paths:
               required: [name, email, password]
               properties:
                 name: { type: string }
-                email: { type: string, example: "owner@bizkhata.dev" }
+                email: { type: string, example: "owner@finbook.dev" }
                 password: { type: string, minLength: 6 }
       responses:
         "201": { description: Created — returns user + token pair }

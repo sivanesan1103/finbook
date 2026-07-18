@@ -4,7 +4,7 @@ import logger from './config/logger.js';
 import prisma from './config/db.js';
 
 const server = app.listen(env.port, () => {
-  logger.info(`BizKhata API listening on :${env.port} (${env.nodeEnv})`);
+  logger.info(`FinBook API listening on :${env.port} (${env.nodeEnv})`);
   logger.info(`Swagger docs at http://localhost:${env.port}/api/docs`);
 });
 

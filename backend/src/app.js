@@ -47,7 +47,7 @@ try {
   logger.warn('openapi.yaml not found — /api/docs disabled');
 }
 
-app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'bizkhata-api', ts: new Date() }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'finbook-api', ts: new Date() }));
 
 const v1 = express.Router();
 v1.use('/auth', authRoutes);
