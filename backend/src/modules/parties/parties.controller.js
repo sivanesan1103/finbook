@@ -4,6 +4,7 @@ import { ApiError } from '../../utils/apiError.js';
 import { getPagination, paged } from '../../utils/pagination.js';
 import { logActivity } from '../../middlewares/activity.js';
 import { fileUrl } from '../../middlewares/upload.js';
+import { smsGateway, buildPartyWelcomeMessage } from '../../utils/sms.js';
 import * as service from './parties.service.js';
 
 const ok = (res, data, status = 200) => res.status(status).json({ success: true, data });
@@ -36,6 +37,12 @@ export const getOne = asyncHandler(async (req, res) => {
 export const create = asyncHandler(async (req, res) => {
   const party = await prisma.party.create({ data: { ...req.body, businessId: req.business.id } });
   logActivity(req, 'PARTY_CREATED', 'Party', party.id, { name: party.name, type: party.type });
+  if (party.smsEnabled && party.phone) {
+    await smsGateway.send({
+      to: party.phone,
+      message: buildPartyWelcomeMessage({ businessName: req.business.name, partyName: party.name }),
+    });
+  }
   ok(res, { ...party, balance: 0 }, 201);
 });
 

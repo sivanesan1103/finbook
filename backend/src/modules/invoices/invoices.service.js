@@ -1,5 +1,6 @@
 import prisma from '../../config/db.js';
 import { ApiError } from '../../utils/apiError.js';
+import { smsGateway, buildSaleConfirmationMessage } from '../../utils/sms.js';
 
 /** Sequential human-friendly numbers per business & doc type: INV-0001…, PI-0001… */
 const nextInvoiceNo = async (db, businessId, docType) => {
@@ -71,7 +72,7 @@ export const createInvoice = async (businessId, { partyId, items, discount = 0, 
   const { lines, subtotal, taxAmount, total } = computeTotals(items, discount);
   const finalStatus = docType === 'PROFORMA' ? 'OPEN' : status || 'UNPAID';
 
-  return prisma.$transaction((txn) =>
+  const invoice = await prisma.$transaction((txn) =>
     createDocument(
       txn,
       businessId,
@@ -80,6 +81,20 @@ export const createInvoice = async (businessId, { partyId, items, discount = 0, 
       { deductStock: docType === 'INVOICE' && finalStatus !== 'DRAFT' }
     )
   );
+
+  if (docType === 'INVOICE' && party.smsEnabled && party.phone) {
+    const business = await prisma.business.findUnique({ where: { id: businessId }, select: { name: true } });
+    await smsGateway.send({
+      to: party.phone,
+      message: buildSaleConfirmationMessage({
+        businessName: business.name,
+        partyName: party.name,
+        invoiceNo: invoice.invoiceNo,
+        total: Number(invoice.total),
+      }),
+    });
+  }
+  return invoice;
 };
 
 /** Turns an OPEN proforma into a real UNPAID invoice (stock deducted, proforma marked CONVERTED). */

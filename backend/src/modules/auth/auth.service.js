@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import prisma from '../../config/db.js';
 import { ApiError } from '../../utils/apiError.js';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../utils/jwt.js';
+import { issueOtp, verifyOtp } from '../../utils/otp.js';
 
 const sanitize = ({ passwordHash, deletedAt, ...user }) => user;
 
@@ -44,7 +45,28 @@ export const register = async ({ name, email, password }) => {
       });
   await ensureDefaultBusiness(user);
   const tokens = await issueTokens(user);
+  // Registration succeeds even if the verification email fails to send —
+  // the user can request a fresh code via resendOtp.
+  try {
+    await issueOtp(user.email, 'VERIFY_EMAIL');
+  } catch { /* logged inside mailer */ }
   return { user: sanitize(user), ...tokens };
+};
+
+export const resendOtp = async ({ email }) => {
+  const user = await prisma.user.findFirst({ where: { email, deletedAt: null } });
+  if (!user) throw ApiError.notFound('No account with this email');
+  if (user.emailVerifiedAt) throw ApiError.conflict('Email is already verified');
+  return issueOtp(email, 'VERIFY_EMAIL');
+};
+
+export const verifyEmail = async ({ email, code }) => {
+  await verifyOtp(email, code, 'VERIFY_EMAIL');
+  const user = await prisma.user.update({
+    where: { email },
+    data: { emailVerifiedAt: new Date() },
+  });
+  return sanitize(user);
 };
 
 export const login = async ({ email, password }) => {
