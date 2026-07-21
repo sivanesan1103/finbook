@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../core/theme.dart';
+import '../l10n/translations.dart';
+import '../providers/locale_provider.dart';
 import 'parties_tab.dart';
 import 'bills_tab.dart';
 import 'cashbook_screen.dart';
@@ -24,18 +27,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<LocaleProvider>();
     return Scaffold(
       body: tabs[index],
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
         onDestinationSelected: (i) => setState(() => index = i),
         indicatorColor: AppColors.primary.withOpacity(0.12),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.groups_outlined), selectedIcon: Icon(Icons.groups), label: 'Parties'),
-          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long), label: 'Sales'),
-          NavigationDestination(icon: Icon(Icons.menu_book_outlined), selectedIcon: Icon(Icons.menu_book), label: 'Cashbook'),
-          NavigationDestination(icon: Icon(Icons.request_page_outlined), selectedIcon: Icon(Icons.request_page), label: 'Expenses'),
-          NavigationDestination(icon: Icon(Icons.more_horiz), label: 'More'),
+        destinations: [
+          NavigationDestination(icon: const Icon(Icons.groups_outlined), selectedIcon: const Icon(Icons.groups), label: context.tr('nav.parties')),
+          NavigationDestination(icon: const Icon(Icons.receipt_long_outlined), selectedIcon: const Icon(Icons.receipt_long), label: context.tr('nav.sales')),
+          NavigationDestination(icon: const Icon(Icons.menu_book_outlined), selectedIcon: const Icon(Icons.menu_book), label: context.tr('nav.cashbook')),
+          NavigationDestination(icon: const Icon(Icons.request_page_outlined), selectedIcon: const Icon(Icons.request_page), label: context.tr('nav.expenses')),
+          NavigationDestination(icon: const Icon(Icons.more_horiz), label: context.tr('nav.more')),
         ],
       ),
     );

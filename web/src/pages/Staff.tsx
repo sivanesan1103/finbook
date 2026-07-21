@@ -1,13 +1,23 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { api, apiMessage } from '../api/client';
 import type { StaffMember, PermissionFlags } from '../types';
+import type { TranslationKey } from '../i18n';
 import { Avatar, EmptyState, Modal, Spinner } from '../components/ui';
 
 const FLAGS: (keyof PermissionFlags)[] = ['parties', 'bills', 'items', 'cashbook', 'reports'];
+const FLAG_LABEL_KEYS: Record<keyof PermissionFlags, TranslationKey> = {
+  parties: 'staff.flagParties',
+  bills: 'staff.flagBills',
+  items: 'staff.flagItems',
+  cashbook: 'staff.flagCashbook',
+  reports: 'staff.flagReports',
+};
 
 export default function Staff() {
   const { business } = useAuth();
+  const { t } = useLanguage();
   const [members, setMembers] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -46,26 +56,26 @@ export default function Staff() {
   };
 
   const remove = async (m: StaffMember) => {
-    if (!confirm(`Remove ${m.user.name} from this business?`)) return;
+    if (!confirm(t('staff.confirmRemove', { name: m.user.name }))) return;
     await api.delete(`${base}/${m.id}`);
     await load();
   };
 
   if (!canManage) {
-    return <EmptyState icon="🔒" title="Staff management is for owners and partners"
-      subtitle="Ask the business owner to change your role if you need access." />;
+    return <EmptyState icon="🔒" title={t('staff.restrictedTitle')}
+      subtitle={t('staff.restrictedSubtitle')} />;
   }
 
   return (
     <div className="p-6 max-w-4xl">
       <div className="flex items-center justify-between mb-2">
-        <h1 className="text-xl font-bold">Staff</h1>
-        <button className="btn-primary" onClick={() => setOpen(true)}>+ Add New Staff</button>
+        <h1 className="text-xl font-bold">{t('staff.title')}</h1>
+        <button className="btn-primary" onClick={() => setOpen(true)}>{t('staff.addNew')}</button>
       </div>
       <ul className="text-sm text-slate-500 mb-4 list-disc pl-5 space-y-0.5">
-        <li>Partners & staff sign in with their own email — invitees register with the invited email to claim their account</li>
-        <li>Add different permission levels for Bills, Items & Parties</li>
-        <li>View entries and bills made by each staff in the Activity log</li>
+        <li>{t('staff.note1')}</li>
+        <li>{t('staff.note2')}</li>
+        <li>{t('staff.note3')}</li>
       </ul>
 
       <div className="card">
@@ -73,8 +83,8 @@ export default function Staff() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-slate-400 uppercase border-b border-slate-100">
-                <th className="px-5 py-3">Member</th><th>Role</th>
-                {FLAGS.map((f) => <th key={f} className="text-center capitalize">{f}</th>)}
+                <th className="px-5 py-3">{t('staff.member')}</th><th>{t('staff.role')}</th>
+                {FLAGS.map((f) => <th key={f} className="text-center capitalize">{t(FLAG_LABEL_KEYS[f])}</th>)}
                 <th className="w-16"></th>
               </tr>
             </thead>
@@ -117,29 +127,29 @@ export default function Staff() {
         )}
       </div>
 
-      <Modal open={open} title="Add Staff / Partner" onClose={() => setOpen(false)}>
+      <Modal open={open} title={t('staff.addModalTitle')} onClose={() => setOpen(false)}>
         <div className="space-y-3">
-          <input className="input" type="email" placeholder="Email address *" value={form.email}
+          <input className="input" type="email" placeholder={t('staff.emailPlaceholder')} value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })} />
-          <input className="input" placeholder="Name (optional)" value={form.name}
+          <input className="input" placeholder={t('staff.namePlaceholder')} value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <select className="input" value={form.role}
             onChange={(e) => setForm({ ...form, role: e.target.value as 'STAFF' | 'PARTNER' })}>
-            <option value="STAFF">Staff (custom permissions)</option>
-            <option value="PARTNER">Partner (full access)</option>
+            <option value="STAFF">{t('staff.roleStaffOption')}</option>
+            <option value="PARTNER">{t('staff.rolePartnerOption')}</option>
           </select>
           {form.role === 'STAFF' && (
             <div className="grid grid-cols-2 gap-2">
               {FLAGS.map((f) => (
                 <label key={f} className="flex items-center gap-2 text-sm capitalize">
                   <input type="checkbox" checked={!!perms[f]}
-                    onChange={(e) => setPerms({ ...perms, [f]: e.target.checked })} /> {f}
+                    onChange={(e) => setPerms({ ...perms, [f]: e.target.checked })} /> {t(FLAG_LABEL_KEYS[f])}
                 </label>
               ))}
             </div>
           )}
           <button className="btn-primary w-full justify-center" onClick={add} disabled={!/^\S+@\S+\.\S+$/.test(form.email)}>
-            Add Member
+            {t('staff.addMember')}
           </button>
         </div>
       </Modal>

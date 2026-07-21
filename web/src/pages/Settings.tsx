@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { api, apiMessage } from '../api/client';
 import type { Notification } from '../types';
 import { Modal } from '../components/ui';
 
 export default function Settings() {
   const { user, business, reloadBusinesses, logout } = useAuth();
+  const { lang, setLang, t } = useLanguage();
   const [bizForm, setBizForm] = useState({ name: '', phone: '', address: '', gstin: '', category: '' });
   const [invForm, setInvForm] = useState({
     upiId: '', bankName: '', bankAccountName: '', bankAccountNo: '', bankIfsc: '', invoiceTerms: '',
@@ -46,7 +48,7 @@ export default function Settings() {
         gstin: bizForm.gstin || undefined, category: bizForm.category || undefined,
       });
       await reloadBusinesses();
-      flash('Business settings saved.');
+      flash(t('settings.savedBusinessSettings'));
     } catch (e) { alert(apiMessage(e)); }
   };
 
@@ -61,7 +63,7 @@ export default function Settings() {
         invoiceTerms: invForm.invoiceTerms.trim() || null,
       });
       await reloadBusinesses();
-      flash('Invoice & payment details saved — they will print on your tax invoices.');
+      flash(t('settings.savedInvoiceDetails'));
     } catch (e) { alert(apiMessage(e)); }
   };
 
@@ -74,7 +76,7 @@ export default function Settings() {
       a.download = `finbook-backup-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      flash('Backup downloaded — keep the file somewhere safe.');
+      flash(t('settings.backupDownloaded'));
     } catch (e) { alert(apiMessage(e)); }
   };
 
@@ -83,23 +85,29 @@ export default function Settings() {
     try {
       parsed = JSON.parse(await file.text());
     } catch {
-      alert('That file is not a valid FinBook backup (could not read it as JSON).');
+      alert(t('settings.invalidBackupFile'));
       return;
     }
-    if (!confirm(`Restore "${file.name}" into "${business?.name}"?\n\nExisting parties/items are reused; ledger entries from the file are added. Importing the same file twice will duplicate ledger entries.`)) return;
+    if (!confirm(t('settings.confirmRestore', { file: file.name, business: business?.name || '' }))) return;
     setImporting(true);
     setImportResult('');
     try {
       const res = await api.post(`/businesses/${business?.id}/import`, parsed);
       const s = res.data.data;
       setImportResult(
-        `Restored: ${s.parties.created} new parties (${s.parties.reused} reused), ` +
-        `${s.transactions.created} ledger entries, ${s.cashbookEntries.created} cashbook entries, ` +
-        `${s.expenses.created} expenses, ${s.items.created} items, ${s.invoices.created} invoices` +
-        (s.invoices.skipped ? ` (${s.invoices.skipped} skipped — already exist)` : '') + '.'
+        t('settings.restoreSummary', {
+          partiesCreated: s.parties.created,
+          partiesReused: s.parties.reused,
+          txCreated: s.transactions.created,
+          cashbookCreated: s.cashbookEntries.created,
+          expensesCreated: s.expenses.created,
+          itemsCreated: s.items.created,
+          invoicesCreated: s.invoices.created,
+          invoicesSkipped: s.invoices.skipped ? t('settings.restoreSummarySkipped', { count: s.invoices.skipped }) : '',
+        })
       );
       await reloadBusinesses();
-      flash('Backup restored into this book.');
+      flash(t('settings.backupRestored'));
     } catch (e) { alert(apiMessage(e)); }
     setImporting(false);
   };
@@ -107,16 +115,16 @@ export default function Settings() {
   const saveMe = async () => {
     try {
       await api.patch('/auth/me', { name: meForm.name, email: meForm.email || null });
-      flash('Profile updated.');
+      flash(t('settings.profileUpdated'));
     } catch (e) { alert(apiMessage(e)); }
   };
 
   const deleteBook = async () => {
-    if (!confirm(`Delete the khata "${business?.name}"? This soft-deletes all its data.`)) return;
+    if (!confirm(t('settings.confirmDeleteBook', { business: business?.name || '' }))) return;
     try {
       await api.delete(`/businesses/${business?.id}`);
       await reloadBusinesses();
-      flash('Book deleted.');
+      flash(t('settings.bookDeleted'));
     } catch (e) { alert(apiMessage(e)); }
   };
 
@@ -128,71 +136,70 @@ export default function Settings() {
 
   return (
     <div className="p-6 max-w-2xl">
-      <h1 className="text-xl font-bold mb-4">Settings</h1>
+      <h1 className="text-xl font-bold mb-4">{t('settings.title')}</h1>
       {msg && <p className="mb-4 text-sm bg-green-50 text-green-700 rounded-lg px-4 py-2">{msg}</p>}
 
       <div className="card p-5 mb-5">
-        <h2 className="font-semibold mb-3">Book Settings — {business?.name}</h2>
+        <h2 className="font-semibold mb-3">{t('settings.bookSettingsTitle', { business: business?.name || '' })}</h2>
         <div className="space-y-3">
-          <div><label className="label">Business name</label>
+          <div><label className="label">{t('settings.businessName')}</label>
             <input className="input" value={bizForm.name} onChange={(e) => setBizForm({ ...bizForm, name: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div><label className="label">Phone</label>
+            <div><label className="label">{t('settings.phone')}</label>
               <input className="input" value={bizForm.phone} onChange={(e) => setBizForm({ ...bizForm, phone: e.target.value })} /></div>
-            <div><label className="label">GSTIN</label>
+            <div><label className="label">{t('settings.gstin')}</label>
               <input className="input" value={bizForm.gstin} onChange={(e) => setBizForm({ ...bizForm, gstin: e.target.value })} /></div>
           </div>
-          <div><label className="label">Category</label>
-            <input className="input" placeholder="Kirana, Electronics, Services…" value={bizForm.category}
+          <div><label className="label">{t('settings.category')}</label>
+            <input className="input" placeholder={t('settings.categoryPlaceholder')} value={bizForm.category}
               onChange={(e) => setBizForm({ ...bizForm, category: e.target.value })} /></div>
-          <div><label className="label">Address</label>
+          <div><label className="label">{t('settings.address')}</label>
             <textarea className="input" rows={2} value={bizForm.address}
               onChange={(e) => setBizForm({ ...bizForm, address: e.target.value })} /></div>
-          <button className="btn-primary" onClick={saveBusiness}>Save Business Settings</button>
+          <button className="btn-primary" onClick={saveBusiness}>{t('settings.saveBusinessSettings')}</button>
         </div>
       </div>
 
       <div className="card p-5 mb-5">
-        <h2 className="font-semibold mb-1">Invoice & Payment Details</h2>
-        <p className="text-xs text-slate-400 mb-3">Printed on your tax invoice PDFs — business name and address come from Book Settings above.</p>
+        <h2 className="font-semibold mb-1">{t('settings.invoicePaymentTitle')}</h2>
+        <p className="text-xs text-slate-400 mb-3">{t('settings.invoicePaymentSubtitle')}</p>
         <div className="space-y-3">
-          <div><label className="label">UPI ID</label>
-            <input className="input" placeholder="yourname@upi" value={invForm.upiId}
+          <div><label className="label">{t('settings.upiId')}</label>
+            <input className="input" placeholder={t('settings.upiIdPlaceholder')} value={invForm.upiId}
               onChange={(e) => setInvForm({ ...invForm, upiId: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div><label className="label">Bank Name</label>
-              <input className="input" placeholder="Kotak Mahindra Bank" value={invForm.bankName}
+            <div><label className="label">{t('settings.bankName')}</label>
+              <input className="input" placeholder={t('settings.bankNamePlaceholder')} value={invForm.bankName}
                 onChange={(e) => setInvForm({ ...invForm, bankName: e.target.value })} /></div>
-            <div><label className="label">Account Holder Name</label>
+            <div><label className="label">{t('settings.bankAccountName')}</label>
               <input className="input" value={invForm.bankAccountName}
                 onChange={(e) => setInvForm({ ...invForm, bankAccountName: e.target.value })} /></div>
-            <div><label className="label">Account Number</label>
+            <div><label className="label">{t('settings.bankAccountNo')}</label>
               <input className="input" value={invForm.bankAccountNo}
                 onChange={(e) => setInvForm({ ...invForm, bankAccountNo: e.target.value })} /></div>
-            <div><label className="label">IFSC Code</label>
-              <input className="input" placeholder="KKBK0000001" value={invForm.bankIfsc}
+            <div><label className="label">{t('settings.bankIfsc')}</label>
+              <input className="input" placeholder={t('settings.bankIfscPlaceholder')} value={invForm.bankIfsc}
                 onChange={(e) => setInvForm({ ...invForm, bankIfsc: e.target.value })} /></div>
           </div>
-          <div><label className="label">Default Terms & Conditions</label>
+          <div><label className="label">{t('settings.invoiceTerms')}</label>
             <textarea className="input" rows={3}
-              placeholder={'1. Goods once sold will not be returned.\n2. Payment is due within the mentioned due date.'}
+              placeholder={t('settings.invoiceTermsPlaceholder')}
               value={invForm.invoiceTerms}
               onChange={(e) => setInvForm({ ...invForm, invoiceTerms: e.target.value })} />
-            <p className="text-xs text-slate-400 mt-1">Used on invoices that don't have their own notes.</p></div>
-          <button className="btn-primary" onClick={saveInvoice}>Save Invoice Details</button>
+            <p className="text-xs text-slate-400 mt-1">{t('settings.invoiceTermsHint')}</p></div>
+          <button className="btn-primary" onClick={saveInvoice}>{t('settings.saveInvoiceDetails')}</button>
         </div>
       </div>
 
       <div className="card p-5 mb-5">
-        <h2 className="font-semibold mb-1">Data Backup & Restore</h2>
+        <h2 className="font-semibold mb-1">{t('settings.backupTitle')}</h2>
         <p className="text-xs text-slate-400 mb-3">
-          Export everything in this book — parties, ledger, cashbook, expenses, items and invoices — as one file.
-          If your storage ever crashes, upload that file here to restore all your data.
+          {t('settings.backupSubtitle')}
         </p>
         <div className="flex gap-3 flex-wrap">
-          <button className="btn-primary" onClick={exportData}>⬇ Export All Data</button>
+          <button className="btn-primary" onClick={exportData}>{t('settings.exportData')}</button>
           <label className={`btn-outline cursor-pointer ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
-            {importing ? 'Restoring…' : '⬆ Import / Restore Backup'}
+            {importing ? t('settings.restoring') : t('settings.importData')}
             <input type="file" accept="application/json,.json" className="hidden" disabled={importing}
               onChange={(e) => {
                 const f = e.target.files?.[0];
@@ -203,47 +210,55 @@ export default function Settings() {
         </div>
         {importResult && <p className="text-xs bg-green-50 text-green-700 rounded-lg px-3 py-2 mt-3">{importResult}</p>}
         <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 mt-3">
-          ⚠️ Restore adds the file's entries into the current book. Importing the same backup twice will duplicate ledger, cashbook and expense entries.
+          {t('settings.restoreWarning')}
         </p>
       </div>
 
       <div className="card p-5 mb-5">
-        <h2 className="font-semibold mb-3">My Profile</h2>
+        <h2 className="font-semibold mb-3">{t('settings.languageTitle')}</h2>
+        <div className="flex gap-2">
+          <button className={lang === 'en' ? 'btn-primary' : 'btn-outline'} onClick={() => setLang('en')}>English</button>
+          <button className={lang === 'ta' ? 'btn-primary' : 'btn-outline'} onClick={() => setLang('ta')}>தமிழ்</button>
+        </div>
+      </div>
+
+      <div className="card p-5 mb-5">
+        <h2 className="font-semibold mb-3">{t('settings.myProfileTitle')}</h2>
         <div className="space-y-3">
-          <div><label className="label">Name</label>
+          <div><label className="label">{t('common.name')}</label>
             <input className="input" value={meForm.name} onChange={(e) => setMeForm({ ...meForm, name: e.target.value })} /></div>
-          <div><label className="label">Email</label>
+          <div><label className="label">{t('common.email')}</label>
             <input className="input" value={meForm.email} onChange={(e) => setMeForm({ ...meForm, email: e.target.value })} /></div>
-          <p className="text-xs text-slate-400">Email: {user?.email} (used for login)</p>
-          <button className="btn-primary" onClick={saveMe}>Update Profile</button>
+          <p className="text-xs text-slate-400">{t('settings.emailLoginHint', { email: user?.email || '' })}</p>
+          <button className="btn-primary" onClick={saveMe}>{t('settings.updateProfile')}</button>
         </div>
       </div>
 
       <div className="card divide-y divide-slate-100">
         <button className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-50"
           onClick={() => setNotifOpen(true)}>
-          <div><p className="font-medium">🔔 Notifications</p>
-            <p className="text-xs text-slate-400">{unread} unread</p></div>
+          <div><p className="font-medium">{t('settings.notifications')}</p>
+            <p className="text-xs text-slate-400">{t('settings.unreadCount', { count: unread })}</p></div>
           <span className="text-slate-300">›</span>
         </button>
         <button className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-50"
           onClick={deleteBook}>
-          <div><p className="font-medium text-red-600">🗑 Book Settings — Delete your FinBook</p>
-            <p className="text-xs text-slate-400">Soft-deletes this book and its records</p></div>
+          <div><p className="font-medium text-red-600">{t('settings.deleteBookTitle')}</p>
+            <p className="text-xs text-slate-400">{t('settings.deleteBookSubtitle')}</p></div>
           <span className="text-slate-300">›</span>
         </button>
         <button className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-50"
           onClick={() => { logout(); navigate('/login'); }}>
-          <div><p className="font-medium">⎋ Logout</p>
-            <p className="text-xs text-slate-400">You will be logged out on this device</p></div>
+          <div><p className="font-medium">{t('settings.logout')}</p>
+            <p className="text-xs text-slate-400">{t('settings.logoutSubtitle')}</p></div>
           <span className="text-slate-300">›</span>
         </button>
       </div>
 
-      <Modal open={notifOpen} title="Notifications" onClose={() => setNotifOpen(false)}>
-        <button className="btn-outline text-xs mb-3" onClick={markAllRead}>Mark all read</button>
+      <Modal open={notifOpen} title={t('settings.notificationsModalTitle')} onClose={() => setNotifOpen(false)}>
+        <button className="btn-outline text-xs mb-3" onClick={markAllRead}>{t('settings.markAllRead')}</button>
         <div className="space-y-2 max-h-80 overflow-y-auto">
-          {notifs.length === 0 && <p className="text-sm text-slate-400">No notifications yet.</p>}
+          {notifs.length === 0 && <p className="text-sm text-slate-400">{t('settings.noNotifications')}</p>}
           {notifs.map((n) => (
             <div key={n.id} className={`p-3 rounded-lg border ${n.readAt ? 'border-slate-100' : 'border-brand-500 bg-brand-50'}`}>
               <p className="text-sm font-semibold">{n.title}</p>

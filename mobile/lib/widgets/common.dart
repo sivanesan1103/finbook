@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/formatters.dart';
 import '../core/theme.dart';
+import '../l10n/translations.dart';
 
 class MoneyText extends StatelessWidget {
   final double value;
@@ -62,9 +63,9 @@ class GiveGetCard extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 14),
           child: Row(children: [
-            _cell('You will give', give, AppColors.got),
+            _cell(context.tr('common.youWillGive'), give, AppColors.got),
             Container(width: 1, height: 40, color: Colors.grey.shade200),
-            _cell('You will get', get, AppColors.gave),
+            _cell(context.tr('common.youWillGet'), get, AppColors.gave),
           ]),
         ),
         if (onReport != null)
@@ -77,11 +78,11 @@ class GiveGetCard extends StatelessWidget {
                 color: const Color(0xFFE8F0FE),
                 borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
               ),
-              child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(Icons.picture_as_pdf_outlined, size: 18, color: AppColors.primary),
-                SizedBox(width: 8),
-                Text('View Reports',
-                    style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700, fontSize: 16)),
+              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                const Icon(Icons.picture_as_pdf_outlined, size: 18, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Text(context.tr('common.viewReports'),
+                    style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700, fontSize: 16)),
               ]),
             ),
           ),

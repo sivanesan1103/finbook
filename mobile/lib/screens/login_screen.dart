@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/theme.dart';
+import '../l10n/translations.dart';
 import '../providers/app_state.dart';
+import '../providers/locale_provider.dart';
 import '../widgets/common.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -58,9 +60,9 @@ class _LoginScreenState extends State<LoginScreen> {
         keyboardType: TextInputType.emailAddress,
         textInputAction: TextInputAction.next,
         onChanged: (_) => setState(() {}),
-        decoration: const InputDecoration(
-          labelText: 'Email address',
-          prefixIcon: Icon(Icons.email_outlined),
+        decoration: InputDecoration(
+          labelText: context.tr('login.emailAddress'),
+          prefixIcon: const Icon(Icons.email_outlined),
         ),
       ),
       const SizedBox(height: 16),
@@ -68,9 +70,9 @@ class _LoginScreenState extends State<LoginScreen> {
         controller: signInPassCtrl,
         obscureText: true,
         onChanged: (_) => setState(() {}),
-        decoration: const InputDecoration(
-          labelText: 'Password',
-          prefixIcon: Icon(Icons.lock_outline),
+        decoration: InputDecoration(
+          labelText: context.tr('login.password'),
+          prefixIcon: const Icon(Icons.lock_outline),
         ),
       ),
       const SizedBox(height: 20),
@@ -79,11 +81,11 @@ class _LoginScreenState extends State<LoginScreen> {
             busy || signInIdCtrl.text.isEmpty || signInPassCtrl.text.isEmpty
                 ? null
                 : _loginPassword,
-        child: Text(busy ? 'SIGNING IN…' : 'SIGN IN'),
+        child: Text(busy ? context.tr('login.signingInDots') : context.tr('login.signInButton')),
       ),
       const SizedBox(height: 12),
-      const Text('Sign in with your email and password.',
-          style: TextStyle(color: Colors.black54, fontSize: 12)),
+      Text(context.tr('login.signInHint'),
+          style: const TextStyle(color: Colors.black54, fontSize: 12)),
     ]);
   }
 
@@ -94,25 +96,25 @@ class _LoginScreenState extends State<LoginScreen> {
         controller: nameCtrl,
         textCapitalization: TextCapitalization.words,
         onChanged: (_) => setState(() {}),
-        decoration: const InputDecoration(
-            labelText: 'Full Name', prefixIcon: Icon(Icons.person_outline)),
+        decoration: InputDecoration(
+            labelText: context.tr('login.fullName'), prefixIcon: const Icon(Icons.person_outline)),
       ),
       const SizedBox(height: 16),
       TextField(
         controller: emailCtrl,
         keyboardType: TextInputType.emailAddress,
         onChanged: (_) => setState(() {}),
-        decoration: const InputDecoration(
-            labelText: 'Email address', prefixIcon: Icon(Icons.email_outlined)),
+        decoration: InputDecoration(
+            labelText: context.tr('login.emailAddress'), prefixIcon: const Icon(Icons.email_outlined)),
       ),
       const SizedBox(height: 16),
       TextField(
         controller: signUpPassCtrl,
         obscureText: true,
         onChanged: (_) => setState(() {}),
-        decoration: const InputDecoration(
-            labelText: 'Password (min 6 chars)',
-            prefixIcon: Icon(Icons.lock_outline)),
+        decoration: InputDecoration(
+            labelText: context.tr('login.passwordMinChars'),
+            prefixIcon: const Icon(Icons.lock_outline)),
       ),
       const SizedBox(height: 20),
       ElevatedButton(
@@ -122,13 +124,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 signUpPassCtrl.text.length < 6
             ? null
             : _register,
-        child: Text(busy ? 'CREATING…' : 'CREATE ACCOUNT'),
+        child: Text(busy ? context.tr('login.creatingDots') : context.tr('login.createAccountButton')),
       ),
     ]);
   }
 
   @override
   Widget build(BuildContext context) {
+    final locale = context.watch<LocaleProvider>();
     return Scaffold(
       backgroundColor: AppColors.primary,
       body: SafeArea(
@@ -140,17 +143,35 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 24),
+                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      TextButton(
+                        onPressed: () => context.read<LocaleProvider>().setLang('en'),
+                        child: Text('English',
+                            style: TextStyle(
+                                color: locale.code == 'en' ? Colors.white : Colors.white54,
+                                fontWeight: locale.code == 'en' ? FontWeight.w800 : FontWeight.normal)),
+                      ),
+                      const Text('|', style: TextStyle(color: Colors.white54)),
+                      TextButton(
+                        onPressed: () => context.read<LocaleProvider>().setLang('ta'),
+                        child: Text('தமிழ்',
+                            style: TextStyle(
+                                color: locale.code == 'ta' ? Colors.white : Colors.white54,
+                                fontWeight: locale.code == 'ta' ? FontWeight.w800 : FontWeight.normal)),
+                      ),
+                    ]),
+                    const SizedBox(height: 8),
                     const Icon(Icons.menu_book_rounded,
                         color: Colors.white, size: 64),
                     const SizedBox(height: 8),
-                    const Text('FinBook',
-                        style: TextStyle(
+                    Text(context.tr('login.appName'),
+                        style: const TextStyle(
                             color: Colors.white,
                             fontSize: 30,
                             fontWeight: FontWeight.w800)),
-                    const Text('Digital ledger for your business',
-                        style: TextStyle(color: Colors.white70, fontSize: 14)),
+                    Text(context.tr('login.subtitle'),
+                        style: const TextStyle(color: Colors.white70, fontSize: 14)),
                     const SizedBox(height: 40),
                     Container(
                       width: double.infinity,
@@ -165,13 +186,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const TabBar(
+                            TabBar(
                               labelColor: AppColors.primary,
                               unselectedLabelColor: Colors.black54,
                               indicatorColor: AppColors.primary,
                               tabs: [
-                                Tab(text: 'Sign In'),
-                                Tab(text: 'Create Account')
+                                Tab(text: context.tr('login.signInTab')),
+                                Tab(text: context.tr('login.createAccountTab'))
                               ],
                             ),
                             const SizedBox(height: 16),
@@ -185,9 +206,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            const Center(
-                              child: Text('🔒 100% Safe and Secure',
-                                  style: TextStyle(
+                            Center(
+                              child: Text(context.tr('login.safeSecure'),
+                                  style: const TextStyle(
                                       color: Colors.green,
                                       fontWeight: FontWeight.w600)),
                             ),

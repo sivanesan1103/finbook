@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { api, apiMessage } from '../api/client';
 import type { PartyType } from '../types';
 
@@ -28,17 +29,21 @@ const str = (v: unknown) => (v == null ? '' : String(v).trim());
 
 export default function BulkImport({ type = 'CUSTOMER' as PartyType }: { type?: PartyType }) {
   const { business } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
   const [state, setState] = useState<UploadState>({ phase: 'idle' });
-  const label = type === 'CUSTOMER' ? 'customer' : 'supplier';
+  const isCustomer = type === 'CUSTOMER';
+  const labelSingular = t(isCustomer ? 'bulkImport.customerSingular' : 'bulkImport.supplierSingular');
+  const labelPlural = t(isCustomer ? 'bulkImport.customerPlural' : 'bulkImport.supplierPlural');
+  const labelFor = (count: number) => (count === 1 ? labelSingular : labelPlural);
 
   const downloadSample = () => {
     const ws = XLSX.utils.json_to_sheet(SAMPLE_ROWS);
     ws['!cols'] = [{ wch: 20 }, { wch: 14 }, { wch: 22 }, { wch: 18 }, { wch: 22 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 10 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Parties');
-    XLSX.writeFile(wb, `bizkhata-${label}s-sample.xlsx`);
+    XLSX.writeFile(wb, `bizkhata-${labelSingular}s-sample.xlsx`);
   };
 
   const parseFile = async (file: File) => {
@@ -48,7 +53,7 @@ export default function BulkImport({ type = 'CUSTOMER' as PartyType }: { type?: 
       const sheet = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
       if (!rows.length) {
-        setState({ phase: 'failed', fileName: file.name, message: 'The sheet is empty. Fill it using the sample format and upload again.' });
+        setState({ phase: 'failed', fileName: file.name, message: t('bulkImport.emptySheet') });
         return;
       }
       // Tolerant header lookup: "Name*", "name", "Customer Name" all work
@@ -65,9 +70,9 @@ export default function BulkImport({ type = 'CUSTOMER' as PartyType }: { type?: 
         const rowNo = i + 2; // 1-based + header row
         const name = pick(row, 'name');
         const phone = pick(row, 'phone', 'mobile');
-        if (!name) { errors.push({ row: rowNo, reason: 'Name is missing' }); return; }
-        if (name.length > 120) { errors.push({ row: rowNo, reason: 'Name is longer than 120 characters' }); return; }
-        if (phone && phone.replace(/[\s+-]/g, '').length > 20) { errors.push({ row: rowNo, reason: 'Phone number is too long' }); return; }
+        if (!name) { errors.push({ row: rowNo, reason: t('bulkImport.nameMissing') }); return; }
+        if (name.length > 120) { errors.push({ row: rowNo, reason: t('bulkImport.nameTooLong') }); return; }
+        if (phone && phone.replace(/[\s+-]/g, '').length > 20) { errors.push({ row: rowNo, reason: t('bulkImport.phoneTooLong') }); return; }
         const email = pick(row, 'email');
         const p: ParsedParty = { name };
         if (phone) p.phone = phone;
@@ -81,12 +86,12 @@ export default function BulkImport({ type = 'CUSTOMER' as PartyType }: { type?: 
         parties.push(p);
       });
       if (!parties.length) {
-        setState({ phase: 'failed', fileName: file.name, message: 'No valid rows found — every row needs at least a name.' });
+        setState({ phase: 'failed', fileName: file.name, message: t('bulkImport.noValidRows') });
         return;
       }
       setState({ phase: 'review', fileName: file.name, parties, errors });
     } catch {
-      setState({ phase: 'failed', fileName: file.name, message: 'Could not read this file. Upload an .xlsx / .xls / .csv sheet in the sample format.' });
+      setState({ phase: 'failed', fileName: file.name, message: t('bulkImport.couldNotRead') });
     }
   };
 
@@ -116,37 +121,37 @@ export default function BulkImport({ type = 'CUSTOMER' as PartyType }: { type?: 
   return (
     <div className="p-6 max-w-6xl">
       <div className="flex items-center gap-3 mb-6">
-        <button className="text-2xl text-slate-500 hover:text-slate-800" onClick={() => navigate(-1)} title="Back">←</button>
-        <h1 className="text-2xl font-bold text-slate-800">Bulk Import</h1>
+        <button className="text-2xl text-slate-500 hover:text-slate-800" onClick={() => navigate(-1)} title={t('bulkImport.back')}>←</button>
+        <h1 className="text-2xl font-bold text-slate-800">{t('bulkImport.title')}</h1>
       </div>
 
       {/* ── 3 simple steps ── */}
       <div className="card p-6 mb-6">
-        <p className="font-semibold text-slate-800 mb-5">Bulk upload {label}s in 3 Simple steps</p>
+        <p className="font-semibold text-slate-800 mb-5">{t('bulkImport.stepsHeading', { label: labelPlural })}</p>
         <div className="grid md:grid-cols-3 gap-8">
           <div>
-            <p className="text-sm font-bold mb-2 border-b border-slate-200 pb-2">Step 1:</p>
+            <p className="text-sm font-bold mb-2 border-b border-slate-200 pb-2">{t('bulkImport.step1')}</p>
             <div className="flex items-start gap-3">
               <span className="text-3xl">📄</span>
               <p className="text-sm text-slate-600">
-                <button className="text-brand-600 font-semibold hover:underline" onClick={downloadSample}>Download</button>{' '}
-                the Sample Excel sheet format
+                <button className="text-brand-600 font-semibold hover:underline" onClick={downloadSample}>{t('bulkImport.download')}</button>{' '}
+                {t('bulkImport.sampleFormat')}
               </p>
             </div>
           </div>
           <div>
-            <p className="text-sm font-bold mb-2 border-b border-slate-200 pb-2">Step 2:</p>
+            <p className="text-sm font-bold mb-2 border-b border-slate-200 pb-2">{t('bulkImport.step2')}</p>
             <div className="flex items-start gap-3">
               <span className="text-3xl">📄</span>
               <p className="text-sm text-slate-600">
-                Fill your {label} details in the sheet — only <b>Name</b> is mandatory
+                {t('bulkImport.fillDetails1', { label: labelSingular })} <b>{t('bulkImport.tableName')}</b> {t('bulkImport.fillDetails2')}
               </p>
             </div>
           </div>
           <div>
-            <p className="text-sm font-bold mb-2 border-b border-slate-200 pb-2">Step 3:</p>
+            <p className="text-sm font-bold mb-2 border-b border-slate-200 pb-2">{t('bulkImport.step3')}</p>
             <p className="text-sm text-slate-600">
-              Click on <b>“Upload excel sheet”</b> below and confirm
+              {t('bulkImport.step3Body1')} <b>“{t('bulkImport.uploadExcelSheet')}”</b> {t('bulkImport.step3Body2')}
             </p>
           </div>
         </div>
@@ -154,13 +159,13 @@ export default function BulkImport({ type = 'CUSTOMER' as PartyType }: { type?: 
 
       {/* ── Bulk upload status ── */}
       <div className="card p-6">
-        <p className="font-semibold text-slate-800 mb-6">Bulk upload status</p>
+        <p className="font-semibold text-slate-800 mb-6">{t('bulkImport.statusHeading')}</p>
 
         {state.phase === 'idle' && (
           <div className="flex flex-col items-center py-10">
             <span className="text-6xl mb-4">🗂️</span>
-            <p className="font-bold text-lg text-slate-800 mb-4">No File added</p>
-            <button className="btn-primary" onClick={() => fileRef.current?.click()}>+ Upload excel sheet</button>
+            <p className="font-bold text-lg text-slate-800 mb-4">{t('bulkImport.noFileAdded')}</p>
+            <button className="btn-primary" onClick={() => fileRef.current?.click()}>{t('bulkImport.uploadButton')}</button>
           </div>
         )}
 
@@ -168,7 +173,7 @@ export default function BulkImport({ type = 'CUSTOMER' as PartyType }: { type?: 
           <div className="flex flex-col items-center py-10">
             <span className="text-6xl mb-4 animate-pulse">⏳</span>
             <p className="font-semibold text-slate-600">
-              {state.phase === 'parsing' ? 'Reading' : 'Uploading'} <b>{state.fileName}</b>…
+              {state.phase === 'parsing' ? t('bulkImport.reading') : t('bulkImport.uploading')} <b>{state.fileName}</b>…
             </p>
           </div>
         )}
@@ -176,14 +181,13 @@ export default function BulkImport({ type = 'CUSTOMER' as PartyType }: { type?: 
         {state.phase === 'review' && (
           <div>
             <p className="text-sm text-slate-600 mb-3">
-              <b>{state.fileName}</b> — found <b>{state.parties.length}</b> valid {label}
-              {state.parties.length === 1 ? '' : 's'}
-              {state.errors.length > 0 && <span className="text-amber-600"> · {state.errors.length} row{state.errors.length === 1 ? '' : 's'} will be skipped</span>}
+              <b>{state.fileName}</b> — {t('bulkImport.foundValid', { count: state.parties.length, label: labelFor(state.parties.length) })}
+              {state.errors.length > 0 && <span className="text-amber-600">{t('bulkImport.rowsWillBeSkipped', { count: state.errors.length })}</span>}
             </p>
             {state.errors.length > 0 && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 max-h-36 overflow-y-auto">
                 {state.errors.map((er) => (
-                  <p key={er.row} className="text-xs text-amber-700">Row {er.row}: {er.reason}</p>
+                  <p key={er.row} className="text-xs text-amber-700">{t('bulkImport.rowError', { row: er.row, reason: er.reason })}</p>
                 ))}
               </div>
             )}
@@ -191,7 +195,7 @@ export default function BulkImport({ type = 'CUSTOMER' as PartyType }: { type?: 
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 sticky top-0">
                   <tr className="text-left text-xs text-slate-400 uppercase">
-                    <th className="px-4 py-2">Name</th><th>Phone</th><th>City</th><th className="px-4">GSTIN</th>
+                    <th className="px-4 py-2">{t('bulkImport.tableName')}</th><th>{t('bulkImport.tablePhone')}</th><th>{t('bulkImport.tableCity')}</th><th className="px-4">{t('bulkImport.tableGstin')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -206,12 +210,12 @@ export default function BulkImport({ type = 'CUSTOMER' as PartyType }: { type?: 
                 </tbody>
               </table>
               {state.parties.length > 50 && (
-                <p className="text-xs text-slate-400 px-4 py-2">…and {state.parties.length - 50} more</p>
+                <p className="text-xs text-slate-400 px-4 py-2">{t('bulkImport.andMore', { count: state.parties.length - 50 })}</p>
               )}
             </div>
             <div className="flex gap-3">
-              <button className="btn-primary" onClick={upload}>Confirm & import {state.parties.length} {label}{state.parties.length === 1 ? '' : 's'}</button>
-              <button className="btn-outline" onClick={() => setState({ phase: 'idle' })}>Cancel</button>
+              <button className="btn-primary" onClick={upload}>{t('bulkImport.confirmImport', { count: state.parties.length, label: labelFor(state.parties.length) })}</button>
+              <button className="btn-outline" onClick={() => setState({ phase: 'idle' })}>{t('bulkImport.cancel')}</button>
             </div>
           </div>
         )}
@@ -219,15 +223,15 @@ export default function BulkImport({ type = 'CUSTOMER' as PartyType }: { type?: 
         {state.phase === 'done' && (
           <div className="flex flex-col items-center py-10">
             <span className="text-6xl mb-4">✅</span>
-            <p className="font-bold text-lg text-slate-800 mb-1">{state.created} {label}{state.created === 1 ? '' : 's'} imported successfully</p>
+            <p className="font-bold text-lg text-slate-800 mb-1">{t('bulkImport.importedSuccess', { count: state.created, label: labelFor(state.created) })}</p>
             {state.errors.length > 0 && (
-              <p className="text-sm text-amber-600 mb-2">{state.errors.length} row{state.errors.length === 1 ? '' : 's'} skipped (missing / invalid data)</p>
+              <p className="text-sm text-amber-600 mb-2">{t('bulkImport.rowsSkippedInvalid', { count: state.errors.length })}</p>
             )}
             <div className="flex gap-3 mt-3">
-              <button className="btn-primary" onClick={() => navigate(type === 'CUSTOMER' ? '/customers' : '/suppliers')}>
-                View {label}s
+              <button className="btn-primary" onClick={() => navigate(isCustomer ? '/customers' : '/suppliers')}>
+                {t('bulkImport.viewLabel', { label: labelPlural })}
               </button>
-              <button className="btn-outline" onClick={() => setState({ phase: 'idle' })}>Upload another sheet</button>
+              <button className="btn-outline" onClick={() => setState({ phase: 'idle' })}>{t('bulkImport.uploadAnother')}</button>
             </div>
           </div>
         )}
@@ -235,9 +239,9 @@ export default function BulkImport({ type = 'CUSTOMER' as PartyType }: { type?: 
         {state.phase === 'failed' && (
           <div className="flex flex-col items-center py-10">
             <span className="text-6xl mb-4">⚠️</span>
-            <p className="font-bold text-lg text-slate-800 mb-1">Upload failed</p>
+            <p className="font-bold text-lg text-slate-800 mb-1">{t('bulkImport.uploadFailed')}</p>
             <p className="text-sm text-red-600 mb-4">{state.message}</p>
-            <button className="btn-primary" onClick={() => fileRef.current?.click()}>Try again</button>
+            <button className="btn-primary" onClick={() => fileRef.current?.click()}>{t('bulkImport.tryAgain')}</button>
           </div>
         )}
 

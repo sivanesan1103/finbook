@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/api_client.dart';
 import '../core/theme.dart';
+import '../l10n/translations.dart';
 import '../models/models.dart';
 import '../providers/app_state.dart';
 import '../widgets/common.dart';
@@ -52,7 +53,7 @@ class _AddEntryScreenState extends State<AddEntryScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: color,
-        title: Text(gave ? 'You gave ₹ to ${widget.party.name}' : 'You got ₹ from ${widget.party.name}',
+        title: Text(gave ? context.tr('addEntry.youGaveTo', {'name': widget.party.name}) : context.tr('addEntry.youGotFrom', {'name': widget.party.name}),
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
       ),
       bottomNavigationBar: SafeArea(
@@ -63,7 +64,7 @@ class _AddEntryScreenState extends State<AddEntryScreen> {
             onPressed: busy || amount.text.isEmpty || double.tryParse(amount.text) == null
                 ? null
                 : _save,
-            child: Text(busy ? 'SAVING…' : 'SAVE'),
+            child: Text(busy ? context.tr('addEntry.saving') : context.tr('addEntry.save')),
           ),
         ),
       ),
@@ -74,22 +75,22 @@ class _AddEntryScreenState extends State<AddEntryScreen> {
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           onChanged: (_) => setState(() {}),
           style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: color),
-          decoration: const InputDecoration(prefixText: '₹ ', labelText: 'Enter amount'),
+          decoration: InputDecoration(prefixText: '₹ ', labelText: context.tr('addEntry.enterAmount')),
         ),
         const SizedBox(height: 14),
         TextField(
           controller: details,
-          decoration: const InputDecoration(
-            labelText: 'Enter details (items, bill number…)',
-            prefixIcon: Icon(Icons.notes),
+          decoration: InputDecoration(
+            labelText: context.tr('addEntry.enterDetails'),
+            prefixIcon: const Icon(Icons.notes),
           ),
         ),
         const SizedBox(height: 14),
         DropdownButtonFormField<String>(
           value: paymentMode,
-          decoration: const InputDecoration(labelText: 'Payment mode', prefixIcon: Icon(Icons.payments_outlined)),
-          items: const ['CASH', 'ONLINE', 'UPI', 'BANK', 'CHEQUE']
-              .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+          decoration: InputDecoration(labelText: context.tr('addEntry.paymentMode'), prefixIcon: const Icon(Icons.payments_outlined)),
+          items: ['CASH', 'ONLINE', 'UPI', 'BANK', 'CHEQUE']
+              .map((m) => DropdownMenuItem(value: m, child: Text(context.tr(modeLabelKeys[m]!))))
               .toList(),
           onChanged: (v) => setState(() => paymentMode = v!),
         ),

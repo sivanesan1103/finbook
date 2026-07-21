@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../core/api_client.dart';
 import '../core/formatters.dart';
 import '../core/theme.dart';
+import '../l10n/translations.dart';
 import '../models/models.dart';
 import '../providers/app_state.dart';
 import '../widgets/common.dart';
@@ -53,7 +54,7 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
       appBar: AppBar(
         titleSpacing: 0,
         title: party == null
-            ? const Text('Khata')
+            ? Text(context.tr('partyLedger.khata'))
             : InkWell(
                 onTap: () async {
                   await Navigator.push(context,
@@ -74,18 +75,18 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                         decoration: BoxDecoration(
                             color: Colors.white24, borderRadius: BorderRadius.circular(4)),
-                        child: Text(party.type == 'CUSTOMER' ? 'Customer' : 'Supplier',
+                        child: Text(party.type == 'CUSTOMER' ? context.tr('partyLedger.customer') : context.tr('partyLedger.supplier'),
                             style: const TextStyle(fontSize: 11)),
                       ),
                     ]),
-                    const Text('View settings', style: TextStyle(fontSize: 12, color: Colors.white70)),
+                    Text(context.tr('partyLedger.viewSettings'), style: const TextStyle(fontSize: 12, color: Colors.white70)),
                   ]),
                 ]),
               ),
         actions: [
           IconButton(icon: const Icon(Icons.call), onPressed: () {
             showSnack(context, party?.phone == null || party!.phone!.isEmpty
-                ? 'No phone number saved' : 'Call ${party.phone}');
+                ? context.tr('partyLedger.noPhoneSaved') : context.tr('partyLedger.call', {'phone': party.phone}));
           }),
         ],
       ),
@@ -104,7 +105,7 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          l.balance > 0 ? 'You will get' : l.balance < 0 ? 'You will give' : 'Settled up',
+                          l.balance > 0 ? context.tr('partyLedger.youWillGet') : l.balance < 0 ? context.tr('partyLedger.youWillGive') : context.tr('partyLedger.settledUp'),
                           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
                         ),
                         MoneyText(l.balance, size: 20),
@@ -121,9 +122,9 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
                 child: InkWell(
                   onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => PartyReportScreen(party: l.party))),
-                  child: const Column(children: [
-                    Icon(Icons.picture_as_pdf_outlined, color: AppColors.primary),
-                    Text('Report', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                  child: Column(children: [
+                    const Icon(Icons.picture_as_pdf_outlined, color: AppColors.primary),
+                    Text(context.tr('partyLedger.report'), style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
                   ]),
                 ),
               ),
@@ -135,7 +136,7 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
                   const Icon(Icons.verified_user, color: Colors.green, size: 16),
                   const SizedBox(width: 6),
                   Expanded(
-                    child: Text('Only you and ${l.party.name} can see these entries',
+                    child: Text(context.tr('partyLedger.onlyYouCanSee', {'name': l.party.name}),
                         style: const TextStyle(color: Colors.black54, fontSize: 12)),
                   ),
                 ]),
@@ -145,7 +146,7 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
                 child: l.entries.isEmpty
                     ? Center(
                         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                          Text('Start adding transactions with ${l.party.name}',
+                          Text(context.tr('partyLedger.startAddingTx', {'name': l.party.name}),
                               style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black54)),
                           const SizedBox(height: 8),
                           const Icon(Icons.arrow_downward, color: AppColors.primary, size: 28),
@@ -183,7 +184,7 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
                                           color: const Color(0xFFFBE9EA),
                                           borderRadius: BorderRadius.circular(4),
                                         ),
-                                        child: Text('Bal. ${inr(e.runningBalance)}',
+                                        child: Text(context.tr('partyLedger.balancePrefix', {'amount': inr(e.runningBalance)}),
                                             style: const TextStyle(fontSize: 11, color: AppColors.gave)),
                                       ),
                                       if (e.description != null && e.description!.isNotEmpty)
@@ -236,7 +237,7 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(backgroundColor: AppColors.gave),
                         onPressed: () => _addEntry('GAVE'),
-                        child: const Text('YOU GAVE ₹'),
+                        child: Text(context.tr('partyLedger.youGaveButton')),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -244,7 +245,7 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(backgroundColor: AppColors.got),
                         onPressed: () => _addEntry('GOT'),
-                        child: const Text('YOU GOT ₹'),
+                        child: Text(context.tr('partyLedger.youGotButton')),
                       ),
                     ),
                   ]),

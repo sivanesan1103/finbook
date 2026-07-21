@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { api } from '../api/client';
 import type { DashboardData } from '../types';
 import { Money, Spinner, fmtDateTime } from '../components/ui';
@@ -18,6 +19,7 @@ function Stat({ title, children, sub, to }: { title: string; children: React.Rea
 
 export default function Dashboard() {
   const { business, user } = useAuth();
+  const { t } = useLanguage();
   const [data, setData] = useState<DashboardData | null>(null);
 
   useEffect(() => {
@@ -31,53 +33,53 @@ export default function Dashboard() {
   return (
     <div className="p-6 max-w-6xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Hello, {user?.name?.split(' ')[0]} 👋</h1>
-        <p className="text-sm text-slate-500 mt-1">Here's what's happening at <span className="font-semibold text-slate-700">{business?.name}</span> this month.</p>
+        <h1 className="text-2xl font-bold text-slate-800">{t('dashboard.greeting', { name: user?.name?.split(' ')[0] || '' })}</h1>
+        <p className="text-sm text-slate-500 mt-1">{t('dashboard.subtitle', { business: business?.name || '' })}</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Stat title="You Will Get" sub="outstanding from parties" to="/customers">
+        <Stat title={t('dashboard.youWillGet')} sub={t('dashboard.youWillGetSub')} to="/customers">
           <Money value={data.ledger.youWillGet} colored={false} className="text-give" />
         </Stat>
-        <Stat title="You Will Give" sub="payable to parties" to="/suppliers">
+        <Stat title={t('dashboard.youWillGive')} sub={t('dashboard.youWillGiveSub')} to="/suppliers">
           <Money value={data.ledger.youWillGive} colored={false} className="text-get" />
         </Stat>
-        <Stat title="Cash In" sub={`Out: ₹${data.cash.out.toLocaleString('en-IN')}`} to="/cashbook">
+        <Stat title={t('dashboard.cashIn')} sub={t('dashboard.cashOutSub', { amount: data.cash.out.toLocaleString('en-IN') })} to="/cashbook">
           <Money value={data.cash.in} colored={false} className="text-give" />
         </Stat>
-        <Stat title="Expenses" sub="this month" to="/expenses">
+        <Stat title={t('dashboard.expenses')} sub={t('dashboard.expensesSub')} to="/expenses">
           <Money value={data.expenses} colored={false} className="text-slate-700" />
         </Stat>
-        <Stat title="Sales Billed" sub={`${data.sales.invoiceCount} invoices`} to="/invoices">
+        <Stat title={t('dashboard.salesBilled')} sub={t('dashboard.invoiceCountSub', { count: data.sales.invoiceCount })} to="/invoices">
           <Money value={data.sales.billed} colored={false} className="text-slate-700" />
         </Stat>
-        <Stat title="Collected" sub="payments received" to="/invoices">
+        <Stat title={t('dashboard.collected')} sub={t('dashboard.collectedSub')} to="/invoices">
           <Money value={data.sales.collected} colored={false} className="text-give" />
         </Stat>
-        <Stat title="Customers" sub="total" to="/customers">
+        <Stat title={t('dashboard.customers')} sub={t('dashboard.totalSub')} to="/customers">
           <span className="text-2xl font-bold text-slate-800">{data.parties.customers}</span>
         </Stat>
-        <Stat title="Suppliers" sub="total" to="/suppliers">
+        <Stat title={t('dashboard.suppliers')} sub={t('dashboard.totalSub')} to="/suppliers">
           <span className="text-2xl font-bold text-slate-800">{data.parties.suppliers}</span>
         </Stat>
       </div>
 
       <div className="card mt-8">
         <div className="px-6 py-4 border-b border-slate-100">
-          <h3 className="font-semibold text-slate-800">Recent Transactions</h3>
+          <h3 className="font-semibold text-slate-800">{t('dashboard.recentTransactions')}</h3>
         </div>
         {data.recentTransactions.length === 0 ? (
           <div className="p-8 text-center text-sm text-slate-400">
-            No transactions yet — open a customer khata and add your first entry.
+            {t('dashboard.noTransactions')}
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-slate-400 uppercase border-b border-slate-100">
-                <th className="px-6 py-3 font-semibold">Party</th>
-                <th className="py-3 font-semibold">Date</th>
-                <th className="py-3 font-semibold">Details</th>
-                <th className="text-right px-6 py-3 font-semibold">Amount</th>
+                <th className="px-6 py-3 font-semibold">{t('dashboard.party')}</th>
+                <th className="py-3 font-semibold">{t('dashboard.date')}</th>
+                <th className="py-3 font-semibold">{t('dashboard.details')}</th>
+                <th className="text-right px-6 py-3 font-semibold">{t('dashboard.amount')}</th>
               </tr>
             </thead>
             <tbody>

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../core/api_client.dart';
 import '../core/formatters.dart';
 import '../core/theme.dart';
+import '../l10n/translations.dart';
 import '../models/models.dart';
 import '../providers/app_state.dart';
 import '../widgets/common.dart';
@@ -50,11 +51,11 @@ class _ExpensesTabState extends State<ExpensesTab> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete expense?'),
-        content: Text('${e.category} · ${inr(e.amount)}'),
+        title: Text(context.tr('expensesTab.confirmDeleteTitle')),
+        content: Text(context.tr('expensesTab.confirmDeleteBody', {'category': e.category, 'amount': inr(e.amount)})),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('expensesTab.cancel'))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('expensesTab.delete'))),
         ],
       ),
     );
@@ -135,25 +136,25 @@ class _ExpensesTabState extends State<ExpensesTab> {
                 ? ConstrainedBox(
                     constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.75),
                     child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Text('Select Expense Item', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                      Text(context.tr('expensesTab.selectExpenseItem'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
                       const SizedBox(height: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                         decoration: BoxDecoration(color: const Color(0xFFFFF6E0), borderRadius: BorderRadius.circular(8)),
-                        child: const Text('ℹ️ Expense items would not affect your inventory', style: TextStyle(fontSize: 11)),
+                        child: Text(context.tr('expensesTab.inventoryNote'), style: const TextStyle(fontSize: 11)),
                       ),
                       const SizedBox(height: 10),
                       TextField(
                         controller: search,
                         onChanged: (_) => setSheet(() {}),
-                        decoration: const InputDecoration(hintText: 'Search for an expense item', prefixIcon: Icon(Icons.search)),
+                        decoration: InputDecoration(hintText: context.tr('expensesTab.searchExpenseItem'), prefixIcon: const Icon(Icons.search)),
                       ),
                       const SizedBox(height: 10),
                       Flexible(
                         child: visible.isEmpty
                             ? Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 16),
-                                child: Text(items.isEmpty ? 'No expense items yet — add your first one below.' : 'No items match your search.',
+                                child: Text(items.isEmpty ? context.tr('expensesTab.noExpenseItemsYet') : context.tr('expensesTab.noItemsMatch'),
                                     style: const TextStyle(color: Colors.black45)),
                               )
                             : ListView.separated(
@@ -179,20 +180,20 @@ class _ExpensesTabState extends State<ExpensesTab> {
                         OutlinedButton.icon(
                           onPressed: () => setSheet(() => creatingNew = true),
                           icon: const Icon(Icons.add),
-                          label: const Text('Add new expense item'),
+                          label: Text(context.tr('expensesTab.addNewExpenseItem')),
                         )
                       else
                         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           TextField(controller: newName, autofocus: true,
-                              decoration: const InputDecoration(labelText: 'Expense item name')),
+                              decoration: InputDecoration(labelText: context.tr('expensesTab.expenseItemName'))),
                           const SizedBox(height: 8),
                           TextField(controller: newPrice, keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(labelText: 'Price (optional)', prefixText: '₹ ')),
+                              decoration: InputDecoration(labelText: context.tr('expensesTab.priceOptional'), prefixText: '₹ ')),
                           const SizedBox(height: 10),
                           Row(children: [
-                            Expanded(child: OutlinedButton(onPressed: () => setSheet(() => creatingNew = false), child: const Text('Cancel'))),
+                            Expanded(child: OutlinedButton(onPressed: () => setSheet(() => creatingNew = false), child: Text(context.tr('expensesTab.cancel')))),
                             const SizedBox(width: 10),
-                            Expanded(child: ElevatedButton(onPressed: saveNewItem, child: const Text('Save'))),
+                            Expanded(child: ElevatedButton(onPressed: saveNewItem, child: Text(context.tr('expensesTab.save')))),
                           ]),
                         ]),
                     ]),
@@ -202,25 +203,25 @@ class _ExpensesTabState extends State<ExpensesTab> {
                     TextButton.icon(
                       onPressed: () => setSheet(() => selected = null),
                       icon: const Icon(Icons.arrow_back, size: 16),
-                      label: const Text('Change expense item'),
+                      label: Text(context.tr('expensesTab.changeExpenseItem')),
                     ),
                     Text(selected!.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
                     const SizedBox(height: 14),
                     TextField(controller: amount, autofocus: true,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-                        decoration: const InputDecoration(labelText: 'Amount', prefixText: '₹ ')),
+                        decoration: InputDecoration(labelText: context.tr('expensesTab.amount'), prefixText: '₹ ')),
                     const SizedBox(height: 10),
-                    TextField(controller: notes, decoration: const InputDecoration(labelText: 'Notes (optional)')),
+                    TextField(controller: notes, decoration: InputDecoration(labelText: context.tr('expensesTab.notesOptional'))),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
                       value: payMode,
-                      decoration: const InputDecoration(labelText: 'Payment mode'),
-                      items: _kModes.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
+                      decoration: InputDecoration(labelText: context.tr('expensesTab.paymentMode')),
+                      items: _kModes.map((m) => DropdownMenuItem(value: m, child: Text(context.tr(modeLabelKeys[m]!)))).toList(),
                       onChanged: (v) => setSheet(() => payMode = v!),
                     ),
                     const SizedBox(height: 14),
-                    ElevatedButton(onPressed: saveExpense, child: const Text('SAVE EXPENSE')),
+                    ElevatedButton(onPressed: saveExpense, child: Text(context.tr('expensesTab.saveExpense'))),
                   ]),
           );
         },
@@ -232,13 +233,13 @@ class _ExpensesTabState extends State<ExpensesTab> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppBar(title: const Text('Expenses')),
+      appBar: AppBar(title: Text(context.tr('expensesTab.title'))),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'add-expense',
         backgroundColor: AppColors.primary,
         onPressed: _addExpense,
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('ADD EXPENSE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+        label: Text(context.tr('expensesTab.addExpense'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator())
@@ -248,15 +249,15 @@ class _ExpensesTabState extends State<ExpensesTab> {
                 padding: const EdgeInsets.all(14),
                 child: Row(children: [
                   Expanded(child: Column(children: [
-                    const Text('Total', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                    Text(context.tr('expensesTab.total'), style: const TextStyle(color: Colors.black54, fontSize: 12)),
                     Text(inr(total), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
                   ])),
                   Expanded(child: Column(children: [
-                    const Text('This Month', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                    Text(context.tr('expensesTab.thisMonth'), style: const TextStyle(color: Colors.black54, fontSize: 12)),
                     Text(inr(_thisMonth), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
                   ])),
                   Expanded(child: Column(children: [
-                    const Text('Entries', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                    Text(context.tr('expensesTab.entries'), style: const TextStyle(color: Colors.black54, fontSize: 12)),
                     Text('${rows.length}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
                   ])),
                 ]),
@@ -266,15 +267,15 @@ class _ExpensesTabState extends State<ExpensesTab> {
                 child: RefreshIndicator(
                   onRefresh: _load,
                   child: rows.isEmpty
-                      ? ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [
+                      ? ListView(physics: const AlwaysScrollableScrollPhysics(), children: [
                           Padding(
-                            padding: EdgeInsets.only(top: 80),
+                            padding: const EdgeInsets.only(top: 80),
                             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                              Icon(Icons.receipt_outlined, size: 64, color: Colors.black12),
-                              SizedBox(height: 8),
-                              Text("Yet to add your first expense", style: TextStyle(fontWeight: FontWeight.w700), textAlign: TextAlign.center),
-                              Text('Add expenses with reusable expense items',
-                                  style: TextStyle(color: Colors.black45, fontSize: 12), textAlign: TextAlign.center),
+                              const Icon(Icons.receipt_outlined, size: 64, color: Colors.black12),
+                              const SizedBox(height: 8),
+                              Text(context.tr('expensesTab.noExpensesYet'), style: const TextStyle(fontWeight: FontWeight.w700), textAlign: TextAlign.center),
+                              Text(context.tr('expensesTab.noExpensesSubtitle'),
+                                  style: const TextStyle(color: Colors.black45, fontSize: 12), textAlign: TextAlign.center),
                             ]),
                           ),
                         ])
@@ -290,7 +291,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
                                   backgroundColor: Color(0xFFFDECEE),
                                   child: Icon(Icons.receipt_long, color: AppColors.customerFab)),
                               title: Text(e.category, style: const TextStyle(fontWeight: FontWeight.w700)),
-                              subtitle: Text('${fmtDate(e.entryDate)} · ${e.paymentMode}${e.notes != null ? ' · ${e.notes}' : ''}',
+                              subtitle: Text('${fmtDate(e.entryDate)} · ${context.tr(modeLabelKeys[e.paymentMode] ?? e.paymentMode)}${e.notes != null ? ' · ${e.notes}' : ''}',
                                   style: const TextStyle(fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
                               trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                                 Text(inr(e.amount), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),

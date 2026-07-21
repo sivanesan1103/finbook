@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../core/api_client.dart';
 import '../core/formatters.dart';
 import '../core/theme.dart';
+import '../l10n/translations.dart';
 import '../models/models.dart';
 import '../providers/app_state.dart';
 import '../widgets/common.dart';
@@ -46,7 +47,7 @@ class _BillsTabState extends State<BillsTab> {
     final parties = (partiesRes['data'] as List).map((p) => Party.fromJson(p)).toList();
     if (!mounted) return;
     if (parties.isEmpty) {
-      showSnack(context, 'Add a customer first, then create a bill.', error: true);
+      showSnack(context, context.tr('bills.addCustomerFirst'), error: true);
       return;
     }
 
@@ -66,36 +67,36 @@ class _BillsTabState extends State<BillsTab> {
         child: StatefulBuilder(
           builder: (ctx, setSheet) => SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('New Bill', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+              Text(context.tr('bills.newBillTitle'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
               const SizedBox(height: 14),
               DropdownButtonFormField<String>(
                 value: partyId,
-                decoration: const InputDecoration(labelText: 'Bill to'),
+                decoration: InputDecoration(labelText: context.tr('bills.billTo')),
                 items: parties
                     .map((p) => DropdownMenuItem(value: p.id, child: Text('${p.name} (${p.type})')))
                     .toList(),
                 onChanged: (v) => setSheet(() => partyId = v!),
               ),
               const SizedBox(height: 10),
-              TextField(controller: itemName, decoration: const InputDecoration(labelText: 'Item / description')),
+              TextField(controller: itemName, decoration: InputDecoration(labelText: context.tr('bills.itemDescription'))),
               const SizedBox(height: 10),
               Row(children: [
                 Expanded(child: TextField(controller: qty, keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Qty'))),
+                    decoration: InputDecoration(labelText: context.tr('bills.qty')))),
                 const SizedBox(width: 10),
                 Expanded(child: TextField(controller: price, keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Price ₹'))),
+                    decoration: InputDecoration(labelText: context.tr('bills.price')))),
               ]),
               const SizedBox(height: 10),
               Row(children: [
                 Expanded(child: TextField(controller: taxRate, keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'GST %'))),
+                    decoration: InputDecoration(labelText: context.tr('bills.gstPercent')))),
                 const SizedBox(width: 10),
                 Expanded(child: TextField(controller: discount, keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Discount ₹ (optional)'))),
+                    decoration: InputDecoration(labelText: context.tr('bills.discountOptional')))),
               ]),
               const SizedBox(height: 14),
-              ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('CREATE BILL')),
+              ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('bills.createBill'))),
             ]),
           ),
         ),
@@ -132,13 +133,13 @@ class _BillsTabState extends State<BillsTab> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppBar(title: const Text('Sales')),
+      appBar: AppBar(title: Text(context.tr('bills.salesTitle'))),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'add-bill',
         backgroundColor: AppColors.primary,
         onPressed: _createInvoice,
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('NEW BILL', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+        label: Text(context.tr('bills.newBill'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator())
@@ -148,16 +149,16 @@ class _BillsTabState extends State<BillsTab> {
                 padding: const EdgeInsets.all(14),
                 child: Row(children: [
                   Expanded(child: Column(children: [
-                    const Text('Billed', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                    Text(context.tr('bills.billed'), style: const TextStyle(color: Colors.black54, fontSize: 12)),
                     Text(inr(billed), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
                   ])),
                   Expanded(child: Column(children: [
-                    const Text('Collected', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                    Text(context.tr('bills.collected'), style: const TextStyle(color: Colors.black54, fontSize: 12)),
                     Text(inr(collected),
                         style: const TextStyle(color: AppColors.got, fontWeight: FontWeight.w800, fontSize: 16)),
                   ])),
                   Expanded(child: Column(children: [
-                    const Text('Due', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                    Text(context.tr('bills.due'), style: const TextStyle(color: Colors.black54, fontSize: 12)),
                     Text(inr(billed - collected),
                         style: const TextStyle(color: AppColors.gave, fontWeight: FontWeight.w800, fontSize: 16)),
                   ])),
@@ -168,15 +169,15 @@ class _BillsTabState extends State<BillsTab> {
                 child: RefreshIndicator(
                   onRefresh: _load,
                   child: invoices.isEmpty
-                      ? ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [
+                      ? ListView(physics: const AlwaysScrollableScrollPhysics(), children: [
                           Padding(
-                            padding: EdgeInsets.only(top: 80),
+                            padding: const EdgeInsets.only(top: 80),
                             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                              Icon(Icons.receipt_long, size: 64, color: Colors.black12),
-                              SizedBox(height: 8),
-                              Text('No bills yet', style: TextStyle(fontWeight: FontWeight.w700), textAlign: TextAlign.center),
-                              Text('Create GST-ready bills for your customers',
-                                  style: TextStyle(color: Colors.black45, fontSize: 12), textAlign: TextAlign.center),
+                              const Icon(Icons.receipt_long, size: 64, color: Colors.black12),
+                              const SizedBox(height: 8),
+                              Text(context.tr('bills.noBillsYet'), style: const TextStyle(fontWeight: FontWeight.w700), textAlign: TextAlign.center),
+                              Text(context.tr('bills.noBillsSubtitle'),
+                                  style: const TextStyle(color: Colors.black45, fontSize: 12), textAlign: TextAlign.center),
                             ]),
                           ),
                         ])
@@ -198,7 +199,7 @@ class _BillsTabState extends State<BillsTab> {
                                     color: _statusColor(inv.status).withOpacity(0.12),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
-                                  child: Text(inv.status,
+                                  child: Text(context.tr(statusLabelKeys[inv.status] ?? inv.status),
                                       style: TextStyle(fontSize: 10, color: _statusColor(inv.status),
                                           fontWeight: FontWeight.w800)),
                                 ),

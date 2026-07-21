@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -23,30 +24,32 @@ function Protected({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route element={<Protected><Layout /></Protected>}>
-            <Route path="/" element={<Navigate to="/customers" replace />} />
-            <Route path="/customers" element={<Parties key="c" type="CUSTOMER" />} />
-            <Route path="/suppliers" element={<Parties key="s" type="SUPPLIER" />} />
-            <Route path="/bulk-import/customers" element={<BulkImport key="bc" type="CUSTOMER" />} />
-            <Route path="/bulk-import/suppliers" element={<BulkImport key="bs" type="SUPPLIER" />} />
-            <Route path="/expenses" element={<Expenses />} />
-            <Route path="/cashbook" element={<Cashbook />} />
-            <Route path="/items" element={<Items />} />
-            <Route path="/invoices" element={<Invoices />} />
-            <Route path="/staff" element={<Staff />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/settings" element={<Settings />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-      </ToastProvider>
-    </AuthProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        <ToastProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route element={<Protected><Layout /></Protected>}>
+              <Route path="/" element={<Navigate to="/customers" replace />} />
+              <Route path="/customers" element={<Parties key="c" type="CUSTOMER" />} />
+              <Route path="/suppliers" element={<Parties key="s" type="SUPPLIER" />} />
+              <Route path="/bulk-import/customers" element={<BulkImport key="bc" type="CUSTOMER" />} />
+              <Route path="/bulk-import/suppliers" element={<BulkImport key="bs" type="SUPPLIER" />} />
+              <Route path="/expenses" element={<Expenses />} />
+              <Route path="/cashbook" element={<Cashbook />} />
+              <Route path="/items" element={<Items />} />
+              <Route path="/invoices" element={<Invoices />} />
+              <Route path="/staff" element={<Staff />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/settings" element={<Settings />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+        </ToastProvider>
+      </AuthProvider>
+    </LanguageProvider>
   );
 }

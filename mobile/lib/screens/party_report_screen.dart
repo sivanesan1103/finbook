@@ -4,6 +4,7 @@ import '../core/api_client.dart';
 import '../core/file_share.dart';
 import '../core/formatters.dart';
 import '../core/theme.dart';
+import '../l10n/translations.dart';
 import '../models/models.dart';
 import '../providers/app_state.dart';
 import '../widgets/common.dart';
@@ -59,7 +60,7 @@ class _PartyReportScreenState extends State<PartyReportScreen> {
     final d = data;
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppBar(title: Text('Report of ${widget.party.name}')),
+      appBar: AppBar(title: Text(context.tr('partyReport.title', {'name': widget.party.name}))),
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -71,7 +72,7 @@ class _PartyReportScreenState extends State<PartyReportScreen> {
                     filename: 'statement-${widget.party.name}.pdf',
                     subject: 'Statement — ${widget.party.name}'),
                 icon: const Icon(Icons.picture_as_pdf_outlined),
-                label: const Text('DOWNLOAD / SHARE PDF'),
+                label: Text(context.tr('partyReport.downloadSharePdf')),
               ),
             ),
           ]),
@@ -88,7 +89,7 @@ class _PartyReportScreenState extends State<PartyReportScreen> {
                 child: OutlinedButton.icon(
                   onPressed: () => _pickDate(true),
                   icon: const Icon(Icons.calendar_today, size: 16),
-                  label: Text(from == null ? 'START DATE' : fmtDate(from!)),
+                  label: Text(from == null ? context.tr('partyReport.startDate') : fmtDate(from!)),
                   style: OutlinedButton.styleFrom(
                       backgroundColor: Colors.white, foregroundColor: AppColors.primary),
                 ),
@@ -98,7 +99,7 @@ class _PartyReportScreenState extends State<PartyReportScreen> {
                 child: OutlinedButton.icon(
                   onPressed: () => _pickDate(false),
                   icon: const Icon(Icons.calendar_today, size: 16),
-                  label: Text(to == null ? 'END DATE' : fmtDate(to!)),
+                  label: Text(to == null ? context.tr('partyReport.endDate') : fmtDate(to!)),
                   style: OutlinedButton.styleFrom(
                       backgroundColor: Colors.white, foregroundColor: AppColors.primary),
                 ),
@@ -110,18 +111,18 @@ class _PartyReportScreenState extends State<PartyReportScreen> {
                 child: TextField(
                   controller: searchCtrl,
                   onSubmitted: (_) => _load(),
-                  decoration: const InputDecoration(
-                      hintText: 'Search Entries', prefixIcon: Icon(Icons.search)),
+                  decoration: InputDecoration(
+                      hintText: context.tr('partyReport.searchEntries'), prefixIcon: const Icon(Icons.search)),
                 ),
               ),
               const SizedBox(width: 10),
               DropdownButton<String>(
                 value: filter,
                 dropdownColor: Colors.white,
-                items: const [
-                  DropdownMenuItem(value: 'ALL', child: Text('ALL')),
-                  DropdownMenuItem(value: 'GAVE', child: Text('GAVE')),
-                  DropdownMenuItem(value: 'GOT', child: Text('GOT')),
+                items: [
+                  DropdownMenuItem(value: 'ALL', child: Text(context.tr('partyReport.filterAll'))),
+                  DropdownMenuItem(value: 'GAVE', child: Text(context.tr('partyReport.filterGave'))),
+                  DropdownMenuItem(value: 'GOT', child: Text(context.tr('partyReport.filterGot'))),
                 ],
                 onChanged: (v) { setState(() => filter = v!); _load(); },
               ),
@@ -133,24 +134,24 @@ class _PartyReportScreenState extends State<PartyReportScreen> {
         else ...[
           ListTile(
             tileColor: Colors.white,
-            title: const Text('Net Balance', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+            title: Text(context.tr('partyReport.netBalance'), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
             trailing: MoneyText(d.balance, size: 20),
           ),
           const Divider(height: 1),
           ListTile(
             tileColor: Colors.white,
             dense: true,
-            title: Text('TOTAL\n${d.entries.length} Entries',
+            title: Text(context.tr('partyReport.totalEntries', {'count': d.entries.length}),
                 style: const TextStyle(fontSize: 12, color: Colors.black54)),
             trailing: SizedBox(
               width: 200,
               child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                 Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  const Text('YOU GAVE', style: TextStyle(fontSize: 10, color: Colors.black45)),
+                  Text(context.tr('partyReport.youGave'), style: const TextStyle(fontSize: 10, color: Colors.black45)),
                   Text(inr(d.gave), style: const TextStyle(color: AppColors.gave, fontWeight: FontWeight.w800)),
                 ]),
                 Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  const Text('YOU GOT', style: TextStyle(fontSize: 10, color: Colors.black45)),
+                  Text(context.tr('partyReport.youGot'), style: const TextStyle(fontSize: 10, color: Colors.black45)),
                   Text(inr(d.got), style: const TextStyle(color: AppColors.got, fontWeight: FontWeight.w800)),
                 ]),
               ]),
@@ -172,7 +173,7 @@ class _PartyReportScreenState extends State<PartyReportScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                         color: Colors.grey.shade100, borderRadius: BorderRadius.circular(4)),
-                    child: Text('Bal. ${inr(e.runningBalance)}',
+                    child: Text(context.tr('partyReport.balancePrefix', {'amount': inr(e.runningBalance)}),
                         style: const TextStyle(fontSize: 11), overflow: TextOverflow.ellipsis),
                   ),
                   trailing: Text(inr(e.amount),

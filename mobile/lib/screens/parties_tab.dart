@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/api_client.dart';
-import '../core/formatters.dart';
 import '../core/theme.dart';
+import '../l10n/translations.dart';
 import '../models/models.dart';
 import '../providers/app_state.dart';
 import '../widgets/common.dart';
@@ -76,8 +76,8 @@ class _PartiesTabState extends State<PartiesTab>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Edit Business Name',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+              Text(context.tr('partiesTab.editBusinessName'),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
               const SizedBox(height: 14),
               TextField(controller: ctrl, autofocus: true),
               const SizedBox(height: 14),
@@ -86,21 +86,21 @@ class _PartiesTabState extends State<PartiesTab>
                   await app.renameBusiness(ctrl.text.trim());
                   if (ctx.mounted) Navigator.pop(ctx);
                 },
-                child: const Text('SAVE'),
+                child: Text(context.tr('partiesTab.save')),
               ),
               TextButton(
                 onPressed: () {
                   Navigator.pop(ctx);
                   _createBook();
                 },
-                child: const Center(child: Text('Create New FinBook')),
+                child: Center(child: Text(context.tr('partiesTab.createNewFinBook'))),
               ),
               TextButton(
                 onPressed: () {
                   Navigator.pop(ctx);
                   _chooseBook();
                 },
-                child: const Center(child: Text('Choose another book')),
+                child: Center(child: Text(context.tr('partiesTab.chooseAnotherBook'))),
               ),
             ]),
       ),
@@ -112,20 +112,20 @@ class _PartiesTabState extends State<PartiesTab>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Create New FinBook'),
+        title: Text(context.tr('partiesTab.createNewFinBook')),
         content: TextField(
             controller: ctrl,
-            decoration: const InputDecoration(hintText: 'Business name')),
+            decoration: InputDecoration(hintText: context.tr('partiesTab.businessNameHint'))),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx), child: Text(context.tr('partiesTab.cancel'))),
           ElevatedButton(
             onPressed: () async {
               await context.read<AppState>().createBusiness(ctrl.text.trim());
               if (ctx.mounted) Navigator.pop(ctx);
               _load();
             },
-            child: const Text('Create'),
+            child: Text(context.tr('partiesTab.create')),
           ),
         ],
       ),
@@ -147,7 +147,7 @@ class _PartiesTabState extends State<PartiesTab>
                     bg: AppColors.primary.withOpacity(0.1)),
                 title: Text(b.name,
                     style: const TextStyle(fontWeight: FontWeight.w700)),
-                subtitle: Text('${b.partyCount} parties'),
+                subtitle: Text(context.tr('partiesTab.partiesCount', {'count': b.partyCount})),
                 trailing: b.id == app.business?.id
                     ? const Icon(Icons.check_circle, color: AppColors.primary)
                     : const Icon(Icons.radio_button_unchecked,
@@ -166,7 +166,7 @@ class _PartiesTabState extends State<PartiesTab>
                 _createBook();
               },
               icon: const Icon(Icons.add),
-              label: const Text('CREATE NEW KHATABOOK'),
+              label: Text(context.tr('partiesTab.createNewKhatabook')),
             ),
           ),
         ],
@@ -194,7 +194,7 @@ class _PartiesTabState extends State<PartiesTab>
           if (added == true) _load();
         },
         icon: const Icon(Icons.person_add_alt_1, color: Colors.white),
-        label: Text(isCustomers ? 'ADD CUSTOMER' : 'ADD SUPPLIER',
+        label: Text(isCustomers ? context.tr('partiesTab.addCustomer') : context.tr('partiesTab.addSupplier'),
             style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w800,
@@ -213,7 +213,7 @@ class _PartiesTabState extends State<PartiesTab>
                 onTap: _editBusinessName,
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Flexible(
-                    child: Text(app.business?.name ?? 'My Business',
+                    child: Text(app.business?.name ?? context.tr('partiesTab.myBusiness'),
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                             color: Colors.white,
@@ -233,15 +233,14 @@ class _PartiesTabState extends State<PartiesTab>
               unselectedLabelColor: Colors.white60,
               labelStyle: const TextStyle(
                   fontWeight: FontWeight.w800, letterSpacing: 1),
-              tabs: const [Tab(text: 'CUSTOMERS'), Tab(text: 'SUPPLIERS')],
+              tabs: [Tab(text: context.tr('partiesTab.customersTab')), Tab(text: context.tr('partiesTab.suppliersTab'))],
             ),
             Padding(
               padding: const EdgeInsets.only(top: 10, bottom: 16),
               child: GiveGetCard(
                 give: summary.youWillGive,
                 get: summary.youWillGet,
-                onReport: () => showSnack(context,
-                    'Open a party and use Report to download their PDF statement.'),
+                onReport: () => showSnack(context, context.tr('partiesTab.reportHint')),
               ),
             ),
           ]),
@@ -254,7 +253,7 @@ class _PartiesTabState extends State<PartiesTab>
             controller: searchCtrl,
             onSubmitted: (_) => _load(),
             decoration: InputDecoration(
-              hintText: isCustomers ? 'Search Customer' : 'Search Supplier',
+              hintText: isCustomers ? context.tr('partiesTab.searchCustomer') : context.tr('partiesTab.searchSupplier'),
               prefixIcon: const Icon(Icons.search, color: AppColors.primary),
               suffixIcon: const Icon(Icons.filter_alt_outlined,
                   color: AppColors.primary),
@@ -283,14 +282,14 @@ class _PartiesTabState extends State<PartiesTab>
                                           color: Colors.grey.shade300),
                                       const SizedBox(height: 8),
                                       Text(
-                                          'No ${isCustomers ? 'customers' : 'suppliers'} yet',
+                                          isCustomers ? context.tr('partiesTab.noCustomersYet') : context.tr('partiesTab.noSuppliersYet'),
                                           style: const TextStyle(
                                               color: Colors.black54,
                                               fontWeight: FontWeight.w600),
                                           textAlign: TextAlign.center),
-                                      const Text(
-                                          'Tap the button below to add your first party',
-                                          style: TextStyle(
+                                      Text(
+                                          context.tr('partiesTab.tapToAddFirst'),
+                                          style: const TextStyle(
                                               color: Colors.black38,
                                               fontSize: 12),
                                           textAlign: TextAlign.center),
@@ -309,7 +308,7 @@ class _PartiesTabState extends State<PartiesTab>
                               title: Text(p.name,
                                   style: const TextStyle(
                                       fontWeight: FontWeight.w700)),
-                              subtitle: Text(timeAgo(p.updatedAt),
+                              subtitle: Text(trTimeAgo(context, p.updatedAt),
                                   style: const TextStyle(
                                       fontSize: 12, color: Colors.black45)),
                               trailing: Column(
@@ -319,10 +318,10 @@ class _PartiesTabState extends State<PartiesTab>
                                   MoneyText(p.balance),
                                   Text(
                                     p.balance > 0
-                                        ? '↙ REQUEST'
+                                        ? context.tr('partiesTab.request')
                                         : p.balance < 0
-                                            ? 'ADVANCE'
-                                            : 'SETTLED',
+                                            ? context.tr('partiesTab.advance')
+                                            : context.tr('partiesTab.settled'),
                                     style: TextStyle(
                                         fontSize: 10,
                                         fontWeight: FontWeight.w700,

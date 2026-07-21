@@ -1,18 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { api, apiMessage } from '../api/client';
 import type { CashbookEntry } from '../types';
-import { EmptyState, Money, PAYMENT_MODES as MODES, Spinner, modeLabel, useToast } from '../components/ui';
+import { EmptyState, Money, PAYMENT_MODES as MODES, MODE_LABEL_KEYS, Spinner, useToast } from '../components/ui';
 
 const fmtTime = (d: string | Date) =>
   new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
-const fmtDayLabel = (dateStr: string) => {
-  const d = new Date(dateStr + 'T00:00:00');
-  const label = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-  const today = new Date().toISOString().slice(0, 10) === dateStr;
-  return today ? `${label} (TODAY)` : label;
-};
+const fmtDayLabel = (dateStr: string) =>
+  new Date(dateStr + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+const isToday = (dateStr: string) => new Date().toISOString().slice(0, 10) === dateStr;
 
 type Pane =
   | { type: 'none' }
@@ -21,6 +20,7 @@ type Pane =
 
 export default function Cashbook() {
   const { business } = useAuth();
+  const { t } = useLanguage();
   const toast = useToast();
   const [entries, setEntries] = useState<CashbookEntry[]>([]);
   const [summary, setSummary] = useState({ totalBalance: 0, todayBalance: 0 });
@@ -70,10 +70,10 @@ export default function Cashbook() {
       };
       if (pane.editing) {
         await api.patch(`${base}/${pane.editing.id}`, payload);
-        toast('Entry updated');
+        toast(t('cashbook.entryUpdated'));
       } else {
         await api.post(base, payload);
-        toast(`${pane.dir === 'IN' ? 'In' : 'Out'} entry saved`);
+        toast(pane.dir === 'IN' ? t('cashbook.inEntrySaved') : t('cashbook.outEntrySaved'));
       }
       setPane({ type: 'none' });
       await load();
@@ -81,9 +81,9 @@ export default function Cashbook() {
   };
 
   const remove = async (entry: CashbookEntry) => {
-    if (!confirm('Delete this entry?')) return;
+    if (!confirm(t('cashbook.confirmDeleteEntry'))) return;
     await api.delete(`${base}/${entry.id}`);
-    toast('Entry deleted');
+    toast(t('cashbook.entryDeleted'));
     setPane({ type: 'none' });
     await load();
   };
@@ -104,46 +104,46 @@ export default function Cashbook() {
     <div className="flex h-full">
       {/* ── Left: list ── */}
       <div className="flex-1 min-w-0 p-6 overflow-y-auto">
-        <h1 className="text-xl font-bold mb-4">Cashbook</h1>
+        <h1 className="text-xl font-bold mb-4">{t('cashbook.title')}</h1>
 
         <div className="card p-4 flex items-center gap-10 mb-4">
           <div className="flex items-baseline gap-2">
-            <p className="text-sm text-slate-500">Total Balance</p>
+            <p className="text-sm text-slate-500">{t('cashbook.totalBalance')}</p>
             <Money value={summary.totalBalance} colored={false} className="text-lg text-link-600" />
           </div>
           <div className="flex items-baseline gap-2">
-            <p className="text-sm text-slate-500">Todays Balance</p>
+            <p className="text-sm text-slate-500">{t('cashbook.todaysBalance')}</p>
             <Money value={summary.todayBalance} colored={false} className="text-lg text-link-600" />
           </div>
           <button className="btn border border-link-500 text-link-600 hover:bg-link-50 ml-auto" onClick={downloadReport}>
-            📄 View Report
+            {t('cashbook.viewReport')}
           </button>
         </div>
 
         <div className="card p-4 flex gap-6 mb-4">
           <div>
-            <label className="label">Date</label>
+            <label className="label">{t('cashbook.date')}</label>
             <input type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
           <div className="border-l border-slate-200 pl-6">
-            <label className="label">Payment Mode</label>
+            <label className="label">{t('cashbook.paymentMode')}</label>
             <select className="input min-w-[180px]" value={mode} onChange={(e) => setMode(e.target.value)}>
-              <option value="ALL">All</option>
-              {MODES.map((m) => <option key={m} value={m}>{modeLabel(m)}</option>)}
+              <option value="ALL">{t('cashbook.all')}</option>
+              {MODES.map((m) => <option key={m} value={m}>{t(MODE_LABEL_KEYS[m])}</option>)}
             </select>
           </div>
         </div>
 
         <div className="card overflow-hidden">
           <div className="grid grid-cols-[1fr_120px_120px] px-5 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide border-b border-slate-100">
-            <span>Name</span><span className="text-right">Out</span><span className="text-right">In</span>
+            <span>{t('cashbook.name')}</span><span className="text-right">{t('cashbook.out')}</span><span className="text-right">{t('cashbook.in')}</span>
           </div>
 
           {/* Day header with totals */}
           <div className="grid grid-cols-[1fr_120px_120px] px-5 py-3 bg-slate-50/60 border-b border-slate-100 items-center">
             <div>
-              <p className="font-bold text-slate-800">{fmtDayLabel(date)}</p>
-              <p className="text-xs text-slate-400">{entries.length} Entries</p>
+              <p className="font-bold text-slate-800">{fmtDayLabel(date)}{isToday(date) ? ` ${t('cashbook.today')}` : ''}</p>
+              <p className="text-xs text-slate-400">{t('cashbook.entriesCount', { count: entries.length })}</p>
             </div>
             <span className="text-right font-semibold text-get">
               {totalOut > 0 ? <Money value={totalOut} colored={false} className="text-get" /> : '₹--'}
@@ -154,7 +154,7 @@ export default function Cashbook() {
           </div>
 
           {loading ? <Spinner /> : entries.length === 0 ? (
-            <EmptyState icon="📔" title="Add your first transaction" subtitle="Looks a bit empty in here!" />
+            <EmptyState icon="📔" title={t('cashbook.addFirstTransaction')} subtitle={t('cashbook.emptySubtitle')} />
           ) : (
             entries.map((e) => (
               <button
@@ -173,7 +173,7 @@ export default function Cashbook() {
                       </span>
                     </p>
                     <p className="font-medium text-slate-800 truncate">
-                      {e.description ? `Description: ${e.description}` : '(no description)'}
+                      {e.description ? t('cashbook.descriptionPrefix', { desc: e.description }) : t('cashbook.noDescription')}
                     </p>
                   </div>
                 </div>
@@ -190,9 +190,9 @@ export default function Cashbook() {
 
         <div className="card mt-4 p-4 flex gap-4">
           <button className="flex-1 py-3 rounded-lg bg-red-100 text-red-700 font-bold tracking-wide hover:bg-red-200"
-            onClick={() => openForm('OUT')}>OUT</button>
+            onClick={() => openForm('OUT')}>{t('cashbook.outButton')}</button>
           <button className="flex-1 py-3 rounded-lg bg-green-100 text-green-700 font-bold tracking-wide hover:bg-green-200"
-            onClick={() => openForm('IN')}>IN</button>
+            onClick={() => openForm('IN')}>{t('cashbook.inButton')}</button>
         </div>
       </div>
 
@@ -201,7 +201,7 @@ export default function Cashbook() {
         {pane.type === 'none' && (
           <div className="h-full flex flex-col items-center justify-center text-slate-400">
             <span className="text-6xl mb-3">👥</span>
-            <p className="font-semibold text-slate-600">No transaction selected</p>
+            <p className="font-semibold text-slate-600">{t('cashbook.noTransactionSelected')}</p>
           </div>
         )}
 
@@ -209,34 +209,34 @@ export default function Cashbook() {
           <div className="p-5">
             <div className="flex items-center justify-between mb-6">
               <h3 className={`font-bold text-lg ${pane.dir === 'IN' ? 'text-give' : 'text-get'}`}>
-                {pane.editing ? 'Edit ' : ''}{pane.dir === 'IN' ? 'In Entry' : 'Out Entry'}
+                {pane.editing ? t('cashbook.editPrefix') : ''}{pane.dir === 'IN' ? t('cashbook.inEntry') : t('cashbook.outEntry')}
               </h3>
               <button className="text-slate-400 hover:text-slate-700 text-2xl leading-none" onClick={() => setPane({ type: 'none' })}>×</button>
             </div>
 
-            <label className="label">Amount</label>
+            <label className="label">{t('cashbook.amount')}</label>
             <div className="relative mb-4">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
-              <input className="input pl-7 text-lg font-semibold" type="number" placeholder="Enter Amount" autoFocus
+              <input className="input pl-7 text-lg font-semibold" type="number" placeholder={t('cashbook.enterAmount')} autoFocus
                 value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
             </div>
 
-            <label className="label">Description</label>
-            <textarea className="input mb-4 min-h-[100px] resize-none" placeholder="Enter Details (Item Name, Bill No, Quantity, etc)"
+            <label className="label">{t('cashbook.description')}</label>
+            <textarea className="input mb-4 min-h-[100px] resize-none" placeholder={t('cashbook.enterDetails')}
               value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
 
-            <label className="label">Payment Mode</label>
+            <label className="label">{t('cashbook.paymentMode')}</label>
             <div className="flex flex-wrap gap-x-5 gap-y-2 mb-4">
               {MODES.map((m) => (
                 <label key={m} className="flex items-center gap-2 text-sm cursor-pointer">
                   <input type="radio" name="paymentMode" className="accent-link-600"
                     checked={form.paymentMode === m} onChange={() => setForm({ ...form, paymentMode: m })} />
-                  {modeLabel(m)}
+                  {t(MODE_LABEL_KEYS[m])}
                 </label>
               ))}
             </div>
 
-            <label className="label">Date</label>
+            <label className="label">{t('cashbook.date')}</label>
             <input type="date" className="input mb-6" value={form.entryDate}
               onChange={(e) => setForm({ ...form, entryDate: e.target.value })} />
 
@@ -246,7 +246,7 @@ export default function Cashbook() {
               disabled={!form.amount || Number(form.amount) <= 0}
               onClick={save}
             >
-              Save
+              {t('cashbook.save')}
             </button>
           </div>
         )}
@@ -266,8 +266,8 @@ export default function Cashbook() {
               </div>
               <div className="flex gap-2">
                 <button className="btn border border-link-500 text-link-600 hover:bg-link-50"
-                  onClick={() => openForm(pane.entry.direction, pane.entry)}>✏️ Edit</button>
-                <button className="btn-danger" onClick={() => remove(pane.entry)}>🗑 Delete</button>
+                  onClick={() => openForm(pane.entry.direction, pane.entry)}>{t('cashbook.edit')}</button>
+                <button className="btn-danger" onClick={() => remove(pane.entry)}>{t('cashbook.delete')}</button>
               </div>
             </div>
 
@@ -280,7 +280,7 @@ export default function Cashbook() {
             <div className="p-5 flex gap-3">
               <span className="text-slate-400 text-lg">📝</span>
               <div>
-                <p className="font-semibold text-slate-700 mb-1">Description</p>
+                <p className="font-semibold text-slate-700 mb-1">{t('cashbook.description')}</p>
                 <p className="text-slate-600 whitespace-pre-wrap">{pane.entry.description || '—'}</p>
               </div>
             </div>

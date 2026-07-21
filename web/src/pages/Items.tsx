@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { api, apiMessage } from '../api/client';
 import type { Item } from '../types';
 import { EmptyState, Money, Spinner, useToast } from '../components/ui';
@@ -19,6 +20,7 @@ const emptyForm = {
 
 export default function Items() {
   const { business } = useAuth();
+  const { t } = useLanguage();
   const toast = useToast();
   const [rows, setRows] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,6 +36,8 @@ export default function Items() {
   const [adjusting, setAdjusting] = useState(false);
 
   const base = `/businesses/${business?.id}/items`;
+  const tabLabel = (tb: 'PRODUCTS' | 'SERVICES') => tb === 'PRODUCTS' ? t('items.products') : t('items.services');
+  const kindLabel = kind === 'SERVICE' ? t('items.serviceLabel') : t('items.productLabel');
 
   const load = useCallback(async () => {
     if (!business) return;
@@ -108,11 +112,11 @@ export default function Items() {
     try {
       if (pane.editing) {
         const res = await api.patch(`${base}/${pane.editing.id}`, payload);
-        toast('Item updated');
+        toast(t('items.itemUpdated'));
         setPane({ type: 'detail', item: res.data.data });
       } else {
         await api.post(base, payload);
-        toast(service ? 'Service added' : 'Product added');
+        toast(service ? t('items.serviceAdded') : t('items.productAdded'));
         setPane({ type: 'none' });
       }
       setTab(service ? 'SERVICES' : 'PRODUCTS');
@@ -125,7 +129,7 @@ export default function Items() {
       await api.post(`${base}/${item.id}/stock`, {
         type: stock.type, qty: Number(stock.qty), note: stock.note || undefined,
       });
-      toast('Stock updated');
+      toast(t('items.stockUpdated'));
       setAdjusting(false);
       setStock({ type: 'IN', qty: '', note: '' });
       await load();
@@ -135,10 +139,10 @@ export default function Items() {
   };
 
   const remove = async (item: Item) => {
-    if (!confirm(`Delete "${item.name}"?`)) return;
+    if (!confirm(t('items.confirmDelete', { name: item.name }))) return;
     try {
       await api.delete(`${base}/${item.id}`);
-      toast('Item deleted');
+      toast(t('items.itemDeleted'));
       setPane({ type: 'none' });
       await load();
     } catch (e) { toast(apiMessage(e), 'error'); }
@@ -152,14 +156,14 @@ export default function Items() {
       <div className="flex-1 min-w-0 p-6 overflow-y-auto flex flex-col">
         {/* Tabs */}
         <div className="flex gap-8 border-b border-slate-200 mb-4">
-          {(['PRODUCTS', 'SERVICES'] as const).map((t) => (
-            <button key={t}
+          {(['PRODUCTS', 'SERVICES'] as const).map((tb) => (
+            <button key={tb}
               className={`pb-3 font-semibold flex items-center gap-2 border-b-2 -mb-px transition
-                ${tab === t ? 'text-link-600 border-link-600' : 'text-slate-500 border-transparent hover:text-slate-700'}`}
-              onClick={() => { setTab(t); setFilter('ALL'); }}>
-              {t === 'PRODUCTS' ? 'Products' : 'Services'}
-              <span className={`px-2 py-0.5 rounded-full text-xs ${tab === t ? 'bg-link-50 text-link-600' : 'bg-slate-100 text-slate-500'}`}>
-                {t === 'PRODUCTS' ? products.length : services.length}
+                ${tab === tb ? 'text-link-600 border-link-600' : 'text-slate-500 border-transparent hover:text-slate-700'}`}
+              onClick={() => { setTab(tb); setFilter('ALL'); }}>
+              {tabLabel(tb)}
+              <span className={`px-2 py-0.5 rounded-full text-xs ${tab === tb ? 'bg-link-50 text-link-600' : 'bg-slate-100 text-slate-500'}`}>
+                {tb === 'PRODUCTS' ? products.length : services.length}
               </span>
             </button>
           ))}
@@ -168,12 +172,12 @@ export default function Items() {
         {/* Summary */}
         <div className="card p-4 flex items-center mb-4">
           <div className="flex-1 flex items-baseline gap-2 justify-center">
-            <p className="text-sm text-slate-500">Total Stock value:</p>
+            <p className="text-sm text-slate-500">{t('items.totalStockValue')}</p>
             <Money value={stockValue} colored={false} className="text-lg text-slate-800" />
           </div>
           <div className="w-px h-8 bg-slate-200" />
           <div className="flex-1 flex items-baseline gap-2 justify-center">
-            <p className="text-sm text-slate-500">Low Stock Products:</p>
+            <p className="text-sm text-slate-500">{t('items.lowStockProducts')}</p>
             <p className={`text-lg font-bold ${lowCount > 0 ? 'text-get' : 'text-slate-800'}`}>{lowCount}</p>
           </div>
         </div>
@@ -181,31 +185,31 @@ export default function Items() {
         {/* Search / filter / sort */}
         <div className="card p-4 flex gap-4 mb-4 items-end flex-wrap">
           <div className="flex-1 min-w-[200px] max-w-sm">
-            <label className="label">Search for {tab === 'PRODUCTS' ? 'Products' : 'Services'}</label>
+            <label className="label">{t('items.searchFor', { label: tabLabel(tab) })}</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
-              <input className="input pl-9" placeholder={`Search by ${tab === 'PRODUCTS' ? 'Product' : 'Service'} name`}
+              <input className="input pl-9" placeholder={t('items.searchByPlaceholder', { label: tab === 'PRODUCTS' ? t('items.productLabel') : t('items.serviceLabel') })}
                 value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
           </div>
           {tab === 'PRODUCTS' && (
             <div>
-              <label className="label">Filter by</label>
+              <label className="label">{t('items.filterBy')}</label>
               <select className="input min-w-[130px]" value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)}>
-                <option value="ALL">All</option>
-                <option value="LOW">Low Stock</option>
-                <option value="IN">In Stock</option>
-                <option value="OUT">Out of Stock</option>
+                <option value="ALL">{t('items.filterAll')}</option>
+                <option value="LOW">{t('items.filterLow')}</option>
+                <option value="IN">{t('items.filterIn')}</option>
+                <option value="OUT">{t('items.filterOut')}</option>
               </select>
             </div>
           )}
           <div>
-            <label className="label">Sort by</label>
+            <label className="label">{t('items.sortBy')}</label>
             <select className="input min-w-[150px]" value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
-              <option value="recent">Most recent</option>
-              <option value="name">Name A–Z</option>
-              <option value="price">Price high → low</option>
-              <option value="stock">Stock low → high</option>
+              <option value="recent">{t('items.sortRecent')}</option>
+              <option value="name">{t('items.sortName')}</option>
+              <option value="price">{t('items.sortPriceDesc')}</option>
+              <option value="stock">{t('items.sortStockAsc')}</option>
             </select>
           </div>
         </div>
@@ -213,11 +217,9 @@ export default function Items() {
         {/* List */}
         <div className="card overflow-hidden flex-1">
           {loading ? <Spinner /> : visible.length === 0 ? (
-            <EmptyState icon="📦" title="No Results"
-              subtitle={tab === 'PRODUCTS'
-                ? 'Add your products to use them in bills and track stock.'
-                : 'Add your services (eg- Repair, Delivery, Consulting) to bill them.'}
-              action={<button className="btn-primary" onClick={() => openForm()}>+ Add {tab === 'PRODUCTS' ? 'Product' : 'Service'}</button>} />
+            <EmptyState icon="📦" title={t('items.noResults')}
+              subtitle={tab === 'PRODUCTS' ? t('items.addProductsSubtitle') : t('items.addServicesSubtitle')}
+              action={<button className="btn-primary" onClick={() => openForm()}>{t('items.addLabel', { label: tab === 'PRODUCTS' ? t('items.productLabel') : t('items.serviceLabel') })}</button>} />
           ) : (
             visible.map((i) => (
               <button key={i.id}
@@ -232,10 +234,10 @@ export default function Items() {
                   <div className="min-w-0">
                     <p className="font-semibold text-slate-800 truncate">
                       {i.name}
-                      {isLow(i) && <span className="ml-2 text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-bold align-middle">LOW STOCK</span>}
+                      {isLow(i) && <span className="ml-2 text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-bold align-middle">{t('items.lowStockBadge')}</span>}
                     </p>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      {i.sku ? `${i.sku} · ` : ''}{Number(i.taxRate) > 0 ? `GST ${Number(i.taxRate)}%` : 'No GST'}
+                      {i.sku ? `${i.sku} · ` : ''}{Number(i.taxRate) > 0 ? t('items.gstPercent', { rate: Number(i.taxRate) }) : t('items.noGst')}
                     </p>
                   </div>
                 </div>
@@ -243,7 +245,7 @@ export default function Items() {
                   <Money value={i.salePrice} colored={false} className="text-slate-800" />
                   {!isService(i) && (
                     <p className={`text-[11px] font-semibold ${isLow(i) ? 'text-get' : 'text-slate-400'}`}>
-                      Stock: {Number(i.stockQty)} {i.unit}
+                      {t('items.stockLine', { qty: Number(i.stockQty), unit: i.unit })}
                     </p>
                   )}
                 </div>
@@ -254,7 +256,7 @@ export default function Items() {
 
         <div className="flex justify-center py-4">
           <button className="btn-primary px-8 py-3" onClick={() => openForm()}>
-            + Add {tab === 'PRODUCTS' ? 'Product' : 'Service'}
+            {t('items.addLabel', { label: tab === 'PRODUCTS' ? t('items.productLabel') : t('items.serviceLabel') })}
           </button>
         </div>
       </div>
@@ -264,8 +266,8 @@ export default function Items() {
         {pane.type === 'none' && (
           <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
             <span className="text-6xl mb-3">📦</span>
-            <p className="font-semibold text-slate-600">No item selected</p>
-            <p className="text-sm mt-1">Select a {tab === 'PRODUCTS' ? 'product' : 'service'} from the left panel</p>
+            <p className="font-semibold text-slate-600">{t('items.noItemSelected')}</p>
+            <p className="text-sm mt-1">{t('items.selectFromLeft', { label: tab === 'PRODUCTS' ? t('items.productLabel') : t('items.serviceLabel') })}</p>
           </div>
         )}
 
@@ -277,15 +279,15 @@ export default function Items() {
             <div>
               <div className="p-5 border-b border-slate-100">
                 <span className="inline-block px-3 py-1 rounded-lg border border-slate-200 text-sm font-semibold text-slate-600 mb-3">
-                  {service ? 'Service' : 'Product'}
+                  {service ? t('items.serviceLabel') : t('items.productLabel')}
                 </span>
                 <div className="flex items-center justify-between">
                   <div className="min-w-0">
                     <p className="font-bold text-lg text-slate-800 truncate">{it.name}</p>
-                    <p className="text-sm text-slate-500 mt-0.5">{it.sku || 'No SKU'}{!service && ` · ${it.unit}`}</p>
+                    <p className="text-sm text-slate-500 mt-0.5">{it.sku || t('items.noSku')}{!service && ` · ${it.unit}`}</p>
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    <button className="btn border border-link-500 text-link-600 hover:bg-link-50" onClick={() => openForm(it)}>✏️ Edit</button>
+                    <button className="btn border border-link-500 text-link-600 hover:bg-link-50" onClick={() => openForm(it)}>{t('items.edit')}</button>
                     <button className="btn-danger" onClick={() => remove(it)}>🗑</button>
                   </div>
                 </div>
@@ -293,18 +295,18 @@ export default function Items() {
 
               <div className="p-5 space-y-4">
                 <div className="rounded-lg border border-slate-200 divide-y divide-slate-100">
-                  <div className="px-4 py-3 flex justify-between"><span className="text-slate-500 text-sm">Sale Price</span><Money value={it.salePrice} colored={false} className="text-slate-800" /></div>
-                  <div className="px-4 py-3 flex justify-between"><span className="text-slate-500 text-sm">Purchase Price</span>
+                  <div className="px-4 py-3 flex justify-between"><span className="text-slate-500 text-sm">{t('items.salePrice')}</span><Money value={it.salePrice} colored={false} className="text-slate-800" /></div>
+                  <div className="px-4 py-3 flex justify-between"><span className="text-slate-500 text-sm">{t('items.purchasePrice')}</span>
                     <span className="font-semibold">{it.purchasePrice != null ? `₹${Number(it.purchasePrice).toLocaleString('en-IN')}` : '—'}</span></div>
-                  <div className="px-4 py-3 flex justify-between"><span className="text-slate-500 text-sm">GST Rate</span><span className="font-semibold">{Number(it.taxRate)}%</span></div>
+                  <div className="px-4 py-3 flex justify-between"><span className="text-slate-500 text-sm">{t('items.gstRate')}</span><span className="font-semibold">{Number(it.taxRate)}%</span></div>
                   {!service && (<>
                     <div className="px-4 py-3 flex justify-between">
-                      <span className="text-slate-500 text-sm">Current Stock</span>
+                      <span className="text-slate-500 text-sm">{t('items.currentStock')}</span>
                       <span className={`font-bold ${isLow(it) ? 'text-get' : 'text-slate-800'}`}>{Number(it.stockQty)} {it.unit}</span>
                     </div>
-                    <div className="px-4 py-3 flex justify-between"><span className="text-slate-500 text-sm">Low Stock Alert</span>
+                    <div className="px-4 py-3 flex justify-between"><span className="text-slate-500 text-sm">{t('items.lowStockAlert')}</span>
                       <span className="font-semibold">{it.lowStockAlert != null ? `${Number(it.lowStockAlert)} ${it.unit}` : '—'}</span></div>
-                    <div className="px-4 py-3 flex justify-between"><span className="text-slate-500 text-sm">Stock Value</span>
+                    <div className="px-4 py-3 flex justify-between"><span className="text-slate-500 text-sm">{t('items.stockValue')}</span>
                       <Money value={Number(it.stockQty) * Number(it.purchasePrice ?? it.salePrice)} colored={false} className="text-slate-800" /></div>
                   </>)}
                 </div>
@@ -312,23 +314,23 @@ export default function Items() {
                 {!service && (!adjusting ? (
                   <button className="w-full py-2.5 rounded-lg border border-link-500 text-link-600 font-semibold hover:bg-link-50"
                     onClick={() => { setAdjusting(true); setStock({ type: 'IN', qty: '', note: '' }); }}>
-                    Adjust Stock
+                    {t('items.adjustStock')}
                   </button>
                 ) : (
                   <div className="rounded-lg bg-slate-50 p-3 space-y-2">
-                    <p className="font-semibold text-sm">Adjust stock — current {Number(it.stockQty)} {it.unit}</p>
+                    <p className="font-semibold text-sm">{t('items.adjustStockCurrent', { qty: Number(it.stockQty), unit: it.unit })}</p>
                     <select className="input" value={stock.type} onChange={(e) => setStock({ ...stock, type: e.target.value })}>
-                      <option value="IN">Stock IN (purchase)</option>
-                      <option value="OUT">Stock OUT (sale/waste)</option>
-                      <option value="ADJUST">Set absolute quantity</option>
+                      <option value="IN">{t('items.stockIn')}</option>
+                      <option value="OUT">{t('items.stockOut')}</option>
+                      <option value="ADJUST">{t('items.setAbsolute')}</option>
                     </select>
-                    <input className="input" type="number" min="0" placeholder="Quantity" autoFocus value={stock.qty}
+                    <input className="input" type="number" min="0" placeholder={t('items.quantity')} autoFocus value={stock.qty}
                       onChange={(e) => setStock({ ...stock, qty: e.target.value })} />
-                    <input className="input" placeholder="Note (optional)" value={stock.note}
+                    <input className="input" placeholder={t('items.noteOptional')} value={stock.note}
                       onChange={(e) => setStock({ ...stock, note: e.target.value })} />
                     <div className="flex gap-2 pt-1">
-                      <button className="btn border border-slate-300 text-slate-600 flex-1 justify-center" onClick={() => setAdjusting(false)}>Cancel</button>
-                      <button className="btn-primary flex-1 justify-center" onClick={() => adjust(it)} disabled={stock.qty === ''}>Apply</button>
+                      <button className="btn border border-slate-300 text-slate-600 flex-1 justify-center" onClick={() => setAdjusting(false)}>{t('items.cancel')}</button>
+                      <button className="btn-primary flex-1 justify-center" onClick={() => adjust(it)} disabled={stock.qty === ''}>{t('items.apply')}</button>
                     </div>
                   </div>
                 ))}
@@ -341,7 +343,7 @@ export default function Items() {
         {pane.type === 'form' && (
           <div className="p-5">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold text-lg">{pane.editing ? 'Edit' : 'Add'} {kind === 'SERVICE' ? 'Service' : 'Product'}</h3>
+              <h3 className="font-bold text-lg">{pane.editing ? t('items.editLabel', { label: kindLabel }) : t('items.addLabelTitle', { label: kindLabel })}</h3>
               <button className="text-slate-400 hover:text-slate-700 text-2xl leading-none" onClick={() => setPane({ type: 'none' })}>×</button>
             </div>
 
@@ -351,7 +353,7 @@ export default function Items() {
                   <button key={k}
                     className={`flex-1 py-2 text-sm font-semibold transition ${kind === k ? 'bg-link-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
                     onClick={() => setKind(k)}>
-                    {k === 'PRODUCT' ? 'Product' : 'Service'}
+                    {k === 'PRODUCT' ? t('items.productLabel') : t('items.serviceLabel')}
                   </button>
                 ))}
               </div>
@@ -359,57 +361,57 @@ export default function Items() {
 
             <div className="space-y-4">
               <div>
-                <label className="label">{kind === 'SERVICE' ? 'Service' : 'Product'} Name *</label>
-                <input className="input" placeholder={kind === 'SERVICE' ? 'eg- Repair, Delivery' : 'eg- Sugar 1kg'} autoFocus
+                <label className="label">{t('items.labelNameRequired', { label: kindLabel })}</label>
+                <input className="input" placeholder={kind === 'SERVICE' ? t('items.namePlaceholderService') : t('items.namePlaceholderProduct')} autoFocus
                   value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="label">SKU / Code</label>
+                  <label className="label">{t('items.skuCode')}</label>
                   <input className="input" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
                 </div>
                 <div>
-                  <label className="label">GST %</label>
+                  <label className="label">{t('items.gstPercentLabel')}</label>
                   <input className="input" type="number" min="0" value={form.taxRate} onChange={(e) => setForm({ ...form, taxRate: e.target.value })} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="label">Sale Price ₹ *</label>
+                  <label className="label">{t('items.salePriceRequired')}</label>
                   <input className="input" type="number" min="0" value={form.salePrice} onChange={(e) => setForm({ ...form, salePrice: e.target.value })} />
                 </div>
                 <div>
-                  <label className="label">Purchase Price ₹</label>
+                  <label className="label">{t('items.purchasePriceLabel')}</label>
                   <input className="input" type="number" min="0" value={form.purchasePrice} onChange={(e) => setForm({ ...form, purchasePrice: e.target.value })} />
                 </div>
               </div>
 
               {kind === 'PRODUCT' && (<>
                 <div>
-                  <label className="label">Unit</label>
+                  <label className="label">{t('items.unit')}</label>
                   <select className="input" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}>
                     {UNITS.map((u) => <option key={u}>{u}</option>)}
                   </select>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="label">{pane.editing ? 'Stock Qty' : 'Opening Stock'}</label>
+                    <label className="label">{pane.editing ? t('items.stockQty') : t('items.openingStock')}</label>
                     <input className="input" type="number" min="0" value={form.stockQty}
                       onChange={(e) => setForm({ ...form, stockQty: e.target.value })}
-                      disabled={!!pane.editing} title={pane.editing ? 'Use Adjust Stock from the item view' : undefined} />
+                      disabled={!!pane.editing} title={pane.editing ? t('items.useAdjustStockTitle') : undefined} />
                   </div>
                   <div>
-                    <label className="label">Low Stock Alert</label>
+                    <label className="label">{t('items.lowStockAlert')}</label>
                     <input className="input" type="number" min="0" value={form.lowStockAlert}
                       onChange={(e) => setForm({ ...form, lowStockAlert: e.target.value })} />
                   </div>
                 </div>
-                {pane.editing && <p className="text-xs text-slate-400 -mt-2">Stock quantity is changed via “Adjust Stock” on the item view.</p>}
+                {pane.editing && <p className="text-xs text-slate-400 -mt-2">{t('items.stockChangedNote')}</p>}
               </>)}
 
               <button className="w-full py-3 rounded-lg font-bold text-white bg-brand-500 hover:bg-brand-600 disabled:bg-slate-200 disabled:text-slate-400"
                 onClick={save} disabled={!form.name.trim() || form.salePrice === ''}>
-                Save {kind === 'SERVICE' ? 'Service' : 'Product'}
+                {t('items.saveLabel', { label: kindLabel })}
               </button>
             </div>
           </div>

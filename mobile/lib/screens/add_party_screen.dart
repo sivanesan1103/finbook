@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:provider/provider.dart';
 import '../core/api_client.dart';
+import '../l10n/translations.dart';
 import '../providers/app_state.dart';
 import '../widgets/common.dart';
 
@@ -25,6 +27,34 @@ class _AddPartyScreenState extends State<AddPartyScreen> {
   bool showGst = false;
   bool sameShipping = true;
   bool busy = false;
+
+  Future<void> _pickContact() async {
+    final granted = await FlutterContacts.requestPermission(readonly: true);
+    if (!granted) {
+      if (mounted) showSnack(context, context.tr('addParty.contactsPermissionDenied'), error: true);
+      return;
+    }
+    final contact = await FlutterContacts.openExternalPick();
+    if (contact == null || !mounted) return;
+    if (contact.phones.isEmpty) {
+      showSnack(context, context.tr('addParty.contactHasNoPhone'), error: true);
+      return;
+    }
+    final digits = contact.phones.first.number.replaceAll(RegExp(r'[^\d+]'), '');
+    final cleaned = digits.startsWith('+91')
+        ? digits.substring(3)
+        : digits.startsWith('91') && digits.length == 12
+            ? digits.substring(2)
+            : digits.startsWith('+')
+                ? digits.substring(1)
+                : digits;
+    setState(() {
+      phone.text = cleaned;
+      if (name.text.trim().isEmpty && contact.displayName.trim().isNotEmpty) {
+        name.text = contact.displayName;
+      }
+    });
+  }
 
   Future<void> _save() async {
     setState(() => busy = true);
@@ -53,13 +83,13 @@ class _AddPartyScreenState extends State<AddPartyScreen> {
   Widget build(BuildContext context) {
     final isCustomer = type == 'CUSTOMER';
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Party')),
+      appBar: AppBar(title: Text(context.tr('addParty.title'))),
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: ElevatedButton(
             onPressed: busy || name.text.trim().isEmpty ? null : _save,
-            child: Text(busy ? 'SAVING…' : isCustomer ? 'ADD CUSTOMER' : 'ADD SUPPLIER'),
+            child: Text(busy ? context.tr('addParty.saving') : isCustomer ? context.tr('addParty.addCustomer') : context.tr('addParty.addSupplier')),
           ),
         ),
       ),
@@ -68,7 +98,7 @@ class _AddPartyScreenState extends State<AddPartyScreen> {
           controller: name,
           autofocus: true,
           onChanged: (_) => setState(() {}),
-          decoration: const InputDecoration(labelText: 'Party name *'),
+          decoration: InputDecoration(labelText: context.tr('addParty.partyNameRequired')),
         ),
         const SizedBox(height: 14),
         Row(children: [
@@ -86,24 +116,31 @@ class _AddPartyScreenState extends State<AddPartyScreen> {
             child: TextField(
               controller: phone,
               keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: 'Mobile Number'),
+              decoration: InputDecoration(
+                labelText: context.tr('addParty.mobileNumber'),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.contact_phone_outlined),
+                  tooltip: context.tr('addParty.pickFromContacts'),
+                  onPressed: _pickContact,
+                ),
+              ),
             ),
           ),
         ]),
         const SizedBox(height: 16),
-        const Text('Who are they?', style: TextStyle(fontWeight: FontWeight.w600)),
+        Text(context.tr('addParty.whoAreThey'), style: const TextStyle(fontWeight: FontWeight.w600)),
         Row(children: [
           Expanded(
             child: RadioListTile<String>(
               dense: true, value: 'CUSTOMER', groupValue: type,
-              title: const Text('Customer'),
+              title: Text(context.tr('addParty.customer')),
               onChanged: (v) => setState(() => type = v!),
             ),
           ),
           Expanded(
             child: RadioListTile<String>(
               dense: true, value: 'SUPPLIER', groupValue: type,
-              title: const Text('Supplier'),
+              title: Text(context.tr('addParty.supplier')),
               onChanged: (v) => setState(() => type = v!),
             ),
           ),
@@ -111,29 +148,29 @@ class _AddPartyScreenState extends State<AddPartyScreen> {
         TextButton.icon(
           onPressed: () => setState(() => showGst = !showGst),
           icon: Icon(showGst ? Icons.remove : Icons.add),
-          label: const Text('ADD GSTIN & ADDRESS (OPTIONAL)'),
+          label: Text(context.tr('addParty.addGstinAddress')),
         ),
         if (showGst) ...[
-          TextField(controller: gstin, decoration: const InputDecoration(labelText: 'GSTIN')),
+          TextField(controller: gstin, decoration: InputDecoration(labelText: context.tr('addParty.gstin'))),
           const SizedBox(height: 12),
-          const Text('Billing address', style: TextStyle(fontWeight: FontWeight.w600)),
+          Text(context.tr('addParty.billingAddress'), style: const TextStyle(fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
-          TextField(controller: flat, decoration: const InputDecoration(labelText: 'Flat / Building Number')),
+          TextField(controller: flat, decoration: InputDecoration(labelText: context.tr('addParty.flatBuilding'))),
           const SizedBox(height: 10),
-          TextField(controller: area, decoration: const InputDecoration(labelText: 'Area / Locality')),
+          TextField(controller: area, decoration: InputDecoration(labelText: context.tr('addParty.areaLocality'))),
           const SizedBox(height: 10),
           TextField(controller: pincode, keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Pincode')),
+              decoration: InputDecoration(labelText: context.tr('addParty.pincode'))),
           const SizedBox(height: 10),
           Row(children: [
-            Expanded(child: TextField(controller: city, decoration: const InputDecoration(labelText: 'City'))),
+            Expanded(child: TextField(controller: city, decoration: InputDecoration(labelText: context.tr('addParty.city')))),
             const SizedBox(width: 10),
-            Expanded(child: TextField(controller: state, decoration: const InputDecoration(labelText: 'State'))),
+            Expanded(child: TextField(controller: state, decoration: InputDecoration(labelText: context.tr('addParty.state')))),
           ]),
           CheckboxListTile(
             value: sameShipping,
             onChanged: (v) => setState(() => sameShipping = v ?? true),
-            title: const Text('Shipping address same as billing address?'),
+            title: Text(context.tr('addParty.shippingSameAsBilling')),
             controlAffinity: ListTileControlAffinity.leading,
             contentPadding: EdgeInsets.zero,
           ),

@@ -1,8 +1,17 @@
 import { ReactNode, createContext, useCallback, useContext, useRef, useState } from 'react';
+import type { TranslationKey } from '../i18n';
 
 /** Payment modes shared by cashbook, expenses and invoices. */
 export const PAYMENT_MODES = ['CASH', 'ONLINE', 'UPI', 'BANK', 'CHEQUE'];
-export const modeLabel = (m: string) => m.charAt(0) + m.slice(1).toLowerCase();
+
+/** Translation keys for payment modes — use with useLanguage().t(MODE_LABEL_KEYS[m]). */
+export const MODE_LABEL_KEYS: Record<string, TranslationKey> = {
+  CASH: 'common.modeCash',
+  ONLINE: 'common.modeOnline',
+  UPI: 'common.modeUpi',
+  BANK: 'common.modeBank',
+  CHEQUE: 'common.modeCheque',
+};
 
 /** Plain ₹-formatted string for inline text (use <Money> for styled amounts). */
 export const inr = (n: number | string) =>
@@ -119,7 +128,20 @@ export function Spinner() {
   );
 }
 
-export function StatusBadge({ status }: { status: string }) {
+/** Translation keys for invoice/entity statuses — use with useLanguage().t(STATUS_LABEL_KEYS[status]). */
+export const STATUS_LABEL_KEYS: Record<string, TranslationKey> = {
+  PAID: 'common.statusPaid',
+  PARTIAL: 'common.statusPartial',
+  UNPAID: 'common.statusUnpaid',
+  DRAFT: 'common.statusDraft',
+  CANCELLED: 'common.statusCancelled',
+  PENDING: 'common.statusPending',
+  SENT: 'common.statusSent',
+  OPEN: 'common.statusOpen',
+  CONVERTED: 'common.statusConverted',
+};
+
+export function StatusBadge({ status, label }: { status: string; label?: string }) {
   const styles: Record<string, string> = {
     PAID: 'bg-green-100 text-green-700',
     PARTIAL: 'bg-amber-100 text-amber-700',
@@ -133,7 +155,7 @@ export function StatusBadge({ status }: { status: string }) {
   };
   return (
     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${styles[status] || 'bg-slate-100 text-slate-600'}`}>
-      {status}
+      {label ?? status}
     </span>
   );
 }
@@ -144,10 +166,12 @@ export const fmtDate = (d: string | Date) =>
 export const fmtDateTime = (d: string | Date) =>
   new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 
-export const timeAgo = (d: string | Date) => {
+type Translate = (key: TranslationKey, vars?: Record<string, string | number>) => string;
+
+export const timeAgo = (d: string | Date, t: Translate) => {
   const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
-  if (s < 60) return `${s} seconds ago`;
-  if (s < 3600) return `${Math.floor(s / 60)} minutes ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)} hours ago`;
-  return `${Math.floor(s / 86400)} days ago`;
+  if (s < 60) return t('common.secondsAgo', { count: s });
+  if (s < 3600) return t('common.minutesAgo', { count: Math.floor(s / 60) });
+  if (s < 86400) return t('common.hoursAgo', { count: Math.floor(s / 3600) });
+  return t('common.daysAgo', { count: Math.floor(s / 86400) });
 };

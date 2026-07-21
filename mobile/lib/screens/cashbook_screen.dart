@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../core/api_client.dart';
 import '../core/formatters.dart';
 import '../core/theme.dart';
+import '../l10n/translations.dart';
 import '../models/models.dart';
 import '../providers/app_state.dart';
 import '../widgets/common.dart';
@@ -54,22 +55,22 @@ class _CashbookScreenState extends State<CashbookScreen> {
         padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
         child: StatefulBuilder(
           builder: (ctx, setSheet) => Column(mainAxisSize: MainAxisSize.min, children: [
-            Text(direction == 'IN' ? 'Cash In' : 'Cash Out',
+            Text(direction == 'IN' ? context.tr('cashbookScreen.cashIn') : context.tr('cashbookScreen.cashOut'),
                 style: TextStyle(
                     fontSize: 18, fontWeight: FontWeight.w800,
                     color: direction == 'IN' ? AppColors.got : AppColors.gave)),
             const SizedBox(height: 14),
             TextField(controller: amount, autofocus: true,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Amount', prefixText: '₹ ')),
+                decoration: InputDecoration(labelText: context.tr('cashbookScreen.amount'), prefixText: '₹ ')),
             const SizedBox(height: 10),
-            TextField(controller: desc, decoration: const InputDecoration(labelText: 'Description')),
+            TextField(controller: desc, decoration: InputDecoration(labelText: context.tr('cashbookScreen.description'))),
             const SizedBox(height: 10),
             DropdownButtonFormField<String>(
               value: payMode,
-              decoration: const InputDecoration(labelText: 'Payment mode'),
-              items: const ['CASH', 'ONLINE', 'UPI', 'BANK', 'CHEQUE']
-                  .map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
+              decoration: InputDecoration(labelText: context.tr('cashbookScreen.paymentMode')),
+              items: ['CASH', 'ONLINE', 'UPI', 'BANK', 'CHEQUE']
+                  .map((m) => DropdownMenuItem(value: m, child: Text(context.tr(modeLabelKeys[m]!)))).toList(),
               onChanged: (v) => setSheet(() => payMode = v!),
             ),
             const SizedBox(height: 14),
@@ -77,7 +78,7 @@ class _CashbookScreenState extends State<CashbookScreen> {
               style: ElevatedButton.styleFrom(
                   backgroundColor: direction == 'IN' ? AppColors.got : AppColors.gave),
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('SAVE'),
+              child: Text(context.tr('cashbookScreen.save')),
             ),
           ]),
         ),
@@ -106,7 +107,7 @@ class _CashbookScreenState extends State<CashbookScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppBar(title: const Text('Cashbook')),
+      appBar: AppBar(title: Text(context.tr('cashbookScreen.title'))),
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -116,7 +117,7 @@ class _CashbookScreenState extends State<CashbookScreen> {
                 style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFBE9EA), foregroundColor: AppColors.gave),
                 onPressed: () => _add('OUT'),
-                child: const Text('OUT'),
+                child: Text(context.tr('cashbookScreen.out')),
               ),
             ),
             const SizedBox(width: 12),
@@ -125,7 +126,7 @@ class _CashbookScreenState extends State<CashbookScreen> {
                 style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFEFF7F0), foregroundColor: AppColors.got),
                 onPressed: () => _add('IN'),
-                child: const Text('IN'),
+                child: Text(context.tr('cashbookScreen.in')),
               ),
             ),
           ]),
@@ -137,11 +138,11 @@ class _CashbookScreenState extends State<CashbookScreen> {
           padding: const EdgeInsets.all(14),
           child: Row(children: [
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Total Balance', style: TextStyle(color: Colors.black54, fontSize: 12)),
+              Text(context.tr('cashbookScreen.totalBalance'), style: const TextStyle(color: Colors.black54, fontSize: 12)),
               Text(inr(totalBalance), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
             ])),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text("Today's Balance", style: TextStyle(color: Colors.black54, fontSize: 12)),
+              Text(context.tr('cashbookScreen.todaysBalance'), style: const TextStyle(color: Colors.black54, fontSize: 12)),
               Text(inr(todayBalance), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
             ])),
           ]),
@@ -166,22 +167,22 @@ class _CashbookScreenState extends State<CashbookScreen> {
             const SizedBox(width: 10),
             DropdownButton<String>(
               value: mode,
-              items: const ['ALL', 'CASH', 'ONLINE', 'UPI', 'BANK', 'CHEQUE']
-                  .map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
+              items: ['ALL', 'CASH', 'ONLINE', 'UPI', 'BANK', 'CHEQUE']
+                  .map((m) => DropdownMenuItem(value: m, child: Text(m == 'ALL' ? context.tr('cashbookScreen.all') : context.tr(modeLabelKeys[m]!)))).toList(),
               onChanged: (v) { setState(() => mode = v!); _load(); },
             ),
           ]),
         ),
         ListTile(
           dense: true,
-          title: Text('${fmtDate(date)} · ${entries.length} entries',
+          title: Text(context.tr('cashbookScreen.entriesLine', {'date': fmtDate(date), 'count': entries.length}),
               style: const TextStyle(fontWeight: FontWeight.w700)),
           trailing: SizedBox(
             width: 190,
             child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-              Text('OUT ${inr(dayOut)}', style: const TextStyle(color: AppColors.gave, fontSize: 12, fontWeight: FontWeight.w700)),
+              Text(context.tr('cashbookScreen.outAmount', {'amount': inr(dayOut)}), style: const TextStyle(color: AppColors.gave, fontSize: 12, fontWeight: FontWeight.w700)),
               const SizedBox(width: 12),
-              Text('IN ${inr(dayIn)}', style: const TextStyle(color: AppColors.got, fontSize: 12, fontWeight: FontWeight.w700)),
+              Text(context.tr('cashbookScreen.inAmount', {'amount': inr(dayIn)}), style: const TextStyle(color: AppColors.got, fontSize: 12, fontWeight: FontWeight.w700)),
             ]),
           ),
         ),
@@ -191,14 +192,14 @@ class _CashbookScreenState extends State<CashbookScreen> {
               : RefreshIndicator(
                   onRefresh: _load,
                   child: entries.isEmpty
-                      ? ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [
+                      ? ListView(physics: const AlwaysScrollableScrollPhysics(), children: [
                           Padding(
-                            padding: EdgeInsets.only(top: 80),
+                            padding: const EdgeInsets.only(top: 80),
                             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                              Icon(Icons.menu_book, size: 64, color: Colors.black12),
-                              SizedBox(height: 8),
-                              Text('Add your first transaction', style: TextStyle(fontWeight: FontWeight.w700), textAlign: TextAlign.center),
-                              Text('Looks a bit empty in here!', style: TextStyle(color: Colors.black45, fontSize: 12), textAlign: TextAlign.center),
+                              const Icon(Icons.menu_book, size: 64, color: Colors.black12),
+                              const SizedBox(height: 8),
+                              Text(context.tr('cashbookScreen.addFirstTransaction'), style: const TextStyle(fontWeight: FontWeight.w700), textAlign: TextAlign.center),
+                              Text(context.tr('cashbookScreen.emptySubtitle'), style: const TextStyle(color: Colors.black45, fontSize: 12), textAlign: TextAlign.center),
                             ]),
                           ),
                         ])
@@ -215,8 +216,8 @@ class _CashbookScreenState extends State<CashbookScreen> {
                                 child: Icon(isIn ? Icons.south_west : Icons.north_east,
                                     color: isIn ? AppColors.got : AppColors.gave, size: 18),
                               ),
-                              title: Text(e.description ?? '(no description)'),
-                              subtitle: Text('${e.paymentMode} · ${fmtDateTime(e.entryDate)}',
+                              title: Text(e.description ?? context.tr('cashbookScreen.noDescription')),
+                              subtitle: Text(context.tr('cashbookScreen.entryLine', {'mode': context.tr(modeLabelKeys[e.paymentMode] ?? e.paymentMode), 'date': fmtDateTime(e.entryDate)}),
                                   style: const TextStyle(fontSize: 12)),
                               trailing: Text(inr(e.amount),
                                   style: TextStyle(

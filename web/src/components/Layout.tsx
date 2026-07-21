@@ -1,22 +1,24 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { Avatar, Modal } from './ui';
 import { api, apiMessage } from '../api/client';
+import type { TranslationKey } from '../i18n';
 
-const LEDGER_NAV = [
-  { to: '/customers', label: 'Customers', icon: '👥' },
-  { to: '/suppliers', label: 'Suppliers', icon: '🚚' },
-  { to: '/expenses', label: 'Expenses', icon: '🧾' },
-  { to: '/cashbook', label: 'Cashbook', icon: '📔' },
-  { to: '/staff', label: 'Staff', icon: '🧑‍💼' },
-  { to: '/reports', label: 'Reports - Parties', icon: '📊' },
-  { to: '/settings', label: 'Settings', icon: '⚙️' },
+const LEDGER_NAV: { to: string; labelKey: TranslationKey; icon: string }[] = [
+  { to: '/customers', labelKey: 'nav.customers', icon: '👥' },
+  { to: '/suppliers', labelKey: 'nav.suppliers', icon: '🚚' },
+  { to: '/expenses', labelKey: 'nav.expenses', icon: '🧾' },
+  { to: '/cashbook', labelKey: 'nav.cashbook', icon: '📔' },
+  { to: '/staff', labelKey: 'nav.staff', icon: '🧑‍💼' },
+  { to: '/reports', labelKey: 'nav.reportsParties', icon: '📊' },
+  { to: '/settings', labelKey: 'nav.settings', icon: '⚙️' },
 ];
 
-const BILLS_NAV = [
-  { to: '/invoices', label: 'Sales', icon: '🧮' },
-  { to: '/items', label: 'Items', icon: '📦' },
+const BILLS_NAV: { to: string; labelKey: TranslationKey; icon: string }[] = [
+  { to: '/invoices', labelKey: 'nav.sales', icon: '🧮' },
+  { to: '/items', labelKey: 'nav.items', icon: '📦' },
 ];
 
 /** In-app tutorial topics — screenshots live in web/public/tutorials. */
@@ -114,6 +116,7 @@ const TUTORIALS = [
 
 export default function Layout() {
   const { user, business, businesses, switchBusiness, reloadBusinesses, logout } = useAuth();
+  const { t } = useLanguage();
   const [switcher, setSwitcher] = useState(false);
   const [newBook, setNewBook] = useState('');
   const [err, setErr] = useState('');
@@ -159,24 +162,24 @@ export default function Layout() {
         </button>
 
         <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
-          <p className="px-2 text-[11px] font-bold text-slate-400 tracking-wider mb-2">LEDGER MANAGEMENT</p>
+          <p className="px-2 text-[11px] font-bold text-slate-400 tracking-wider mb-2">{t('nav.ledgerManagement')}</p>
           {LEDGER_NAV.map((n) => (
             <NavLink
               key={n.to}
               to={n.to}
               className={({ isActive }) => `sidebar-link ${isActive ? 'sidebar-link-active' : ''}`}
             >
-              <span>{n.icon}</span> {n.label}
+              <span>{n.icon}</span> {t(n.labelKey)}
             </NavLink>
           ))}
-          <p className="px-2 pt-4 text-[11px] font-bold text-slate-400 tracking-wider mb-2">BILLS AND INVENTORY</p>
+          <p className="px-2 pt-4 text-[11px] font-bold text-slate-400 tracking-wider mb-2">{t('nav.billsAndInventory')}</p>
           {BILLS_NAV.map((n) => (
             <NavLink
               key={n.to}
               to={n.to}
               className={({ isActive }) => `sidebar-link ${isActive ? 'sidebar-link-active' : ''}`}
             >
-              <span>{n.icon}</span> {n.label}
+              <span>{n.icon}</span> {t(n.labelKey)}
             </NavLink>
           ))}
         </nav>
@@ -189,7 +192,7 @@ export default function Layout() {
           </div>
           <button
             onClick={() => { logout(); navigate('/login'); }}
-            title="Logout"
+            title={t('nav.logout')}
             className="text-slate-400 hover:text-white"
           >
             ⎋
@@ -209,8 +212,8 @@ export default function Layout() {
           </button>
 
           <div className="ml-auto flex items-center gap-2">
-            <button className="btn-outline text-xs" onClick={() => setAppModal(true)}>📲 Use on Mobile</button>
-            <button className="text-sm text-slate-500 hover:text-slate-800 px-2" onClick={() => setHelpOpen(true)}>📚 Tutorials</button>
+            <button className="btn-outline text-xs" onClick={() => setAppModal(true)}>{t('layout.useOnMobile')}</button>
+            <button className="text-sm text-slate-500 hover:text-slate-800 px-2" onClick={() => setHelpOpen(true)}>{t('layout.tutorials')}</button>
             <div className="relative">
               <button className="flex items-center gap-2" onClick={() => setUserMenu((v) => !v)}>
                 <Avatar name={user?.name || '?'} url={user?.avatarUrl} size={30} />
@@ -222,9 +225,9 @@ export default function Layout() {
                     <p className="text-xs text-slate-500 truncate">{user?.email}</p>
                   </div>
                   <button className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-slate-50"
-                    onClick={() => { setUserMenu(false); navigate('/settings'); }}>⚙️ Settings</button>
+                    onClick={() => { setUserMenu(false); navigate('/settings'); }}>{t('layout.settingsMenuItem')}</button>
                   <button className="w-full text-left px-3 py-2 text-sm rounded-lg text-red-600 hover:bg-red-50"
-                    onClick={() => { logout(); navigate('/login'); }}>⎋ Logout</button>
+                    onClick={() => { logout(); navigate('/login'); }}>{t('layout.logoutMenuItem')}</button>
                 </div>
               )}
             </div>
@@ -237,21 +240,21 @@ export default function Layout() {
       </main>
 
       {/* ── Mobile app modal ── */}
-      <Modal open={appModal} title="Use FinBook on your phone" onClose={() => setAppModal(false)}>
+      <Modal open={appModal} title={t('layout.useOnMobileTitle')} onClose={() => setAppModal(false)}>
         <div className="text-center space-y-3">
           <div className="mx-auto w-40 h-40 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center text-6xl">
             📱
           </div>
           <p className="text-sm text-slate-600">
-            Your khata syncs automatically. Install the FinBook mobile app (Flutter) from
-            the <code className="text-xs bg-slate-100 px-1 rounded">mobile/</code> project and log in with the same account.
+            {t('layout.useOnMobileBody1')}{' '}
+            <code className="text-xs bg-slate-100 px-1 rounded">mobile/</code> {t('layout.useOnMobileBody2')}
           </p>
-          <p className="text-xs text-slate-400">100% Safe & Secure · Data backed up to your server</p>
+          <p className="text-xs text-slate-400">{t('layout.useOnMobileFooter')}</p>
         </div>
       </Modal>
 
       {/* ── Book switcher ── */}
-      <Modal open={switcher} title="Your FinBook" onClose={() => setSwitcher(false)}>
+      <Modal open={switcher} title={t('layout.yourFinBookTitle')} onClose={() => setSwitcher(false)}>
         <div className="space-y-2">
           {businesses.map((b) => (
             <button
@@ -264,7 +267,7 @@ export default function Layout() {
               <Avatar name={b.name} size={36} />
               <div className="flex-1">
                 <p className="font-semibold text-sm">{b.name}</p>
-                <p className="text-xs text-slate-500">{b.partyCount ?? 0} parties · {b.role}</p>
+                <p className="text-xs text-slate-500">{t('layout.partiesCountRole', { count: b.partyCount ?? 0, role: b.role ?? '' })}</p>
               </div>
               {b.id === business?.id && <span className="text-brand-600 font-bold">✓</span>}
             </button>
@@ -273,30 +276,30 @@ export default function Layout() {
         <div className="mt-4 flex gap-2">
           <input
             className="input"
-            placeholder="New FinBook name"
+            placeholder={t('layout.newBookPlaceholder')}
             value={newBook}
             onChange={(e) => setNewBook(e.target.value)}
           />
-          <button className="btn-primary whitespace-nowrap" onClick={createBook}>+ Create</button>
+          <button className="btn-primary whitespace-nowrap" onClick={createBook}>{t('layout.createBook')}</button>
         </div>
         {err && <p className="text-red-600 text-sm mt-2">{err}</p>}
       </Modal>
 
       {/* ── Help & Documentation ── */}
-      <Modal open={helpOpen} title="📚 FinBook Help & Tutorials" onClose={() => { setHelpOpen(false); setTutorialStep(0); }} wide>
+      <Modal open={helpOpen} title={t('layout.helpTitle')} onClose={() => { setHelpOpen(false); setTutorialStep(0); }} wide>
         {tutorialStep === 0 ? (
           <div className="text-center space-y-4">
             <div className="text-6xl">🚀</div>
-            <h3 className="text-lg font-bold text-slate-900">Welcome to FinBook!</h3>
-            <p className="text-sm text-slate-600">Your complete business management solution. Pick a topic — every guide has real screenshots from the app.</p>
+            <h3 className="text-lg font-bold text-slate-900">{t('layout.welcomeTitle')}</h3>
+            <p className="text-sm text-slate-600">{t('layout.welcomeBody')}</p>
             <div className="grid grid-cols-2 gap-3 text-left">
-              {TUTORIALS.map((t, i) => (
-                <button key={t.title}
+              {TUTORIALS.map((tu, i) => (
+                <button key={tu.title}
                   className="p-3 rounded-lg border border-slate-200 hover:border-brand-500 text-left transition"
                   onClick={() => setTutorialStep(i + 1)}>
-                  <div className="text-2xl mb-2">{t.icon}</div>
-                  <p className="font-semibold text-sm">{t.title}</p>
-                  <p className="text-xs text-slate-500">{t.blurb}</p>
+                  <div className="text-2xl mb-2">{tu.icon}</div>
+                  <p className="font-semibold text-sm">{tu.title}</p>
+                  <p className="text-xs text-slate-500">{tu.blurb}</p>
                 </button>
               ))}
             </div>
@@ -311,24 +314,25 @@ export default function Layout() {
 
 /** One tutorial topic: screenshots, numbered steps, prev/next navigation. */
 function TutorialTopic({ step, onStep }: { step: number; onStep: (s: number) => void }) {
-  const t = TUTORIALS[step - 1];
+  const { t } = useLanguage();
+  const topic = TUTORIALS[step - 1];
   const last = step === TUTORIALS.length;
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 text-sm text-slate-500">
-        <button onClick={() => onStep(0)} className="hover:text-slate-700">← All topics</button>
+        <button onClick={() => onStep(0)} className="hover:text-slate-700">{t('layout.allTopics')}</button>
         <span>·</span>
-        <span>Topic {step} of {TUTORIALS.length}</span>
+        <span>{t('layout.topicOf', { step, total: TUTORIALS.length })}</span>
       </div>
-      <h3 className="text-lg font-bold text-slate-900">{t.icon} {t.title}</h3>
+      <h3 className="text-lg font-bold text-slate-900">{topic.icon} {topic.title}</h3>
       <div className="space-y-3">
-        {t.images.map((img) => (
+        {topic.images.map((img) => (
           <img key={img.src} src={img.src} alt={img.alt} loading="lazy"
             className="w-full rounded-xl border border-slate-200 shadow-sm" />
         ))}
       </div>
       <ol className="space-y-3 text-sm text-slate-700">
-        {t.steps.map((s, idx) => (
+        {topic.steps.map((s, idx) => (
           <li key={idx} className="flex gap-3">
             <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-500 text-white flex items-center justify-center text-xs font-bold">{idx + 1}</span>
             <span>{s}</span>
@@ -337,10 +341,10 @@ function TutorialTopic({ step, onStep }: { step: number; onStep: (s: number) => 
       </ol>
       <div className="flex gap-2">
         {step > 1 && (
-          <button className="btn-outline flex-1 justify-center" onClick={() => onStep(step - 1)}>← Previous</button>
+          <button className="btn-outline flex-1 justify-center" onClick={() => onStep(step - 1)}>{t('layout.previous')}</button>
         )}
         <button className="btn-primary flex-1 justify-center" onClick={() => onStep(last ? 0 : step + 1)}>
-          {last ? '← Back to all topics' : `Next: ${TUTORIALS[step].title} →`}
+          {last ? t('layout.backToAllTopics') : t('layout.nextTopic', { title: TUTORIALS[step].title })}
         </button>
       </div>
     </div>

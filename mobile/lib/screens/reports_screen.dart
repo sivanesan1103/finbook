@@ -4,6 +4,7 @@ import '../core/api_client.dart';
 import '../core/file_share.dart';
 import '../core/formatters.dart';
 import '../core/theme.dart';
+import '../l10n/translations.dart';
 import '../providers/app_state.dart';
 
 class ReportsScreen extends StatefulWidget {
@@ -61,7 +62,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final app = context.read<AppState>();
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppBar(title: const Text('Reports')),
+      appBar: AppBar(title: Text(context.tr('reports.title'))),
       body: d == null
           ? const Center(child: CircularProgressIndicator())
           : ListView(padding: const EdgeInsets.all(14), children: [
@@ -83,31 +84,31 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 ),
               ]),
               const SizedBox(height: 14),
-              const Text('Ledger', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black54)),
+              Text(context.tr('reports.ledger'), style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.black54)),
               const SizedBox(height: 8),
               Row(children: [
-                _stat('You will get', (d['ledger']['youWillGet'] as num).toDouble(), color: AppColors.gave),
+                _stat(context.tr('reports.youWillGet'), (d['ledger']['youWillGet'] as num).toDouble(), color: AppColors.gave),
                 const SizedBox(width: 10),
-                _stat('You will give', (d['ledger']['youWillGive'] as num).toDouble(), color: AppColors.got),
+                _stat(context.tr('reports.youWillGive'), (d['ledger']['youWillGive'] as num).toDouble(), color: AppColors.got),
               ]),
               const SizedBox(height: 16),
-              const Text('Cashbook', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black54)),
+              Text(context.tr('reports.cashbook'), style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.black54)),
               const SizedBox(height: 8),
               Row(children: [
-                _stat('Cash In', (d['cash']['in'] as num).toDouble(), color: AppColors.got),
+                _stat(context.tr('reports.cashIn'), (d['cash']['in'] as num).toDouble(), color: AppColors.got),
                 const SizedBox(width: 10),
-                _stat('Cash Out', (d['cash']['out'] as num).toDouble(), color: AppColors.gave),
+                _stat(context.tr('reports.cashOut'), (d['cash']['out'] as num).toDouble(), color: AppColors.gave),
               ]),
               const SizedBox(height: 16),
-              const Text('Sales', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black54)),
+              Text(context.tr('reports.sales'), style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.black54)),
               const SizedBox(height: 8),
               Row(children: [
-                _stat('Billed (${d['sales']['invoiceCount']})', (d['sales']['billed'] as num).toDouble()),
+                _stat(context.tr('reports.billedCount', {'count': d['sales']['invoiceCount']}), (d['sales']['billed'] as num).toDouble()),
                 const SizedBox(width: 10),
-                _stat('Collected', (d['sales']['collected'] as num).toDouble(), color: AppColors.got),
+                _stat(context.tr('reports.collected'), (d['sales']['collected'] as num).toDouble(), color: AppColors.got),
               ]),
               const SizedBox(height: 16),
-              const Text('Expenses', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black54)),
+              Text(context.tr('reports.expenses'), style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.black54)),
               const SizedBox(height: 8),
               Container(
                 width: double.infinity,
@@ -118,9 +119,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ),
               const SizedBox(height: 16),
               Row(children: [
-                _statText('Customers', '${d['parties']['customers']}'),
+                _statText(context.tr('reports.customers'), '${d['parties']['customers']}'),
                 const SizedBox(width: 10),
-                _statText('Suppliers', '${d['parties']['suppliers']}'),
+                _statText(context.tr('reports.suppliers'), '${d['parties']['suppliers']}'),
               ]),
               const SizedBox(height: 20),
               ElevatedButton.icon(
@@ -128,7 +129,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     path: '${app.basePath}/reports/transactions.pdf?from=${from.toIso8601String()}&to=${to.toIso8601String()}',
                     filename: 'transactions-report.pdf', subject: 'Transactions report'),
                 icon: const Icon(Icons.picture_as_pdf_outlined),
-                label: const Text('DOWNLOAD TRANSACTIONS REPORT'),
+                label: Text(context.tr('reports.downloadTransactionsReport')),
               ),
             ]),
     );

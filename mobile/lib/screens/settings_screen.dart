@@ -5,7 +5,9 @@ import 'package:provider/provider.dart';
 import '../core/api_client.dart';
 import '../core/file_share.dart';
 import '../core/theme.dart';
+import '../l10n/translations.dart';
 import '../providers/app_state.dart';
+import '../providers/locale_provider.dart';
 import '../widgets/common.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -61,7 +63,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         if (address.text.trim().isNotEmpty) 'address': address.text.trim(),
       });
       await app.loadBusinesses();
-      if (mounted) showSnack(context, 'Business settings saved');
+      if (mounted) showSnack(context, context.tr('settings.savedBusinessSettings'));
     } catch (e) {
       if (mounted) showSnack(context, e.toString(), error: true);
     }
@@ -79,7 +81,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         'invoiceTerms': invoiceTerms.text.trim().isEmpty ? null : invoiceTerms.text.trim(),
       });
       await app.loadBusinesses();
-      if (mounted) showSnack(context, 'Invoice & payment details saved — they will print on your tax invoices');
+      if (mounted) showSnack(context, context.tr('settings.savedInvoiceDetails'));
     } catch (e) {
       if (mounted) showSnack(context, e.toString(), error: true);
     }
@@ -105,7 +107,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       parsed = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
     } catch (_) {
-      if (mounted) showSnack(context, 'That file is not a valid FinBook backup.', error: true);
+      if (mounted) showSnack(context, context.tr('settings.invalidBackupFile'), error: true);
       return;
     }
 
@@ -113,13 +115,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Restore backup?'),
-        content: Text('Restore into "${app.business?.name}"?\n\n'
-            'Existing parties/items are reused; ledger entries from the file are added. '
-            'Importing the same backup twice will duplicate ledger, cashbook and expense entries.'),
+        title: Text(context.tr('settings.confirmRestoreTitle')),
+        content: Text(context.tr('settings.confirmRestoreBody', {'business': app.business?.name ?? ''})),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Restore')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('common.cancel'))),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('settings.restore'))),
         ],
       ),
     );
@@ -129,13 +129,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final res = await ApiClient.instance.post('${app.basePath}/import', parsed);
       final s = res['data'];
-      setState(() => importResult =
-          'Restored: ${s['parties']['created']} new parties (${s['parties']['reused']} reused), '
-          '${s['transactions']['created']} ledger entries, ${s['cashbookEntries']['created']} cashbook entries, '
-          '${s['expenses']['created']} expenses, ${s['items']['created']} items, ${s['invoices']['created']} invoices'
-          '${s['invoices']['skipped'] > 0 ? ' (${s['invoices']['skipped']} skipped — already exist)' : ''}.');
+      setState(() => importResult = context.tr('settings.restoreSummary', {
+            'partiesCreated': s['parties']['created'],
+            'partiesReused': s['parties']['reused'],
+            'txCreated': s['transactions']['created'],
+            'cashbookCreated': s['cashbookEntries']['created'],
+            'expensesCreated': s['expenses']['created'],
+            'itemsCreated': s['items']['created'],
+            'invoicesCreated': s['invoices']['created'],
+            'invoicesSkipped': s['invoices']['skipped'] > 0
+                ? context.tr('settings.restoreSummarySkipped', {'count': s['invoices']['skipped']})
+                : '',
+          }));
       await app.loadBusinesses();
-      if (mounted) showSnack(context, 'Backup restored into this book');
+      if (mounted) showSnack(context, context.tr('settings.backupRestored'));
     } catch (e) {
       if (mounted) showSnack(context, e.toString(), error: true);
     } finally {
@@ -166,34 +173,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = context.watch<LocaleProvider>();
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text(context.tr('settings.title'))),
       body: ListView(padding: const EdgeInsets.only(bottom: 24), children: [
-        _card('Book Settings', [
-          _field(name, 'Business name'),
-          _field(phone, 'Phone', type: TextInputType.phone),
-          _field(gstin, 'GSTIN'),
-          _field(category, 'Category'),
-          _field(address, 'Address', maxLines: 2),
-          ElevatedButton(onPressed: _saveBusiness, child: const Text('SAVE BUSINESS SETTINGS')),
+        _card(context.tr('settings.bookSettingsTitle'), [
+          _field(name, context.tr('settings.businessName')),
+          _field(phone, context.tr('settings.phone'), type: TextInputType.phone),
+          _field(gstin, context.tr('settings.gstin')),
+          _field(category, context.tr('settings.category')),
+          _field(address, context.tr('settings.address'), maxLines: 2),
+          ElevatedButton(onPressed: _saveBusiness, child: Text(context.tr('settings.saveBusinessSettings'))),
         ]),
-        _card('Invoice & Payment Details', [
-          _field(upiId, 'UPI ID'),
-          _field(bankName, 'Bank Name'),
-          _field(bankAccountName, 'Account Holder Name'),
-          _field(bankAccountNo, 'Account Number'),
-          _field(bankIfsc, 'IFSC Code'),
-          _field(invoiceTerms, 'Default Terms & Conditions', maxLines: 3),
-          ElevatedButton(onPressed: _saveInvoiceDetails, child: const Text('SAVE INVOICE DETAILS')),
-        ], subtitle: 'Printed on your tax invoice PDFs'),
-        _card('Data Backup & Restore', [
+        _card(context.tr('settings.invoicePaymentTitle'), [
+          _field(upiId, context.tr('settings.upiId')),
+          _field(bankName, context.tr('settings.bankName')),
+          _field(bankAccountName, context.tr('settings.bankAccountName')),
+          _field(bankAccountNo, context.tr('settings.bankAccountNo')),
+          _field(bankIfsc, context.tr('settings.bankIfsc')),
+          _field(invoiceTerms, context.tr('settings.invoiceTerms'), maxLines: 3),
+          ElevatedButton(onPressed: _saveInvoiceDetails, child: Text(context.tr('settings.saveInvoiceDetails'))),
+        ], subtitle: context.tr('settings.invoicePaymentSubtitle')),
+        _card(context.tr('settings.backupTitle'), [
           Row(children: [
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: _exportData,
                 icon: const Icon(Icons.download),
-                label: const Text('EXPORT'),
+                label: Text(context.tr('settings.export')),
               ),
             ),
             const SizedBox(width: 10),
@@ -203,7 +211,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 icon: importing
                     ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.upload),
-                label: const Text('RESTORE'),
+                label: Text(context.tr('settings.restore')),
               ),
             ),
           ]),
@@ -219,12 +227,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(color: const Color(0xFFFFF6E0), borderRadius: BorderRadius.circular(8)),
-            child: const Text(
-              '⚠️ Restore adds the file\'s entries into the current book. Importing the same backup twice will duplicate ledger, cashbook and expense entries.',
-              style: TextStyle(fontSize: 11),
+            child: Text(
+              context.tr('settings.restoreWarning'),
+              style: const TextStyle(fontSize: 11),
             ),
           ),
-        ], subtitle: 'Export everything in this book, or restore it after a storage crash'),
+        ], subtitle: context.tr('settings.backupSubtitle')),
+        _card(context.tr('settings.languageTitle'), [
+          Row(children: [
+            Expanded(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: locale.code == 'en' ? AppColors.primary : null,
+                  foregroundColor: locale.code == 'en' ? Colors.white : null,
+                ),
+                onPressed: () => context.read<LocaleProvider>().setLang('en'),
+                child: Text(context.tr('settings.english')),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: locale.code == 'ta' ? AppColors.primary : null,
+                  foregroundColor: locale.code == 'ta' ? Colors.white : null,
+                ),
+                onPressed: () => context.read<LocaleProvider>().setLang('ta'),
+                child: Text(context.tr('settings.tamil')),
+              ),
+            ),
+          ]),
+        ], subtitle: context.tr('settings.languageSubtitle')),
       ]),
     );
   }

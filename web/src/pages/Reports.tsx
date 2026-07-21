@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { api } from '../api/client';
 import type { Transaction, CashbookEntry, PartyType } from '../types';
+import type { TranslationKey } from '../i18n';
 import { EmptyState, Money, Spinner, fmtDate } from '../components/ui';
 
 type ReportKind = 'transactions' | 'cashbook';
@@ -34,14 +36,14 @@ const periodRange = (p: Period): { from: string; to: string } => {
   }
 };
 
-const PERIODS: { key: Period; label: string }[] = [
-  { key: 'today', label: 'Today' },
-  { key: 'yesterday', label: 'Yesterday' },
-  { key: 'week', label: 'This Week' },
-  { key: 'month', label: 'This Month' },
-  { key: 'lastMonth', label: 'Last Month' },
-  { key: 'year', label: 'This Year' },
-  { key: 'custom', label: 'Custom' },
+const PERIODS: { key: Period; labelKey: TranslationKey }[] = [
+  { key: 'today', labelKey: 'reports.periodToday' },
+  { key: 'yesterday', labelKey: 'reports.periodYesterday' },
+  { key: 'week', labelKey: 'reports.periodWeek' },
+  { key: 'month', labelKey: 'reports.periodMonth' },
+  { key: 'lastMonth', labelKey: 'reports.periodLastMonth' },
+  { key: 'year', labelKey: 'reports.periodYear' },
+  { key: 'custom', labelKey: 'reports.periodCustom' },
 ];
 
 const downloadBlob = (data: Blob, filename: string) => {
@@ -53,6 +55,7 @@ const downloadBlob = (data: Blob, filename: string) => {
 
 export default function Reports() {
   const { business } = useAuth();
+  const { t } = useLanguage();
   const [kind, setKind] = useState<ReportKind>('transactions');
   const [partyType, setPartyType] = useState<PartyType>('CUSTOMER');
   const [search, setSearch] = useState('');
@@ -163,23 +166,23 @@ export default function Reports() {
     <div className={`grid grid-cols-2 ${withSearch ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-3 mb-5`}>
       {withSearch && (
         <div>
-          <label className="label">Customer Name</label>
-          <input className="input" placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <label className="label">{t('reports.customerName')}</label>
+          <input className="input" placeholder={t('reports.search')} value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
       )}
       <div>
-        <label className="label">Period</label>
+        <label className="label">{t('reports.period')}</label>
         <select className="input" value={period} onChange={(e) => setPeriodAndRange(e.target.value as Period)}>
-          {PERIODS.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+          {PERIODS.map((p) => <option key={p.key} value={p.key}>{t(p.labelKey)}</option>)}
         </select>
       </div>
       <div>
-        <label className="label">Start</label>
+        <label className="label">{t('reports.start')}</label>
         <input type="date" className="input" value={from}
           onChange={(e) => { setPeriod('custom'); setRange((r) => ({ ...r, from: e.target.value })); }} />
       </div>
       <div>
-        <label className="label">End</label>
+        <label className="label">{t('reports.end')}</label>
         <input type="date" className="input" value={to}
           onChange={(e) => { setPeriod('custom'); setRange((r) => ({ ...r, to: e.target.value })); }} />
       </div>
@@ -191,17 +194,17 @@ export default function Reports() {
       {/* ── Reports list panel ── */}
       <section className="w-[360px] border-r border-slate-200 bg-white flex flex-col shrink-0">
         <div className="px-5 py-4 border-b border-slate-100">
-          <h2 className="font-bold text-lg">Reports</h2>
+          <h2 className="font-bold text-lg">{t('reports.title')}</h2>
         </div>
-        <p className="px-5 pt-4 pb-2 text-[11px] font-bold text-slate-400 tracking-wider">PARTIES REPORTS</p>
+        <p className="px-5 pt-4 pb-2 text-[11px] font-bold text-slate-400 tracking-wider">{t('reports.partiesReports')}</p>
         <button onClick={() => setKind('transactions')}
           className={`flex items-center gap-3 px-5 py-4 text-left border-l-4 transition ${
             kind === 'transactions' ? 'border-brand-500 bg-brand-50' : 'border-transparent hover:bg-slate-50'
           }`}>
           <span className={`w-11 h-11 rounded-full flex items-center justify-center text-lg ${kind === 'transactions' ? 'bg-brand-500 text-white' : 'bg-slate-100'}`}>⇄</span>
           <span>
-            <span className="block font-semibold text-sm">Transaction Report</span>
-            <span className="block text-xs text-slate-400">All customers, All Transactions</span>
+            <span className="block font-semibold text-sm">{t('reports.transactionReport')}</span>
+            <span className="block text-xs text-slate-400">{t('reports.transactionReportSub')}</span>
           </span>
         </button>
         <button onClick={() => setKind('cashbook')}
@@ -210,8 +213,8 @@ export default function Reports() {
           }`}>
           <span className={`w-11 h-11 rounded-full flex items-center justify-center text-lg ${kind === 'cashbook' ? 'bg-brand-500 text-white' : 'bg-slate-100'}`}>📔</span>
           <span>
-            <span className="block font-semibold text-sm">Cashbook Report</span>
-            <span className="block text-xs text-slate-400">Daily cash in / cash out</span>
+            <span className="block font-semibold text-sm">{t('reports.cashbookReport')}</span>
+            <span className="block text-xs text-slate-400">{t('reports.cashbookReportSub')}</span>
           </span>
         </button>
       </section>
@@ -223,27 +226,27 @@ export default function Reports() {
             {kind === 'transactions' ? '⇄' : '📔'}
           </span>
           <h1 className="text-xl font-bold text-slate-800 flex-1">
-            {kind === 'transactions' ? 'Transactions Reports' : 'Cashbook Report'}
+            {kind === 'transactions' ? t('reports.transactionsReportsTitle') : t('reports.cashbookReport')}
           </h1>
           <button className="btn-outline" onClick={downloadPdf} disabled={!hasRows || downloading}>
-            {downloading ? '…' : '📄 Download PDF'}
+            {downloading ? '…' : t('reports.downloadPdf')}
           </button>
           <button className="btn-outline" onClick={downloadExcel} disabled={!hasRows}>
-            📊 Download Excel
+            {t('reports.downloadExcel')}
           </button>
         </div>
 
         {kind === 'transactions' && (
           <div className="px-6 pt-4">
             <div className="flex gap-8 border-b border-slate-200 mb-5">
-              {(['CUSTOMER', 'SUPPLIER'] as PartyType[]).map((t) => (
-                <button key={t} onClick={() => setPartyType(t)}
+              {(['CUSTOMER', 'SUPPLIER'] as PartyType[]).map((pt) => (
+                <button key={pt} onClick={() => setPartyType(pt)}
                   className={`pb-2 text-sm font-semibold border-b-2 transition flex items-center gap-2 ${
-                    partyType === t ? 'border-brand-500 text-brand-600' : 'border-transparent text-slate-400 hover:text-slate-600'
+                    partyType === pt ? 'border-brand-500 text-brand-600' : 'border-transparent text-slate-400 hover:text-slate-600'
                   }`}>
-                  {t === 'CUSTOMER' ? 'Customers' : 'Suppliers'}
-                  <span className={`text-xs rounded-full px-2 py-0.5 ${partyType === t ? 'bg-brand-50 text-brand-600' : 'bg-slate-100 text-slate-500'}`}>
-                    {tabCounts[t]}
+                  {pt === 'CUSTOMER' ? t('reports.customers') : t('reports.suppliers')}
+                  <span className={`text-xs rounded-full px-2 py-0.5 ${partyType === pt ? 'bg-brand-50 text-brand-600' : 'bg-slate-100 text-slate-500'}`}>
+                    {tabCounts[pt]}
                   </span>
                 </button>
               ))}
@@ -251,41 +254,41 @@ export default function Reports() {
 
             {filters(true)}
 
-            <p className="font-semibold text-sm mb-3">Total {txData?.count ?? 0} entries</p>
+            <p className="font-semibold text-sm mb-3">{t('reports.totalEntries', { count: txData?.count ?? 0 })}</p>
             <div className="grid grid-cols-3 gap-4 mb-5">
               <div className="card p-4 bg-red-50 border-red-100">
                 <Money value={txData?.totals.gave ?? 0} colored={false} className="text-xl text-get" />
-                <p className="text-xs font-semibold text-get mt-1">You Gave</p>
+                <p className="text-xs font-semibold text-get mt-1">{t('reports.youGave')}</p>
               </div>
               <div className="card p-4 bg-green-50 border-green-100">
                 <Money value={txData?.totals.got ?? 0} colored={false} className="text-xl text-give" />
-                <p className="text-xs font-semibold text-give mt-1">You Got</p>
+                <p className="text-xs font-semibold text-give mt-1">{t('reports.youGot')}</p>
               </div>
               <div className="card p-4 bg-brand-50 border-brand-100">
                 <Money value={txData?.totals.net ?? 0} colored={false} className="text-xl text-slate-800" />
-                <p className="text-xs font-semibold text-slate-500 mt-1">Net Balance</p>
+                <p className="text-xs font-semibold text-slate-500 mt-1">{t('reports.netBalance')}</p>
               </div>
             </div>
 
             {loading ? <Spinner /> : !txData?.entries.length ? (
-              <EmptyState icon="🗃️" title="No transactions available to generate reports" />
+              <EmptyState icon="🗃️" title={t('reports.noTransactionsAvailable')} />
             ) : (
               <div className="card mb-6">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-xs text-slate-400 uppercase border-b border-slate-100">
-                      <th className="px-5 py-3">Date</th><th>Party</th><th>Details</th>
-                      <th className="text-right">You Gave</th><th className="text-right px-5">You Got</th>
+                      <th className="px-5 py-3">{t('reports.date')}</th><th>{t('reports.party')}</th><th>{t('reports.details')}</th>
+                      <th className="text-right">{t('reports.youGave')}</th><th className="text-right px-5">{t('reports.youGot')}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {txData.entries.map((t) => (
-                      <tr key={t.id} className="border-b border-slate-50 last:border-0">
-                        <td className="px-5 py-3 text-slate-500">{fmtDate(t.entryDate)}</td>
-                        <td className="font-medium">{t.party?.name}</td>
-                        <td className="text-slate-400">{t.description || '—'}</td>
-                        <td className="text-right">{t.type === 'GAVE' && <Money value={t.amount} colored={false} className="text-get" />}</td>
-                        <td className="text-right px-5">{t.type === 'GOT' && <Money value={t.amount} colored={false} className="text-give" />}</td>
+                    {txData.entries.map((tx) => (
+                      <tr key={tx.id} className="border-b border-slate-50 last:border-0">
+                        <td className="px-5 py-3 text-slate-500">{fmtDate(tx.entryDate)}</td>
+                        <td className="font-medium">{tx.party?.name}</td>
+                        <td className="text-slate-400">{tx.description || '—'}</td>
+                        <td className="text-right">{tx.type === 'GAVE' && <Money value={tx.amount} colored={false} className="text-get" />}</td>
+                        <td className="text-right px-5">{tx.type === 'GOT' && <Money value={tx.amount} colored={false} className="text-give" />}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -302,27 +305,27 @@ export default function Reports() {
             <div className="grid grid-cols-3 gap-4 mb-5">
               <div className="card p-4 bg-green-50 border-green-100">
                 <Money value={cashTotals.in} colored={false} className="text-xl text-give" />
-                <p className="text-xs font-semibold text-give mt-1">Total In</p>
+                <p className="text-xs font-semibold text-give mt-1">{t('reports.totalIn')}</p>
               </div>
               <div className="card p-4 bg-red-50 border-red-100">
                 <Money value={cashTotals.out} colored={false} className="text-xl text-get" />
-                <p className="text-xs font-semibold text-get mt-1">Total Out</p>
+                <p className="text-xs font-semibold text-get mt-1">{t('reports.totalOut')}</p>
               </div>
               <div className="card p-4 bg-brand-50 border-brand-100">
                 <Money value={cashTotals.balance} colored={false} className="text-xl text-slate-800" />
-                <p className="text-xs font-semibold text-slate-500 mt-1">Net Balance</p>
+                <p className="text-xs font-semibold text-slate-500 mt-1">{t('reports.netBalance')}</p>
               </div>
             </div>
 
             {loading ? <Spinner /> : !cashEntries?.length ? (
-              <EmptyState icon="🗃️" title="No transactions available to generate reports" />
+              <EmptyState icon="🗃️" title={t('reports.noTransactionsAvailable')} />
             ) : (
               <div className="card mb-6">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-xs text-slate-400 uppercase border-b border-slate-100">
-                      <th className="px-5 py-3">Date</th><th>Details</th><th>Mode</th>
-                      <th className="text-right">Cash Out</th><th className="text-right px-5">Cash In</th>
+                      <th className="px-5 py-3">{t('reports.date')}</th><th>{t('reports.details')}</th><th>{t('reports.mode')}</th>
+                      <th className="text-right">{t('reports.cashOut')}</th><th className="text-right px-5">{t('reports.cashIn')}</th>
                     </tr>
                   </thead>
                   <tbody>

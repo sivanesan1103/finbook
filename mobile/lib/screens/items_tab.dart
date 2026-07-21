@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../core/api_client.dart';
 import '../core/formatters.dart';
 import '../core/theme.dart';
+import '../l10n/translations.dart';
 import '../models/models.dart';
 import '../providers/app_state.dart';
 import '../widgets/common.dart';
@@ -68,40 +69,40 @@ class _ItemsTabState extends State<ItemsTab> with SingleTickerProviderStateMixin
         child: StatefulBuilder(
           builder: (ctx, setSheet) => SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(isService ? 'Add Service' : 'Add Product', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+              Text(isService ? context.tr('itemsTab.addServiceTitle') : context.tr('itemsTab.addProductTitle'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
               const SizedBox(height: 14),
               SegmentedButton<bool>(
-                segments: const [
-                  ButtonSegment(value: false, label: Text('Product')),
-                  ButtonSegment(value: true, label: Text('Service')),
+                segments: [
+                  ButtonSegment(value: false, label: Text(context.tr('itemsTab.product'))),
+                  ButtonSegment(value: true, label: Text(context.tr('itemsTab.service'))),
                 ],
                 selected: {isService},
                 onSelectionChanged: (s) => setSheet(() => isService = s.first),
               ),
               const SizedBox(height: 14),
               TextField(controller: name, autofocus: true,
-                  decoration: InputDecoration(labelText: isService ? 'Service name' : 'Item name')),
+                  decoration: InputDecoration(labelText: isService ? context.tr('itemsTab.serviceName') : context.tr('itemsTab.itemName'))),
               const SizedBox(height: 10),
               TextField(controller: price, keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Sale price ₹')),
+                  decoration: InputDecoration(labelText: context.tr('itemsTab.salePrice'))),
               if (!isService) ...[
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
                   value: unit,
-                  decoration: const InputDecoration(labelText: 'Unit'),
+                  decoration: InputDecoration(labelText: context.tr('itemsTab.unit')),
                   items: _kUnits.map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
                   onChanged: (v) => setSheet(() => unit = v!),
                 ),
                 const SizedBox(height: 10),
                 TextField(controller: stock, keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Opening stock (optional)')),
+                    decoration: InputDecoration(labelText: context.tr('itemsTab.openingStockOptional'))),
                 const SizedBox(height: 10),
                 TextField(controller: lowAlert, keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Low stock alert (optional)')),
+                    decoration: InputDecoration(labelText: context.tr('itemsTab.lowStockAlertOptional'))),
               ],
               const SizedBox(height: 14),
               ElevatedButton(onPressed: () => Navigator.pop(ctx, true),
-                  child: Text('SAVE ${isService ? 'SERVICE' : 'PRODUCT'}')),
+                  child: Text(isService ? context.tr('itemsTab.saveService') : context.tr('itemsTab.saveProduct'))),
             ]),
           ),
         ),
@@ -131,23 +132,23 @@ class _ItemsTabState extends State<ItemsTab> with SingleTickerProviderStateMixin
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setD) => AlertDialog(
-          title: Text('Adjust stock — ${item.name}'),
+          title: Text(context.tr('itemsTab.adjustStockTitle', {'name': item.name})),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
             DropdownButtonFormField<String>(
               value: type,
-              items: const [
-                DropdownMenuItem(value: 'IN', child: Text('Stock IN')),
-                DropdownMenuItem(value: 'OUT', child: Text('Stock OUT')),
-                DropdownMenuItem(value: 'ADJUST', child: Text('Set quantity')),
+              items: [
+                DropdownMenuItem(value: 'IN', child: Text(context.tr('itemsTab.stockIn'))),
+                DropdownMenuItem(value: 'OUT', child: Text(context.tr('itemsTab.stockOut'))),
+                DropdownMenuItem(value: 'ADJUST', child: Text(context.tr('itemsTab.setQuantity'))),
               ],
               onChanged: (v) => setD(() => type = v!),
             ),
             TextField(controller: qty, keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Quantity')),
+                decoration: InputDecoration(labelText: context.tr('itemsTab.quantity'))),
           ]),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Apply')),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('itemsTab.cancel'))),
+            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('itemsTab.apply'))),
           ],
         ),
       ),
@@ -167,10 +168,10 @@ class _ItemsTabState extends State<ItemsTab> with SingleTickerProviderStateMixin
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Delete "${item.name}"?'),
+        title: Text(context.tr('itemsTab.confirmDelete', {'name': item.name})),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('itemsTab.cancel'))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('itemsTab.delete'))),
         ],
       ),
     );
@@ -191,8 +192,8 @@ class _ItemsTabState extends State<ItemsTab> with SingleTickerProviderStateMixin
                 child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                   Icon(service ? Icons.miscellaneous_services : Icons.inventory_2, size: 64, color: Colors.black12),
                   const SizedBox(height: 8),
-                  Text('No ${service ? 'services' : 'products'} yet', style: const TextStyle(fontWeight: FontWeight.w700), textAlign: TextAlign.center),
-                  Text(service ? 'Add services like Repair, Delivery, Consulting' : 'Add products to bill faster and track stock',
+                  Text(service ? context.tr('itemsTab.noServicesYet') : context.tr('itemsTab.noProductsYet'), style: const TextStyle(fontWeight: FontWeight.w700), textAlign: TextAlign.center),
+                  Text(service ? context.tr('itemsTab.addServicesSubtitle') : context.tr('itemsTab.addProductsSubtitle'),
                       style: const TextStyle(color: Colors.black45, fontSize: 12), textAlign: TextAlign.center),
                 ]),
               ),
@@ -215,10 +216,10 @@ class _ItemsTabState extends State<ItemsTab> with SingleTickerProviderStateMixin
                   margin: const EdgeInsets.only(left: 6),
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                   decoration: BoxDecoration(color: const Color(0xFFFBE9EA), borderRadius: BorderRadius.circular(4)),
-                  child: const Text('LOW', style: TextStyle(fontSize: 9, color: AppColors.gave, fontWeight: FontWeight.w800)),
+                  child: Text(context.tr('itemsTab.low'), style: const TextStyle(fontSize: 9, color: AppColors.gave, fontWeight: FontWeight.w800)),
                 ),
             ]),
-            subtitle: Text(service ? 'GST ${it.taxRate}%' : 'Stock: ${it.stockQty} ${it.unit} · GST ${it.taxRate}%'),
+            subtitle: Text(service ? context.tr('itemsTab.gstOnly', {'rate': it.taxRate}) : context.tr('itemsTab.stockGstLine', {'qty': it.stockQty, 'unit': it.unit, 'rate': it.taxRate})),
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
               Text(inr(it.salePrice), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
               IconButton(icon: const Icon(Icons.delete_outline, size: 20, color: Colors.black38), onPressed: () => _delete(it)),
@@ -235,7 +236,7 @@ class _ItemsTabState extends State<ItemsTab> with SingleTickerProviderStateMixin
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
-        title: const Text('Items'),
+        title: Text(context.tr('itemsTab.title')),
         bottom: TabBar(
           controller: tabCtrl,
           onTap: (_) => setState(() {}),
@@ -244,7 +245,10 @@ class _ItemsTabState extends State<ItemsTab> with SingleTickerProviderStateMixin
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white60,
           labelStyle: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: 1),
-          tabs: [Tab(text: 'PRODUCTS (${products.length})'), Tab(text: 'SERVICES (${services.length})')],
+          tabs: [
+            Tab(text: context.tr('itemsTab.productsTab', {'count': products.length})),
+            Tab(text: context.tr('itemsTab.servicesTab', {'count': services.length})),
+          ],
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -252,7 +256,7 @@ class _ItemsTabState extends State<ItemsTab> with SingleTickerProviderStateMixin
         backgroundColor: AppColors.primary,
         onPressed: _addItem,
         icon: const Icon(Icons.add, color: Colors.white),
-        label: Text(tabCtrl.index == 1 ? 'ADD SERVICE' : 'ADD PRODUCT',
+        label: Text(tabCtrl.index == 1 ? context.tr('itemsTab.addService') : context.tr('itemsTab.addProduct'),
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
       ),
       body: Column(children: [
@@ -261,11 +265,11 @@ class _ItemsTabState extends State<ItemsTab> with SingleTickerProviderStateMixin
           padding: const EdgeInsets.all(14),
           child: Row(children: [
             Expanded(child: Column(children: [
-              const Text('Stock value', style: TextStyle(color: Colors.black54, fontSize: 12)),
+              Text(context.tr('itemsTab.stockValue'), style: const TextStyle(color: Colors.black54, fontSize: 12)),
               Text(inr(stockValue), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
             ])),
             Expanded(child: Column(children: [
-              const Text('Low stock', style: TextStyle(color: Colors.black54, fontSize: 12)),
+              Text(context.tr('itemsTab.lowStock'), style: const TextStyle(color: Colors.black54, fontSize: 12)),
               Text('$lowCount', style: TextStyle(
                   fontWeight: FontWeight.w800, fontSize: 16, color: lowCount > 0 ? AppColors.gave : Colors.black87)),
             ])),

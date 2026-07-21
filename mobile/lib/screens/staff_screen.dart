@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/api_client.dart';
 import '../core/theme.dart';
+import '../l10n/translations.dart';
 import '../models/models.dart';
 import '../providers/app_state.dart';
 import '../widgets/common.dart';
@@ -45,26 +46,26 @@ class _StaffScreenState extends State<StaffScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setD) => AlertDialog(
-          title: const Text('Add Staff / Partner'),
+          title: Text(context.tr('staff.addTitle')),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
             TextField(controller: email, keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'Email address')),
+                decoration: InputDecoration(labelText: context.tr('staff.emailAddress'))),
             const SizedBox(height: 10),
-            TextField(controller: name, decoration: const InputDecoration(labelText: 'Name (optional)')),
+            TextField(controller: name, decoration: InputDecoration(labelText: context.tr('staff.nameOptional'))),
             const SizedBox(height: 10),
             DropdownButtonFormField<String>(
               value: role,
-              decoration: const InputDecoration(labelText: 'Role'),
-              items: const [
-                DropdownMenuItem(value: 'STAFF', child: Text('Staff')),
-                DropdownMenuItem(value: 'PARTNER', child: Text('Partner')),
+              decoration: InputDecoration(labelText: context.tr('staff.role')),
+              items: [
+                DropdownMenuItem(value: 'STAFF', child: Text(context.tr('staff.roleStaff'))),
+                DropdownMenuItem(value: 'PARTNER', child: Text(context.tr('staff.rolePartner'))),
               ],
               onChanged: (v) => setD(() => role = v!),
             ),
           ]),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Add')),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('common.cancel'))),
+            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('staff.add'))),
           ],
         ),
       ),
@@ -87,10 +88,10 @@ class _StaffScreenState extends State<StaffScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Remove ${m.userName}?'),
+        title: Text(context.tr('staff.confirmRemove', {'name': m.userName})),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Remove')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('common.cancel'))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('staff.remove'))),
         ],
       ),
     );
@@ -104,23 +105,23 @@ class _StaffScreenState extends State<StaffScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppBar(title: const Text('Staff')),
+      appBar: AppBar(title: Text(context.tr('staff.title'))),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.primary,
         onPressed: _add,
         icon: const Icon(Icons.person_add, color: Colors.white),
-        label: const Text('ADD STAFF', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+        label: Text(context.tr('staff.addStaff'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : members.isEmpty
-              ? const Center(
+              ? Center(
                   child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Icon(Icons.people_outline, size: 64, color: Colors.black12),
-                    SizedBox(height: 8),
-                    Text('No staff added yet', style: TextStyle(fontWeight: FontWeight.w700)),
-                    Text('Invite partners or staff to help run this book',
-                        style: TextStyle(color: Colors.black45, fontSize: 12)),
+                    const Icon(Icons.people_outline, size: 64, color: Colors.black12),
+                    const SizedBox(height: 8),
+                    Text(context.tr('staff.noStaffYet'), style: const TextStyle(fontWeight: FontWeight.w700)),
+                    Text(context.tr('staff.inviteSubtitle'),
+                        style: const TextStyle(color: Colors.black45, fontSize: 12)),
                   ]),
                 )
               : ListView.separated(
