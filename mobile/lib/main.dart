@@ -44,7 +44,17 @@ class FinBookApp extends StatelessWidget {
               ),
             );
           }
-          return app.user == null ? const LoginScreen() : const HomeScreen();
+          // Keyed by language so switching it tears down and rebuilds every
+          // screen fresh — `context.tr()` reads the locale with `listen:
+          // false` (safe to call from callbacks), so without this key most
+          // already-built screens would keep showing the old language until
+          // they happened to rebuild for some other reason.
+          return Consumer<LocaleProvider>(
+            builder: (context, locale, _) => KeyedSubtree(
+              key: ValueKey(locale.code),
+              child: app.user == null ? const LoginScreen() : const HomeScreen(),
+            ),
+          );
         },
       ),
     );

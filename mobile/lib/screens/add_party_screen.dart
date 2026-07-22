@@ -28,6 +28,18 @@ class _AddPartyScreenState extends State<AddPartyScreen> {
   bool sameShipping = true;
   bool busy = false;
 
+  /// Strips country code / trunk prefix so only the 10-digit local number
+  /// remains, matching the fixed "+91" prefix shown next to the field.
+  String _cleanIndianMobile(String raw) {
+    final digits = raw.replaceAll(RegExp(r'[^\d+]'), '');
+    if (digits.startsWith('+91')) return digits.substring(3);
+    if (digits.startsWith('91') && digits.length == 12) return digits.substring(2);
+    if (digits.startsWith('+')) return digits.substring(1);
+    // Domestic numbers are sometimes saved with a leading trunk "0" (e.g. "09876543210").
+    if (digits.startsWith('0') && digits.length == 11) return digits.substring(1);
+    return digits;
+  }
+
   Future<void> _pickContact() async {
     final granted = await FlutterContacts.requestPermission(readonly: true);
     if (!granted) {
@@ -40,14 +52,12 @@ class _AddPartyScreenState extends State<AddPartyScreen> {
       showSnack(context, context.tr('addParty.contactHasNoPhone'), error: true);
       return;
     }
-    final digits = contact.phones.first.number.replaceAll(RegExp(r'[^\d+]'), '');
-    final cleaned = digits.startsWith('+91')
-        ? digits.substring(3)
-        : digits.startsWith('91') && digits.length == 12
-            ? digits.substring(2)
-            : digits.startsWith('+')
-                ? digits.substring(1)
-                : digits;
+    final chosen = contact.phones.firstWhere(
+      (p) => p.label == PhoneLabel.mobile,
+      orElse: () => contact.phones.first,
+    );
+    final source = chosen.normalizedNumber.isNotEmpty ? chosen.normalizedNumber : chosen.number;
+    final cleaned = _cleanIndianMobile(source);
     setState(() {
       phone.text = cleaned;
       if (name.text.trim().isEmpty && contact.displayName.trim().isNotEmpty) {
