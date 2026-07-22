@@ -133,7 +133,6 @@ export interface Invoice {
   total: string | number;
   amountPaid: string | number;
   notes?: string | null;
-  confirmedAt?: string | null;
   party?: { id: string; name: string; phone?: string | null };
   items?: InvoiceItem[];
   payments?: { id: string; amount: string | number; mode: PaymentMode; paidAt: string }[];
@@ -158,12 +157,10 @@ export interface StaffMember {
 
 export interface Reminder {
   id: string;
-  channel: 'SMS' | 'WHATSAPP';
   message?: string | null;
   dueDate: string;
   status: 'PENDING' | 'SENT' | 'CANCELLED';
   sentAt?: string | null;
-  confirmedAt?: string | null;
   party: { id: string; name: string; phone?: string | null };
 }
 

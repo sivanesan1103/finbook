@@ -115,10 +115,10 @@ export default function Parties({ type }: { type: PartyType }) {
   const remind = async () => {
     if (!selected) return;
     try {
-      const r = await api.post(`${base}/reminders`, { partyId: selected.id, dueDate: new Date().toISOString(), channel: 'WHATSAPP' });
+      const r = await api.post(`${base}/reminders`, { partyId: selected.id, dueDate: new Date().toISOString() });
       const sendRes = await api.post(`${base}/reminders/${r.data.data.id}/send`);
       const provider = sendRes.data.data.notification?.provider;
-      alert(provider === 'dev-logger' ? t('parties.reminderSentDev') : t('parties.reminderSentWhatsapp'));
+      alert(provider === 'dev-logger' ? t('parties.reminderSentDev') : t('parties.reminderSentSms'));
     } catch (e) { alert(apiMessage(e)); }
   };
 

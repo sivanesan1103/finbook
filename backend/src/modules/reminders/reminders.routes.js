@@ -11,7 +11,6 @@ router.get('/', ctrl.list);
 router.post('/', validate({
   body: z.object({
     partyId: z.string(),
-    channel: z.enum(['SMS', 'WHATSAPP']).optional(),
     message: z.string().max(500).optional(),
     dueDate: z.coerce.date(),
   }),

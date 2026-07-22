@@ -160,15 +160,6 @@ export function StatusBadge({ status, label }: { status: string; label?: string 
   );
 }
 
-/** Small pill shown once a customer has replied YES to confirm an invoice/reminder on WhatsApp. */
-export function ConfirmedBadge({ label }: { label: string }) {
-  return (
-    <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
-      {label}
-    </span>
-  );
-}
-
 export const fmtDate = (d: string | Date) =>
   new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 

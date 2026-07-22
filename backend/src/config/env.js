@@ -16,7 +16,6 @@ const env = {
     maxMb: Number(process.env.MAX_UPLOAD_MB || 5),
   },
   corsOrigins: (process.env.CORS_ORIGINS || '*').split(',').map((s) => s.trim()),
-  publicBaseUrl: (process.env.PUBLIC_BASE_URL || '').replace(/\/+$/, ''),
 };
 
 export default env;

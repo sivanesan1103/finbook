@@ -35,7 +35,6 @@ export const ta: Record<TranslationKey, string> = {
   'common.statusSent': 'அனுப்பப்பட்டது',
   'common.statusOpen': 'திறந்துள்ளது',
   'common.statusConverted': 'மாற்றப்பட்டது',
-  'common.confirmedByCustomer': 'உறுதிசெய்யப்பட்டது ✓',
 
   // settings page
   'settings.title': 'அமைப்புகள்',
@@ -210,8 +209,6 @@ export const ta: Record<TranslationKey, string> = {
   'activity.actionCashbookEntryCreated': '📔 ஒரு ரொக்கப் புத்தக பதிவைச் சேர்த்தார்',
   'activity.actionStaffAdded': '🧑‍💼 ஊழியரைச் சேர்த்தார்',
   'activity.actionReminderSent': '🔔 ஒரு நினைவூட்டலை அனுப்பினார்',
-  'activity.actionInvoiceConfirmedByCustomer': '✅ வாடிக்கையாளர் வாட்ஸ்அப்பில் விலைப்பட்டியலை உறுதிசெய்தார்',
-  'activity.actionReminderConfirmedByCustomer': '✅ வாடிக்கையாளர் வாட்ஸ்அப்பில் நினைவூட்டலை உறுதிசெய்தார்',
 
   // staff
   'staff.title': 'ஊழியர்கள்',
@@ -422,8 +419,8 @@ export const ta: Record<TranslationKey, string> = {
   'parties.saveEntry': 'பதிவைச் சேமி',
   'parties.confirmDeleteParty': '{name}-ஐ நீக்கவா? பதிவுகள் மறுசுழற்சி தொட்டிக்கு நகரும்.',
   'parties.confirmDeleteEntry': 'இந்த பதிவை நீக்கவா?',
-  'parties.reminderSentWhatsapp': 'பணம் செலுத்தும் நினைவூட்டல் வாட்ஸ்அப்பில் அனுப்பப்பட்டது.',
-  'parties.reminderSentDev': 'நினைவூட்டல் பதிவு செய்யப்பட்டது (வாட்ஸ்அப் அமைக்கப்படவில்லை — பேக்கெண்ட் லாக்கைப் பார்க்கவும்).',
+  'parties.reminderSentSms': 'பணம் செலுத்தும் நினைவூட்டல் SMS மூலம் அனுப்பப்பட்டது.',
+  'parties.reminderSentDev': 'நினைவூட்டல் பதிவு செய்யப்பட்டது (SMS அமைக்கப்படவில்லை — பேக்கெண்ட் லாக்கைப் பார்க்கவும்).',
 
   // items
   'items.products': 'பொருட்கள்',

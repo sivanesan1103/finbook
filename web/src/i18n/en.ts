@@ -33,7 +33,6 @@ export const en = {
   'common.statusSent': 'SENT',
   'common.statusOpen': 'OPEN',
   'common.statusConverted': 'CONVERTED',
-  'common.confirmedByCustomer': 'Confirmed ✓',
 
   // settings page
   'settings.title': 'Settings',
@@ -208,8 +207,6 @@ export const en = {
   'activity.actionCashbookEntryCreated': '📔 added a cashbook entry',
   'activity.actionStaffAdded': '🧑‍💼 added staff',
   'activity.actionReminderSent': '🔔 sent a reminder',
-  'activity.actionInvoiceConfirmedByCustomer': '✅ customer confirmed the invoice on WhatsApp',
-  'activity.actionReminderConfirmedByCustomer': '✅ customer confirmed the reminder on WhatsApp',
 
   // staff
   'staff.title': 'Staff',
@@ -420,8 +417,8 @@ export const en = {
   'parties.saveEntry': 'Save Entry',
   'parties.confirmDeleteParty': 'Delete {name}? Entries move to recycle bin.',
   'parties.confirmDeleteEntry': 'Delete this entry?',
-  'parties.reminderSentWhatsapp': 'Payment reminder sent on WhatsApp.',
-  'parties.reminderSentDev': 'Payment reminder logged (WhatsApp not configured — see backend log).',
+  'parties.reminderSentSms': 'Payment reminder sent via SMS.',
+  'parties.reminderSentDev': 'Payment reminder logged (SMS not configured — see backend log).',
 
   // items
   'items.products': 'Products',

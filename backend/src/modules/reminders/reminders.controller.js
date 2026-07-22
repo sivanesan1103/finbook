@@ -33,7 +33,7 @@ export const create = asyncHandler(async (req, res) => {
   ok(res, reminder, 201);
 });
 
-/** Sends the reminder now over the chosen channel (SMS/WhatsApp-ready gateway). */
+/** Sends the reminder now via SMS. */
 export const sendNow = asyncHandler(async (req, res) => {
   const reminder = await prisma.reminder.findFirst({
     where: { id: req.params.reminderId, businessId: req.business.id, deletedAt: null },
@@ -51,7 +51,7 @@ export const sendNow = asyncHandler(async (req, res) => {
     dueDate: reminder.dueDate,
   });
 
-  const result = await smsGateway.send({ to: reminder.party.phone, message, channel: reminder.channel });
+  const result = await smsGateway.send({ to: reminder.party.phone, message });
   if (!result.ok) {
     throw ApiError.badGateway(`Failed to send reminder: ${result.error || 'unknown error'}`);
   }
@@ -59,7 +59,7 @@ export const sendNow = asyncHandler(async (req, res) => {
     where: { id: reminder.id },
     data: { status: 'SENT', sentAt: new Date() },
   });
-  logActivity(req, 'REMINDER_SENT', 'Reminder', reminder.id, { channel: reminder.channel, provider: result.provider });
+  logActivity(req, 'REMINDER_SENT', 'Reminder', reminder.id, { provider: result.provider });
   ok(res, { ...updated, notification: result });
 });
 

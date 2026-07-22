@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { api, apiMessage } from '../api/client';
 import type { Invoice, InvoiceItem, Item, Party } from '../types';
-import { ConfirmedBadge, EmptyState, Money, MODE_LABEL_KEYS, PAYMENT_MODES as MODES, Spinner, StatusBadge, STATUS_LABEL_KEYS, fmtDate, inr, useToast } from '../components/ui';
+import { EmptyState, Money, MODE_LABEL_KEYS, PAYMENT_MODES as MODES, Spinner, StatusBadge, STATUS_LABEL_KEYS, fmtDate, inr, useToast } from '../components/ui';
 
 type Pane =
   | { type: 'none' }
@@ -241,7 +241,6 @@ export default function Invoices() {
                       <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-semibold">{inv.invoiceNo}</span>
                       {fmtDate(inv.issueDate)}
                       <StatusBadge status={inv.status} label={t(STATUS_LABEL_KEYS[inv.status])} />
-                      {inv.confirmedAt && <ConfirmedBadge label={t('common.confirmedByCustomer')} />}
                     </p>
                   </div>
                 </div>
@@ -281,7 +280,6 @@ export default function Invoices() {
                 <div className="flex items-center justify-between mb-2">
                   <span className="inline-block px-3 py-1 rounded-lg border border-slate-200 text-sm font-semibold text-slate-600">{t('invoices.saleLabel')}</span>
                   <div className="flex items-center gap-2">
-                    {inv.confirmedAt && <ConfirmedBadge label={t('common.confirmedByCustomer')} />}
                     <StatusBadge status={inv.status} label={t(STATUS_LABEL_KEYS[inv.status])} />
                   </div>
                 </div>
