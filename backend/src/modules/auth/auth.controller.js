@@ -9,9 +9,6 @@ export const login = asyncHandler(async (req, res) => ok(res, await service.logi
 export const refresh = asyncHandler(async (req, res) => ok(res, await service.refresh(req.body)));
 export const logout = asyncHandler(async (req, res) => ok(res, await service.logout(req.body)));
 
-export const verifyEmail = asyncHandler(async (req, res) => ok(res, await service.verifyEmail(req.body)));
-export const resendOtp = asyncHandler(async (req, res) => ok(res, await service.resendOtp(req.body)));
-
 export const me = asyncHandler(async (req, res) => ok(res, service.sanitize(req.user)));
 
 export const updateProfile = asyncHandler(async (req, res) =>

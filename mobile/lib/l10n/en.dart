@@ -342,16 +342,6 @@ const Map<String, String> en = {
   'login.creatingDots': 'CREATING…',
   'login.createAccountButton': 'CREATE ACCOUNT',
   'login.safeSecure': '🔒 100% Safe and Secure',
-  'login.otpTitle': 'Verify your email',
-  'login.otpSubtitle': "We've sent a 6-digit code to {email}",
-  'login.otpHint': 'Enter 6-digit code',
-  'login.otpVerify': 'VERIFY',
-  'login.otpVerifying': 'VERIFYING…',
-  'login.otpResend': 'Resend code',
-  'login.otpResending': 'Sending…',
-  'login.otpResent': 'Code resent — check your inbox',
-  'login.otpSkip': 'Skip for now',
-  'login.otpInvalid': 'Please enter the 6-digit code',
 
   // bottom nav
   'nav.parties': 'Parties',
@@ -395,9 +385,6 @@ const Map<String, String> en = {
   'settings.languageSubtitle': 'Choose your app language',
   'settings.english': 'English',
   'settings.tamil': 'தமிழ்',
-  'settings.emailVerified': '✓ Email verified',
-  'settings.emailNotVerified': 'Email not verified',
-  'settings.verifyNow': 'Verify now',
 
   // more tab (hub screen)
   'more.title': 'More',

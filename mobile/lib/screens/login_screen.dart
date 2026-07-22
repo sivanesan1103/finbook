@@ -5,7 +5,6 @@ import '../l10n/translations.dart';
 import '../providers/app_state.dart';
 import '../providers/locale_provider.dart';
 import '../widgets/common.dart';
-import 'otp_verify_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -41,17 +40,11 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _register() async {
     setState(() => busy = true);
     try {
-      final email = emailCtrl.text.trim();
-      final data = await context.read<AppState>().registerPending(
+      await context.read<AppState>().register(
             nameCtrl.text.trim(),
-            email,
+            emailCtrl.text.trim(),
             signUpPassCtrl.text.trim(),
           );
-      if (mounted) {
-        await Navigator.push(context, MaterialPageRoute(
-          builder: (_) => OtpVerifyScreen(email: email, pendingAuthData: data),
-        ));
-      }
     } catch (e) {
       if (mounted) showSnack(context, e.toString(), error: true);
     } finally {

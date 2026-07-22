@@ -22,13 +22,6 @@ router.post('/login', validate({
 router.post('/refresh', validate({ body: z.object({ refreshToken: z.string() }) }), ctrl.refresh);
 router.post('/logout', validate({ body: z.object({ refreshToken: z.string().optional() }) }), ctrl.logout);
 
-router.post('/verify-email', validate({
-  body: z.object({ email: z.string().email(), code: z.string().length(6) }),
-}), ctrl.verifyEmail);
-router.post('/resend-otp', validate({
-  body: z.object({ email: z.string().email() }),
-}), ctrl.resendOtp);
-
 router.get('/me', requireAuth, ctrl.me);
 router.patch('/me', requireAuth, validate({
   body: z.object({

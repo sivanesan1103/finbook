@@ -71,9 +71,6 @@ export const en = {
 
   'settings.myProfileTitle': 'My Profile',
   'settings.emailLoginHint': 'Email: {email} (used for login)',
-  'settings.emailVerified': '✓ Email verified',
-  'settings.emailNotVerified': 'Email not verified',
-  'settings.verifyNow': 'Verify now',
   'settings.updateProfile': 'Update Profile',
 
   'settings.notifications': '🔔 Notifications',
@@ -154,16 +151,6 @@ export const en = {
   'auth.register': 'Register',
   'auth.haveAccount': 'Already have an account?',
   'auth.passwordsDontMatch': 'Passwords do not match',
-  'auth.otpTitle': 'Verify your email',
-  'auth.otpSubtitle': "We've sent a 6-digit code to {email}",
-  'auth.otpPlaceholder': 'Enter 6-digit code',
-  'auth.otpVerify': 'Verify',
-  'auth.otpVerifying': 'Verifying…',
-  'auth.otpResend': 'Resend code',
-  'auth.otpResending': 'Sending…',
-  'auth.otpResent': 'Code resent — check your inbox',
-  'auth.otpSkip': 'Skip for now',
-  'auth.otpInvalid': 'Please enter the 6-digit code',
 
   // dashboard
   'dashboard.greeting': 'Hello, {name} 👋',

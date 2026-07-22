@@ -10,7 +10,6 @@ interface AuthState {
   setSession: (user: User, access: string, refresh: string) => Promise<void>;
   switchBusiness: (b: Business) => void;
   reloadBusinesses: () => Promise<void>;
-  refreshUser: () => Promise<void>;
   logout: () => void;
 }
 
@@ -54,11 +53,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await loadBusinesses();
   };
 
-  const refreshUser = async () => {
-    const me = await api.get('/auth/me');
-    setUser(me.data.data);
-  };
-
   const switchBusiness = (b: Business) => {
     setBusiness(b);
     localStorage.setItem('bk_business', b.id);
@@ -75,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, businesses, business, loading, setSession, switchBusiness, reloadBusinesses: loadBusinesses, refreshUser, logout }}
+      value={{ user, businesses, business, loading, setSession, switchBusiness, reloadBusinesses: loadBusinesses, logout }}
     >
       {children}
     </AuthContext.Provider>

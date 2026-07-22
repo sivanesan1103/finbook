@@ -28,7 +28,6 @@ model User {
   role         UserRole  @default(USER)
   avatarUrl    String?
   language     String    @default("en")
-  emailVerifiedAt DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
@@ -42,20 +41,6 @@ model User {
 
   @@index([email])
   @@map("users")
-}
-
-model EmailOtp {
-  id        String    @id @default(cuid())
-  email     String
-  codeHash  String
-  purpose   String    @default("VERIFY_EMAIL")
-  attempts  Int       @default(0)
-  expiresAt DateTime
-  consumedAt DateTime?
-  createdAt DateTime  @default(now())
-
-  @@index([email, purpose])
-  @@map("email_otps")
 }
 
 model RefreshToken {

@@ -7,7 +7,7 @@ import type { Notification } from '../types';
 import { Modal } from '../components/ui';
 
 export default function Settings() {
-  const { user, business, reloadBusinesses, refreshUser, logout } = useAuth();
+  const { user, business, reloadBusinesses, logout } = useAuth();
   const { lang, setLang, t } = useLanguage();
   const [bizForm, setBizForm] = useState({ name: '', phone: '', address: '', gstin: '', category: '' });
   const [invForm, setInvForm] = useState({
@@ -21,13 +21,6 @@ export default function Settings() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [msg, setMsg] = useState('');
   const navigate = useNavigate();
-
-  const [verifyOpen, setVerifyOpen] = useState(false);
-  const [otp, setOtp] = useState('');
-  const [otpErr, setOtpErr] = useState('');
-  const [otpBusy, setOtpBusy] = useState(false);
-  const [resendBusy, setResendBusy] = useState(false);
-  const [resendMsg, setResendMsg] = useState('');
 
   useEffect(() => {
     if (business) {
@@ -124,27 +117,6 @@ export default function Settings() {
       await api.patch('/auth/me', { name: meForm.name, email: meForm.email || null });
       flash(t('settings.profileUpdated'));
     } catch (e) { alert(apiMessage(e)); }
-  };
-
-  const verifyOtp = async () => {
-    if (otp.trim().length !== 6) return setOtpErr(t('auth.otpInvalid'));
-    setOtpErr('');
-    setOtpBusy(true);
-    try {
-      await api.post('/auth/verify-email', { email: user?.email, code: otp.trim() });
-      await refreshUser();
-      setVerifyOpen(false);
-      setOtp('');
-    } catch (e) { setOtpErr(apiMessage(e)); } finally { setOtpBusy(false); }
-  };
-
-  const resendOtp = async () => {
-    setResendMsg('');
-    setResendBusy(true);
-    try {
-      await api.post('/auth/resend-otp', { email: user?.email });
-      setResendMsg(t('auth.otpResent'));
-    } catch (e) { setOtpErr(apiMessage(e)); } finally { setResendBusy(false); }
   };
 
   const deleteBook = async () => {
@@ -258,36 +230,6 @@ export default function Settings() {
           <div><label className="label">{t('common.email')}</label>
             <input className="input" value={meForm.email} onChange={(e) => setMeForm({ ...meForm, email: e.target.value })} /></div>
           <p className="text-xs text-slate-400">{t('settings.emailLoginHint', { email: user?.email || '' })}</p>
-          {user?.emailVerifiedAt ? (
-            <p className="text-xs text-green-600 font-semibold">{t('settings.emailVerified')}</p>
-          ) : !verifyOpen ? (
-            <p className="text-xs">
-              <span className="text-amber-700">{t('settings.emailNotVerified')}</span>{' '}
-              <button className="text-brand-600 font-semibold underline" onClick={() => setVerifyOpen(true)}>{t('settings.verifyNow')}</button>
-            </p>
-          ) : (
-            <div className="rounded-lg bg-slate-50 p-3 space-y-2">
-              <p className="text-xs text-slate-500">{t('auth.otpSubtitle', { email: user?.email || '' })}</p>
-              <input
-                className="input text-center text-lg tracking-[0.4em] font-bold"
-                placeholder={t('auth.otpPlaceholder')}
-                inputMode="numeric"
-                maxLength={6}
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              />
-              {otpErr && <p className="text-red-600 text-xs">{otpErr}</p>}
-              {resendMsg && <p className="text-green-600 text-xs">{resendMsg}</p>}
-              <div className="flex gap-2">
-                <button className="btn-primary text-xs" onClick={verifyOtp} disabled={otpBusy || otp.length !== 6}>
-                  {otpBusy ? t('auth.otpVerifying') : t('auth.otpVerify')}
-                </button>
-                <button className="btn-outline text-xs" onClick={resendOtp} disabled={resendBusy}>
-                  {resendBusy ? t('auth.otpResending') : t('auth.otpResend')}
-                </button>
-              </div>
-            </div>
-          )}
           <button className="btn-primary" onClick={saveMe}>{t('settings.updateProfile')}</button>
         </div>
       </div>

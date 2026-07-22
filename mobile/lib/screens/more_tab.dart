@@ -14,53 +14,6 @@ import 'settings_screen.dart';
 class MoreTab extends StatelessWidget {
   const MoreTab({super.key});
 
-  Future<void> _verifyEmail(BuildContext context) async {
-    final app = context.read<AppState>();
-    final code = TextEditingController();
-    String? error;
-    bool busy = false;
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setD) => AlertDialog(
-          title: Text(context.tr('login.otpTitle')),
-          content: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text(context.tr('login.otpSubtitle', {'email': app.user?.email ?? ''}), style: const TextStyle(fontSize: 12)),
-            const SizedBox(height: 10),
-            TextField(controller: code, keyboardType: TextInputType.number, maxLength: 6, textAlign: TextAlign.center,
-                decoration: InputDecoration(hintText: context.tr('login.otpHint'), counterText: '')),
-            if (error != null) Text(error!, style: const TextStyle(color: Colors.red, fontSize: 12)),
-          ]),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                setD(() => busy = true);
-                try {
-                  await ApiClient.instance.post('/auth/resend-otp', {'email': app.user?.email});
-                } catch (_) {}
-                setD(() => busy = false);
-              },
-              child: Text(context.tr('login.otpResend')),
-            ),
-            ElevatedButton(
-              onPressed: busy ? null : () async {
-                setD(() { busy = true; error = null; });
-                try {
-                  await ApiClient.instance.post('/auth/verify-email', {'email': app.user?.email, 'code': code.text.trim()});
-                  await app.refreshUser();
-                  if (ctx.mounted) Navigator.pop(ctx);
-                } catch (e) {
-                  setD(() { busy = false; error = e.toString(); });
-                }
-              },
-              child: Text(context.tr('login.otpVerify')),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Future<void> _editProfile(BuildContext context) async {
     final app = context.read<AppState>();
     final name = TextEditingController(text: app.user?.name);
@@ -167,16 +120,6 @@ class MoreTab extends StatelessWidget {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(app.user?.name ?? '', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
                 Text(app.user?.phone ?? app.user?.email ?? '', style: const TextStyle(color: Colors.black54)),
-                if (app.user?.emailVerifiedAt != null)
-                  Text(context.tr('settings.emailVerified'), style: const TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.w600))
-                else
-                  GestureDetector(
-                    onTap: () => _verifyEmail(context),
-                    child: Text(
-                      '${context.tr('settings.emailNotVerified')} · ${context.tr('settings.verifyNow')}',
-                      style: const TextStyle(color: Colors.deepOrange, fontSize: 12, fontWeight: FontWeight.w600, decoration: TextDecoration.underline),
-                    ),
-                  ),
               ]),
             ),
             TextButton(onPressed: () => _editProfile(context), child: Text(context.tr('more.edit'))),

@@ -6,7 +6,6 @@ export interface User {
   role: 'ADMIN' | 'STAFF' | 'USER';
   avatarUrl?: string | null;
   language: string;
-  emailVerifiedAt?: string | null;
 }
 
 export interface Business {

@@ -3,11 +3,10 @@ double _num(dynamic v) => v == null ? 0 : double.tryParse(v.toString()) ?? 0;
 class User {
   final String id, name;
   final String? phone, email, avatarUrl;
-  final String? emailVerifiedAt;
-  User({required this.id, required this.name, this.phone, this.email, this.avatarUrl, this.emailVerifiedAt});
+  User({required this.id, required this.name, this.phone, this.email, this.avatarUrl});
   factory User.fromJson(Map<String, dynamic> j) => User(
         id: j['id'], name: j['name'], phone: j['phone'],
-        email: j['email'], avatarUrl: j['avatarUrl'], emailVerifiedAt: j['emailVerifiedAt'],
+        email: j['email'], avatarUrl: j['avatarUrl'],
       );
 }
 
