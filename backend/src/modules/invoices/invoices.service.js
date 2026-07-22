@@ -19,7 +19,9 @@ const computeTotals = (items, discount = 0) => {
     taxAmount += tax;
     return { ...it, amount: base + tax };
   });
-  return { lines, subtotal, taxAmount, total: subtotal + taxAmount - discount };
+  const total = subtotal + taxAmount - discount;
+  if (total < 0) throw ApiError.badRequest('Discount cannot exceed the subtotal plus tax');
+  return { lines, subtotal, taxAmount, total };
 };
 
 /** Creates the invoice row + lines inside an existing transaction, deducting stock when asked. */
@@ -37,6 +39,7 @@ const createDocument = async (txn, businessId, { partyId, docType, status, dueDa
       taxAmount,
       discount,
       total,
+      stockDeducted: deductStock,
       items: {
         create: lines.map((l) => ({
           itemId: l.itemId ?? null,
@@ -53,10 +56,14 @@ const createDocument = async (txn, businessId, { partyId, docType, status, dueDa
 
   if (deductStock) {
     for (const line of lines.filter((l) => l.itemId)) {
-      await txn.item.update({
-        where: { id: line.itemId },
+      // Conditional update — atomically scoped to this business and guarded
+      // against overselling, so it can't race with a concurrent sale of the
+      // same item, and can't touch another business's item.
+      const { count } = await txn.item.updateMany({
+        where: { id: line.itemId, businessId, stockQty: { gte: line.qty } },
         data: { stockQty: { decrement: line.qty } },
       });
+      if (count === 0) throw ApiError.badRequest(`Insufficient stock for "${line.name}"`);
       await txn.stockMovement.create({
         data: { itemId: line.itemId, type: 'OUT', qty: line.qty, note: `Invoice ${invoice.invoiceNo}` },
       });
@@ -68,6 +75,12 @@ const createDocument = async (txn, businessId, { partyId, docType, status, dueDa
 export const createInvoice = async (businessId, { partyId, items, discount = 0, dueDate, notes, status }, docType = 'INVOICE') => {
   const party = await prisma.party.findFirst({ where: { id: partyId, businessId, deletedAt: null } });
   if (!party) throw ApiError.notFound('Party not found');
+
+  const itemIds = [...new Set(items.filter((it) => it.itemId).map((it) => it.itemId))];
+  if (itemIds.length) {
+    const owned = await prisma.item.count({ where: { id: { in: itemIds }, businessId, deletedAt: null } });
+    if (owned !== itemIds.length) throw ApiError.badRequest('One or more items do not belong to this business');
+  }
 
   const { lines, subtotal, taxAmount, total } = computeTotals(items, discount);
   const finalStatus = docType === 'PROFORMA' ? 'OPEN' : status || 'UNPAID';
@@ -141,20 +154,28 @@ export const convertProforma = async (businessId, proformaId) => {
 
 /** Records a payment against an invoice and rolls the status forward. */
 export const recordPayment = async (businessId, invoiceId, { amount, mode, note, paidAt }) => {
-  const invoice = await prisma.invoice.findFirst({
-    where: { id: invoiceId, businessId, docType: 'INVOICE', deletedAt: null },
-  });
-  if (!invoice) throw ApiError.notFound('Invoice not found');
-  if (invoice.status === 'CANCELLED') throw ApiError.badRequest('Invoice is cancelled');
+  return prisma.$transaction(async (txn) => {
+    const invoice = await txn.invoice.findFirst({
+      where: { id: invoiceId, businessId, docType: 'INVOICE', deletedAt: null },
+    });
+    if (!invoice) throw ApiError.notFound('Invoice not found');
+    if (invoice.status === 'CANCELLED') throw ApiError.badRequest('Invoice is cancelled');
 
-  const newPaid = Number(invoice.amountPaid) + amount;
-  if (newPaid > Number(invoice.total) + 0.01) throw ApiError.badRequest('Payment exceeds invoice total');
+    const newPaid = Number(invoice.amountPaid) + amount;
+    if (newPaid > Number(invoice.total) + 0.01) throw ApiError.badRequest('Payment exceeds invoice total');
+    const status = newPaid >= Number(invoice.total) ? 'PAID' : 'PARTIAL';
 
-  const status = newPaid >= Number(invoice.total) ? 'PAID' : 'PARTIAL';
-  const [payment] = await prisma.$transaction([
-    prisma.payment.create({ data: { invoiceId, amount, mode: mode || 'CASH', note, paidAt } }),
-    prisma.invoice.update({ where: { id: invoiceId }, data: { amountPaid: newPaid, status } }),
-    prisma.cashbookEntry.create({
+    // Conditional update guarded on the amountPaid we just read — if a
+    // concurrent payment lands first, this matches 0 rows and we fail loudly
+    // instead of both payments silently applying on top of a stale read.
+    const { count } = await txn.invoice.updateMany({
+      where: { id: invoiceId, amountPaid: invoice.amountPaid },
+      data: { amountPaid: newPaid, status },
+    });
+    if (count === 0) throw ApiError.conflict('This invoice was just updated by another payment — please retry');
+
+    const payment = await txn.payment.create({ data: { invoiceId, amount, mode: mode || 'CASH', note, paidAt } });
+    await txn.cashbookEntry.create({
       data: {
         businessId,
         direction: 'IN',
@@ -162,7 +183,7 @@ export const recordPayment = async (businessId, invoiceId, { amount, mode, note,
         paymentMode: mode || 'CASH',
         description: `Payment for invoice ${invoice.invoiceNo}`,
       },
-    }),
-  ]);
-  return { payment, status, amountPaid: newPaid };
+    });
+    return { payment, status, amountPaid: newPaid };
+  });
 };

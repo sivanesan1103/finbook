@@ -51,13 +51,16 @@ export const sendNow = asyncHandler(async (req, res) => {
     dueDate: reminder.dueDate,
   });
 
-  await smsGateway.send({ to: reminder.party.phone, message, channel: reminder.channel });
+  const result = await smsGateway.send({ to: reminder.party.phone, message, channel: reminder.channel });
+  if (!result.ok) {
+    throw ApiError.badGateway(`Failed to send reminder: ${result.error || 'unknown error'}`);
+  }
   const updated = await prisma.reminder.update({
     where: { id: reminder.id },
     data: { status: 'SENT', sentAt: new Date() },
   });
-  logActivity(req, 'REMINDER_SENT', 'Reminder', reminder.id, { channel: reminder.channel });
-  ok(res, updated);
+  logActivity(req, 'REMINDER_SENT', 'Reminder', reminder.id, { channel: reminder.channel, provider: result.provider });
+  ok(res, { ...updated, notification: result });
 });
 
 export const cancel = asyncHandler(async (req, res) => {

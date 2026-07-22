@@ -43,6 +43,7 @@ export default function Expenses() {
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<'latest' | 'oldest'>('latest');
   const [pane, setPane] = useState<Pane>({ type: 'none' });
+  const [submitting, setSubmitting] = useState(false);
 
   // Create-expense state
   const [picked, setPicked] = useState<Picked[]>([]);
@@ -70,7 +71,10 @@ export default function Expenses() {
     setLoading(false);
   }, [business]);
 
-  useEffect(() => { load(); }, [load]);
+  // Switching businesses re-runs `load` (business is in its deps), but the
+  // detail/edit pane isn't part of that state — reset it or it keeps showing
+  // the previous business's expense.
+  useEffect(() => { load(); setPane({ type: 'none' }); }, [load]);
 
   const loadItems = useCallback(async () => {
     if (!business) return;
@@ -132,7 +136,8 @@ export default function Expenses() {
   };
 
   const saveExpense = async () => {
-    if (picked.length === 0) return;
+    if (picked.length === 0 || submitting) return;
+    setSubmitting(true);
     const category = picked.length === 1 ? picked[0].item.name : `${picked[0].item.name} +${picked.length - 1} more`;
     try {
       const payload: Record<string, string> = {
@@ -153,7 +158,7 @@ export default function Expenses() {
       toast(t('expenses.expenseSaved'));
       setPane({ type: 'none' });
       await load();
-    } catch (e) { toast(apiMessage(e), 'error'); }
+    } catch (e) { toast(apiMessage(e), 'error'); } finally { setSubmitting(false); }
   };
 
   const startEdit = (expense: Expense) => {
@@ -168,7 +173,8 @@ export default function Expenses() {
   };
 
   const saveEdit = async () => {
-    if (pane.type !== 'edit') return;
+    if (pane.type !== 'edit' || submitting) return;
+    setSubmitting(true);
     try {
       await api.patch(`${base}/${pane.expense.id}`, {
         category: editForm.category,
@@ -180,15 +186,17 @@ export default function Expenses() {
       toast(t('expenses.expenseUpdated'));
       setPane({ type: 'none' });
       await load();
-    } catch (e) { toast(apiMessage(e), 'error'); }
+    } catch (e) { toast(apiMessage(e), 'error'); } finally { setSubmitting(false); }
   };
 
   const remove = async (expense: Expense) => {
     if (!confirm(t('expenses.confirmDeleteExpense'))) return;
-    await api.delete(`${base}/${expense.id}`);
-    toast(t('expenses.expenseDeleted'));
-    setPane({ type: 'none' });
-    await load();
+    try {
+      await api.delete(`${base}/${expense.id}`);
+      toast(t('expenses.expenseDeleted'));
+      setPane({ type: 'none' });
+      await load();
+    } catch (e) { toast(apiMessage(e), 'error'); }
   };
 
   const visibleRows = useMemo(() => {
@@ -427,7 +435,7 @@ export default function Expenses() {
             </div>
 
             <button className="w-full py-3 rounded-lg font-bold text-white bg-brand-500 hover:bg-brand-600 disabled:bg-slate-200 disabled:text-slate-400"
-              disabled={picked.length === 0 || !(Number(createForm.amountPaid) > 0 || gross > 0)}
+              disabled={submitting || picked.length === 0 || !(Number(createForm.amountPaid) > 0 || gross > 0)}
               onClick={saveExpense}>
               {t('expenses.save')}
             </button>
@@ -572,7 +580,7 @@ export default function Expenses() {
                   onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} />
               </div>
               <button className="w-full py-3 rounded-lg font-bold text-white bg-brand-500 hover:bg-brand-600 disabled:bg-slate-200 disabled:text-slate-400"
-                disabled={!editForm.amount || Number(editForm.amount) <= 0 || !editForm.category.trim()}
+                disabled={submitting || !editForm.amount || Number(editForm.amount) <= 0 || !editForm.category.trim()}
                 onClick={saveEdit}>
                 {t('expenses.saveChanges')}
               </button>

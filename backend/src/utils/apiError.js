@@ -10,4 +10,5 @@ export class ApiError extends Error {
   static forbidden(msg = 'Forbidden') { return new ApiError(403, msg); }
   static notFound(msg = 'Not found') { return new ApiError(404, msg); }
   static conflict(msg = 'Conflict') { return new ApiError(409, msg); }
+  static badGateway(msg = 'Upstream service failed') { return new ApiError(502, msg); }
 }

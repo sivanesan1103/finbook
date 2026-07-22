@@ -30,14 +30,19 @@ class _BillsTabState extends State<BillsTab> {
     final app = context.read<AppState>();
     if (app.business == null) return;
     setState(() => loading = true);
-    final res = await ApiClient.instance.get('${app.basePath}/invoices?limit=100');
-    if (!mounted) return;
-    setState(() {
-      invoices = (res['data'] as List).map((i) => Invoice.fromJson(i)).toList();
-      billed = (res['summary']['totalBilled'] as num).toDouble();
-      collected = (res['summary']['totalCollected'] as num).toDouble();
-      loading = false;
-    });
+    try {
+      final res = await ApiClient.instance.get('${app.basePath}/invoices?limit=100');
+      if (!mounted) return;
+      setState(() {
+        invoices = (res['data'] as List).map((i) => Invoice.fromJson(i)).toList();
+        billed = (res['summary']['totalBilled'] as num).toDouble();
+        collected = (res['summary']['totalCollected'] as num).toDouble();
+      });
+    } catch (e) {
+      if (mounted) showSnack(context, e.toString(), error: true);
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
   }
 
   Future<void> _createInvoice() async {
@@ -205,6 +210,19 @@ class _BillsTabState extends State<BillsTab> {
                                 ),
                                 const SizedBox(width: 8),
                                 Text(fmtDate(inv.issueDate), style: const TextStyle(fontSize: 12)),
+                                if (inv.confirmedAt != null) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(context.tr('common.confirmedByCustomer'),
+                                        style: const TextStyle(fontSize: 10, color: Colors.green,
+                                            fontWeight: FontWeight.w800)),
+                                  ),
+                                ],
                               ]),
                               trailing: Text(inr(inv.total),
                                   style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),

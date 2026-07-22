@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { api, apiMessage } from '../api/client';
 import type { Invoice, InvoiceItem, Item, Party } from '../types';
-import { EmptyState, Money, MODE_LABEL_KEYS, PAYMENT_MODES as MODES, Spinner, StatusBadge, STATUS_LABEL_KEYS, fmtDate, inr, useToast } from '../components/ui';
+import { ConfirmedBadge, EmptyState, Money, MODE_LABEL_KEYS, PAYMENT_MODES as MODES, Spinner, StatusBadge, STATUS_LABEL_KEYS, fmtDate, inr, useToast } from '../components/ui';
 
 type Pane =
   | { type: 'none' }
@@ -21,6 +21,7 @@ export default function Invoices() {
   const [sort, setSort] = useState<'latest' | 'oldest'>('latest');
   const [loading, setLoading] = useState(true);
   const [pane, setPane] = useState<Pane>({ type: 'none' });
+  const [submitting, setSubmitting] = useState(false);
 
   // collect-payment state (inline in detail panel)
   const [collecting, setCollecting] = useState(false);
@@ -46,7 +47,10 @@ export default function Invoices() {
     setLoading(false);
   }, [business, status]);
 
-  useEffect(() => { load(); }, [load]);
+  // `business` in `load`'s deps means switching businesses re-runs this, but
+  // the detail/create pane isn't part of that state — without resetting it
+  // here it keeps showing the previous business's invoice.
+  useEffect(() => { load(); setPane({ type: 'none' }); }, [load]);
 
   const openDetail = async (inv: Invoice) => {
     setCollecting(false);
@@ -95,6 +99,8 @@ export default function Invoices() {
   const grandTotal = totals.subtotal + totals.tax - Number(discount || 0);
 
   const createInvoice = async () => {
+    if (submitting) return;
+    setSubmitting(true);
     try {
       await api.post(`${base}/invoices`, {
         partyId,
@@ -106,10 +112,12 @@ export default function Invoices() {
       toast(t('invoices.invoiceCreated'));
       setPane({ type: 'none' });
       await load();
-    } catch (e) { toast(apiMessage(e), 'error'); }
+    } catch (e) { toast(apiMessage(e), 'error'); } finally { setSubmitting(false); }
   };
 
   const collect = async (invoice: Invoice) => {
+    if (submitting) return;
+    setSubmitting(true);
     try {
       await api.post(`${base}/invoices/${invoice.id}/payments`, {
         amount: Number(payment.amount), mode: payment.mode,
@@ -119,7 +127,7 @@ export default function Invoices() {
       setPayment({ amount: '', mode: 'CASH' });
       await load();
       await openDetail(invoice);
-    } catch (e) { toast(apiMessage(e), 'error'); }
+    } catch (e) { toast(apiMessage(e), 'error'); } finally { setSubmitting(false); }
   };
 
   const cancelInvoice = async (invoice: Invoice) => {
@@ -143,11 +151,13 @@ export default function Invoices() {
   };
 
   const downloadPdf = async (inv: Invoice) => {
-    const res = await api.get(`${base}/invoices/${inv.id}/pdf`, { responseType: 'blob' });
-    const url = URL.createObjectURL(res.data);
-    const a = document.createElement('a');
-    a.href = url; a.download = `invoice-${inv.invoiceNo}.pdf`; a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const res = await api.get(`${base}/invoices/${inv.id}/pdf`, { responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url; a.download = `invoice-${inv.invoiceNo}.pdf`; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) { toast(apiMessage(e), 'error'); }
   };
 
   const visibleRows = useMemo(() => {
@@ -231,6 +241,7 @@ export default function Invoices() {
                       <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-semibold">{inv.invoiceNo}</span>
                       {fmtDate(inv.issueDate)}
                       <StatusBadge status={inv.status} label={t(STATUS_LABEL_KEYS[inv.status])} />
+                      {inv.confirmedAt && <ConfirmedBadge label={t('common.confirmedByCustomer')} />}
                     </p>
                   </div>
                 </div>
@@ -269,7 +280,10 @@ export default function Invoices() {
               <div className="p-5 border-b border-slate-100">
                 <div className="flex items-center justify-between mb-2">
                   <span className="inline-block px-3 py-1 rounded-lg border border-slate-200 text-sm font-semibold text-slate-600">{t('invoices.saleLabel')}</span>
-                  <StatusBadge status={inv.status} label={t(STATUS_LABEL_KEYS[inv.status])} />
+                  <div className="flex items-center gap-2">
+                    {inv.confirmedAt && <ConfirmedBadge label={t('common.confirmedByCustomer')} />}
+                    <StatusBadge status={inv.status} label={t(STATUS_LABEL_KEYS[inv.status])} />
+                  </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <div>
@@ -355,7 +369,7 @@ export default function Invoices() {
                       <div className="flex gap-2 pt-1">
                         <button className="btn border border-slate-300 text-slate-600 flex-1 justify-center" onClick={() => setCollecting(false)}>{t('invoices.cancel')}</button>
                         <button className="btn-success flex-1 justify-center" onClick={() => collect(inv)}
-                          disabled={!payment.amount || Number(payment.amount) <= 0}>{t('invoices.record')}</button>
+                          disabled={submitting || !payment.amount || Number(payment.amount) <= 0}>{t('invoices.record')}</button>
                       </div>
                     </div>
                   )
@@ -447,7 +461,7 @@ export default function Invoices() {
 
             <button className="w-full py-3 rounded-lg font-bold text-white bg-brand-500 hover:bg-brand-600 disabled:bg-slate-200 disabled:text-slate-400"
               onClick={createInvoice}
-              disabled={!partyId || lines.every((l) => !l.name.trim()) || grandTotal < 0}>
+              disabled={submitting || !partyId || lines.every((l) => !l.name.trim()) || grandTotal < 0}>
               {t('invoices.saveInvoice')}
             </button>
           </div>

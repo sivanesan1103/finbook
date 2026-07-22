@@ -29,6 +29,7 @@ export default function Cashbook() {
   const [loading, setLoading] = useState(true);
   const [pane, setPane] = useState<Pane>({ type: 'none' });
   const [form, setForm] = useState({ amount: '', description: '', paymentMode: 'CASH', entryDate: date });
+  const [submitting, setSubmitting] = useState(false);
 
   const base = `/businesses/${business?.id}/cashbook`;
 
@@ -44,7 +45,10 @@ export default function Cashbook() {
     setLoading(false);
   }, [business, date, mode]);
 
-  useEffect(() => { load(); }, [load]);
+  // Switching businesses re-runs `load` (business is in its deps), but the
+  // detail/edit pane isn't part of that state — reset it or it keeps showing
+  // the previous business's entry.
+  useEffect(() => { load(); setPane({ type: 'none' }); }, [load]);
 
   const openForm = (dir: 'IN' | 'OUT', editing?: CashbookEntry) => {
     setForm(editing
@@ -59,7 +63,8 @@ export default function Cashbook() {
   };
 
   const save = async () => {
-    if (pane.type !== 'form') return;
+    if (pane.type !== 'form' || submitting) return;
+    setSubmitting(true);
     try {
       const payload = {
         direction: pane.dir,
@@ -77,23 +82,27 @@ export default function Cashbook() {
       }
       setPane({ type: 'none' });
       await load();
-    } catch (e) { toast(apiMessage(e), 'error'); }
+    } catch (e) { toast(apiMessage(e), 'error'); } finally { setSubmitting(false); }
   };
 
   const remove = async (entry: CashbookEntry) => {
     if (!confirm(t('cashbook.confirmDeleteEntry'))) return;
-    await api.delete(`${base}/${entry.id}`);
-    toast(t('cashbook.entryDeleted'));
-    setPane({ type: 'none' });
-    await load();
+    try {
+      await api.delete(`${base}/${entry.id}`);
+      toast(t('cashbook.entryDeleted'));
+      setPane({ type: 'none' });
+      await load();
+    } catch (e) { toast(apiMessage(e), 'error'); }
   };
 
   const downloadReport = async () => {
-    const res = await api.get(`${base}/report.pdf`, { responseType: 'blob' });
-    const url = URL.createObjectURL(res.data);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'cashbook-report.pdf'; a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const res = await api.get(`${base}/report.pdf`, { responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'cashbook-report.pdf'; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) { toast(apiMessage(e), 'error'); }
   };
 
   const totalIn = entries.filter((e) => e.direction === 'IN').reduce((s, e) => s + Number(e.amount), 0);
@@ -243,7 +252,7 @@ export default function Cashbook() {
             <button
               className={`w-full py-3 rounded-lg font-bold text-white transition disabled:bg-slate-200 disabled:text-slate-400
                 ${pane.dir === 'IN' ? 'bg-give hover:brightness-110' : 'bg-get hover:brightness-110'}`}
-              disabled={!form.amount || Number(form.amount) <= 0}
+              disabled={submitting || !form.amount || Number(form.amount) <= 0}
               onClick={save}
             >
               {t('cashbook.save')}

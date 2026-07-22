@@ -16,7 +16,10 @@ export const validate = (schemas) => (req, _res, next) => {
       }));
       return next(ApiError.badRequest('Validation failed', details));
     }
-    Object.assign(req[key], result.data);
+    // Replace (not merge) — Zod strips unknown/disallowed keys in result.data,
+    // and merging onto the original req[key] would leave those stripped keys
+    // in place, letting them flow into `...req.body` spreads downstream.
+    req[key] = result.data;
   }
   next();
 };

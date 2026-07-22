@@ -32,6 +32,7 @@ const Map<String, String> ta = {
   'common.statusUnpaid': 'செலுத்தப்படவில்லை',
   'common.statusDraft': 'வரைவு',
   'common.statusCancelled': 'ரத்துசெய்யப்பட்டது',
+  'common.confirmedByCustomer': 'உறுதிசெய்யப்பட்டது ✓',
 
   // add entry screen
   'addEntry.youGaveTo': '{name}-க்கு நீங்கள் ₹ கொடுத்தது',
@@ -341,6 +342,16 @@ const Map<String, String> ta = {
   'login.creatingDots': 'உருவாக்குகிறது…',
   'login.createAccountButton': 'கணக்கை உருவாக்கு',
   'login.safeSecure': '🔒 100% பாதுகாப்பானது',
+  'login.otpTitle': 'உங்கள் மின்னஞ்சலை சரிபார்க்கவும்',
+  'login.otpSubtitle': '{email}-க்கு 6-இலக்க குறியீடு அனுப்பப்பட்டது',
+  'login.otpHint': '6-இலக்க குறியீட்டை உள்ளிடவும்',
+  'login.otpVerify': 'சரிபார்',
+  'login.otpVerifying': 'சரிபார்க்கிறது…',
+  'login.otpResend': 'குறியீட்டை மீண்டும் அனுப்பு',
+  'login.otpResending': 'அனுப்புகிறது…',
+  'login.otpResent': 'குறியீடு மீண்டும் அனுப்பப்பட்டது — உங்கள் இன்பாக்ஸைப் பார்க்கவும்',
+  'login.otpSkip': 'இப்போது தவிர்',
+  'login.otpInvalid': '6-இலக்க குறியீட்டை உள்ளிடவும்',
 
   // bottom nav
   'nav.parties': 'நபர்கள்',
@@ -384,6 +395,9 @@ const Map<String, String> ta = {
   'settings.languageSubtitle': 'உங்கள் ஆப் மொழியைத் தேர்ந்தெடுக்கவும்',
   'settings.english': 'English',
   'settings.tamil': 'தமிழ்',
+  'settings.emailVerified': '✓ மின்னஞ்சல் சரிபார்க்கப்பட்டது',
+  'settings.emailNotVerified': 'மின்னஞ்சல் சரிபார்க்கப்படவில்லை',
+  'settings.verifyNow': 'இப்போது சரிபார்',
 
   // more tab (hub screen)
   'more.title': 'மேலும்',

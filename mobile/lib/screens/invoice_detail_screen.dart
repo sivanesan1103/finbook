@@ -172,6 +172,16 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                       child: Text(context.tr(statusLabelKeys[inv.status] ?? inv.status),
                           style: TextStyle(color: _statusColor(inv.status), fontWeight: FontWeight.w800, fontSize: 12)),
                     ),
+                    if (inv.confirmedAt != null) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
+                        child: Text(context.tr('common.confirmedByCustomer'),
+                            style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w800, fontSize: 12)),
+                      ),
+                    ],
                     const Spacer(),
                     Text(fmtDate(inv.issueDate), style: const TextStyle(color: Colors.black54)),
                   ]),

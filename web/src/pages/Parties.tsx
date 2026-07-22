@@ -24,6 +24,7 @@ export default function Parties({ type }: { type: PartyType }) {
   const [sort, setSort] = useState('recent');
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   // modals
   const [addOpen, setAddOpen] = useState(false);
@@ -60,6 +61,8 @@ export default function Parties({ type }: { type: PartyType }) {
   };
 
   const saveParty = async () => {
+    if (submitting) return;
+    setSubmitting(true);
     try {
       if (editOpen && selected) {
         await api.patch(`${base}/parties/${selected.id}`, cleaned(form));
@@ -70,14 +73,15 @@ export default function Parties({ type }: { type: PartyType }) {
       }
       setForm({ ...emptyParty, type });
       await load();
-    } catch (e) { alert(apiMessage(e)); }
+    } catch (e) { alert(apiMessage(e)); } finally { setSubmitting(false); }
   };
 
   const cleaned = (obj: Record<string, string>) =>
     Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== ''));
 
   const addEntry = async () => {
-    if (!selected || !entryType) return;
+    if (!selected || !entryType || submitting) return;
+    setSubmitting(true);
     try {
       await api.post(`${base}/parties/${selected.id}/transactions`, {
         type: entryType,
@@ -88,28 +92,33 @@ export default function Parties({ type }: { type: PartyType }) {
       setEntryType(null);
       setEntry({ amount: '', description: '', paymentMode: 'CASH' });
       await Promise.all([openLedger(selected), load()]);
-    } catch (e) { alert(apiMessage(e)); }
+    } catch (e) { alert(apiMessage(e)); } finally { setSubmitting(false); }
   };
 
   const deleteParty = async () => {
     if (!selected || !confirm(t('parties.confirmDeleteParty', { name: selected.name }))) return;
-    await api.delete(`${base}/parties/${selected.id}`);
-    setSelected(null);
-    await load();
+    try {
+      await api.delete(`${base}/parties/${selected.id}`);
+      setSelected(null);
+      await load();
+    } catch (e) { alert(apiMessage(e)); }
   };
 
   const deleteTx = async (txId: string) => {
     if (!selected || !confirm(t('parties.confirmDeleteEntry'))) return;
-    await api.delete(`${base}/transactions/${txId}`);
-    await Promise.all([openLedger(selected), load()]);
+    try {
+      await api.delete(`${base}/transactions/${txId}`);
+      await Promise.all([openLedger(selected), load()]);
+    } catch (e) { alert(apiMessage(e)); }
   };
 
   const remind = async () => {
     if (!selected) return;
     try {
-      const r = await api.post(`${base}/reminders`, { partyId: selected.id, dueDate: new Date().toISOString() });
-      await api.post(`${base}/reminders/${r.data.data.id}/send`);
-      alert(t('parties.reminderSent'));
+      const r = await api.post(`${base}/reminders`, { partyId: selected.id, dueDate: new Date().toISOString(), channel: 'WHATSAPP' });
+      const sendRes = await api.post(`${base}/reminders/${r.data.data.id}/send`);
+      const provider = sendRes.data.data.notification?.provider;
+      alert(provider === 'dev-logger' ? t('parties.reminderSentDev') : t('parties.reminderSentWhatsapp'));
     } catch (e) { alert(apiMessage(e)); }
   };
 
@@ -125,11 +134,13 @@ export default function Parties({ type }: { type: PartyType }) {
 
   const downloadStatement = async () => {
     if (!selected) return;
-    const res = await api.get(`${base}/parties/${selected.id}/statement.pdf`, { responseType: 'blob' });
-    const url = URL.createObjectURL(res.data);
-    const a = document.createElement('a');
-    a.href = url; a.download = `statement-${selected.name}.pdf`; a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const res = await api.get(`${base}/parties/${selected.id}/statement.pdf`, { responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url; a.download = `statement-${selected.name}.pdf`; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) { alert(apiMessage(e)); }
   };
 
   return (
@@ -327,7 +338,7 @@ export default function Parties({ type }: { type: PartyType }) {
             <input className="input" placeholder={t('parties.state')} value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} />
             <input className="input" placeholder={t('parties.pincode')} value={form.pincode} onChange={(e) => setForm({ ...form, pincode: e.target.value })} />
           </div>
-          <button className="btn-primary w-full justify-center" onClick={saveParty} disabled={!form.name.trim()}>
+          <button className="btn-primary w-full justify-center" onClick={saveParty} disabled={submitting || !form.name.trim()}>
             {editOpen ? t('parties.saveChanges') : t('parties.addLabel', { label: labelSingular })}
           </button>
         </div>
@@ -356,7 +367,7 @@ export default function Parties({ type }: { type: PartyType }) {
           </div>
           <button
             className={`w-full py-3 rounded-lg text-white font-bold ${entryType === 'GAVE' ? 'bg-red-700 hover:bg-red-800' : 'bg-green-700 hover:bg-green-800'}`}
-            onClick={addEntry} disabled={!entry.amount || Number(entry.amount) <= 0}>
+            onClick={addEntry} disabled={submitting || !entry.amount || Number(entry.amount) <= 0}>
             {t('parties.saveEntry')}
           </button>
         </div>

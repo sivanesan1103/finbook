@@ -79,28 +79,60 @@ export const convert = asyncHandler(async (req, res) => {
   ok(res, invoice, 201);
 });
 
+/** Restores stock deducted at creation, inside the caller's transaction. Idempotent via stockDeducted. */
+const revertStock = async (txn, invoice) => {
+  if (!invoice.stockDeducted) return;
+  for (const line of invoice.items.filter((l) => l.itemId)) {
+    await txn.item.update({
+      where: { id: line.itemId },
+      data: { stockQty: { increment: Number(line.qty) } },
+    });
+    await txn.stockMovement.create({
+      data: { itemId: line.itemId, type: 'IN', qty: Number(line.qty), note: `Reversed — invoice ${invoice.invoiceNo}` },
+    });
+  }
+  await txn.invoice.update({ where: { id: invoice.id }, data: { stockDeducted: false } });
+};
+
 export const cancel = asyncHandler(async (req, res) => {
-  const { count } = await prisma.invoice.updateMany({
-    where: {
-      id: req.params.invoiceId,
-      businessId: req.business.id,
-      docType: docTypeOf(req),
-      deletedAt: null,
-      status: { notIn: ['PAID', 'CONVERTED'] },
-    },
-    data: { status: 'CANCELLED' },
+  await prisma.$transaction(async (txn) => {
+    const invoice = await txn.invoice.findFirst({
+      where: {
+        id: req.params.invoiceId,
+        businessId: req.business.id,
+        docType: docTypeOf(req),
+        deletedAt: null,
+        status: { notIn: ['PAID', 'CONVERTED'] },
+      },
+      include: { items: true },
+    });
+    if (!invoice) throw ApiError.badRequest('Invoice not found or already settled');
+    // Cancelling would otherwise leave payments/cashbook entries recorded
+    // against a sale that no longer exists — block it instead of guessing
+    // at refund semantics.
+    if (Number(invoice.amountPaid) > 0) {
+      throw ApiError.badRequest('Cannot cancel an invoice with payments recorded against it');
+    }
+    await revertStock(txn, invoice);
+    await txn.invoice.update({ where: { id: invoice.id }, data: { status: 'CANCELLED' } });
   });
-  if (!count) throw ApiError.badRequest('Invoice not found or already settled');
   logActivity(req, 'INVOICE_CANCELLED', 'Invoice', req.params.invoiceId);
   ok(res, { cancelled: true });
 });
 
 export const softDelete = asyncHandler(async (req, res) => {
-  const { count } = await prisma.invoice.updateMany({
-    where: { id: req.params.invoiceId, businessId: req.business.id, docType: docTypeOf(req), deletedAt: null },
-    data: { deletedAt: new Date() },
+  await prisma.$transaction(async (txn) => {
+    const invoice = await txn.invoice.findFirst({
+      where: { id: req.params.invoiceId, businessId: req.business.id, docType: docTypeOf(req), deletedAt: null },
+      include: { items: true },
+    });
+    if (!invoice) throw ApiError.notFound('Invoice not found');
+    if (Number(invoice.amountPaid) > 0) {
+      throw ApiError.badRequest('Cannot delete an invoice with payments recorded against it — cancel is also blocked for the same reason');
+    }
+    await revertStock(txn, invoice);
+    await txn.invoice.update({ where: { id: invoice.id }, data: { deletedAt: new Date() } });
   });
-  if (!count) throw ApiError.notFound('Invoice not found');
   logActivity(req, 'INVOICE_DELETED', 'Invoice', req.params.invoiceId);
   ok(res, { deleted: true });
 });

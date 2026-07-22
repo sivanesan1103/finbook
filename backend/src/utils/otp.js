@@ -15,12 +15,12 @@ export const issueOtp = async (email, purpose = 'VERIFY_EMAIL') => {
   await prisma.emailOtp.create({
     data: { email, codeHash, purpose, expiresAt: new Date(Date.now() + OTP_TTL_MS) },
   });
-  await mailer.send({
+  const result = await mailer.send({
     to: email,
     subject: 'Your FinBook verification code',
     text: `Your FinBook verification code is ${code}. It expires in 10 minutes. If you didn't request this, ignore this email.`,
   });
-  return { sent: true };
+  return { sent: result.ok, provider: result.provider, error: result.error };
 };
 
 /** Verifies `code` against the most recent unconsumed OTP for `email`. */

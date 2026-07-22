@@ -33,6 +33,7 @@ export const en = {
   'common.statusSent': 'SENT',
   'common.statusOpen': 'OPEN',
   'common.statusConverted': 'CONVERTED',
+  'common.confirmedByCustomer': 'Confirmed ✓',
 
   // settings page
   'settings.title': 'Settings',
@@ -71,6 +72,9 @@ export const en = {
 
   'settings.myProfileTitle': 'My Profile',
   'settings.emailLoginHint': 'Email: {email} (used for login)',
+  'settings.emailVerified': '✓ Email verified',
+  'settings.emailNotVerified': 'Email not verified',
+  'settings.verifyNow': 'Verify now',
   'settings.updateProfile': 'Update Profile',
 
   'settings.notifications': '🔔 Notifications',
@@ -151,6 +155,16 @@ export const en = {
   'auth.register': 'Register',
   'auth.haveAccount': 'Already have an account?',
   'auth.passwordsDontMatch': 'Passwords do not match',
+  'auth.otpTitle': 'Verify your email',
+  'auth.otpSubtitle': "We've sent a 6-digit code to {email}",
+  'auth.otpPlaceholder': 'Enter 6-digit code',
+  'auth.otpVerify': 'Verify',
+  'auth.otpVerifying': 'Verifying…',
+  'auth.otpResend': 'Resend code',
+  'auth.otpResending': 'Sending…',
+  'auth.otpResent': 'Code resent — check your inbox',
+  'auth.otpSkip': 'Skip for now',
+  'auth.otpInvalid': 'Please enter the 6-digit code',
 
   // dashboard
   'dashboard.greeting': 'Hello, {name} 👋',
@@ -194,6 +208,8 @@ export const en = {
   'activity.actionCashbookEntryCreated': '📔 added a cashbook entry',
   'activity.actionStaffAdded': '🧑‍💼 added staff',
   'activity.actionReminderSent': '🔔 sent a reminder',
+  'activity.actionInvoiceConfirmedByCustomer': '✅ customer confirmed the invoice on WhatsApp',
+  'activity.actionReminderConfirmedByCustomer': '✅ customer confirmed the reminder on WhatsApp',
 
   // staff
   'staff.title': 'Staff',
@@ -404,7 +420,8 @@ export const en = {
   'parties.saveEntry': 'Save Entry',
   'parties.confirmDeleteParty': 'Delete {name}? Entries move to recycle bin.',
   'parties.confirmDeleteEntry': 'Delete this entry?',
-  'parties.reminderSent': 'Payment reminder sent (see backend log in dev mode).',
+  'parties.reminderSentWhatsapp': 'Payment reminder sent on WhatsApp.',
+  'parties.reminderSentDev': 'Payment reminder logged (WhatsApp not configured — see backend log).',
 
   // items
   'items.products': 'Products',

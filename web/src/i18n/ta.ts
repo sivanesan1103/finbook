@@ -35,6 +35,7 @@ export const ta: Record<TranslationKey, string> = {
   'common.statusSent': 'அனுப்பப்பட்டது',
   'common.statusOpen': 'திறந்துள்ளது',
   'common.statusConverted': 'மாற்றப்பட்டது',
+  'common.confirmedByCustomer': 'உறுதிசெய்யப்பட்டது ✓',
 
   // settings page
   'settings.title': 'அமைப்புகள்',
@@ -73,6 +74,9 @@ export const ta: Record<TranslationKey, string> = {
 
   'settings.myProfileTitle': 'எனது சுயவிவரம்',
   'settings.emailLoginHint': 'மின்னஞ்சல்: {email} (உள்நுழைவதற்குப் பயன்படுத்தப்படுகிறது)',
+  'settings.emailVerified': '✓ மின்னஞ்சல் சரிபார்க்கப்பட்டது',
+  'settings.emailNotVerified': 'மின்னஞ்சல் சரிபார்க்கப்படவில்லை',
+  'settings.verifyNow': 'இப்போது சரிபார்',
   'settings.updateProfile': 'சுயவிவரத்தைப் புதுப்பி',
 
   'settings.notifications': '🔔 அறிவிப்புகள்',
@@ -153,6 +157,16 @@ export const ta: Record<TranslationKey, string> = {
   'auth.register': 'பதிவு செய்',
   'auth.haveAccount': 'ஏற்கனவே கணக்கு உள்ளதா?',
   'auth.passwordsDontMatch': 'கடவுச்சொற்கள் பொருந்தவில்லை',
+  'auth.otpTitle': 'உங்கள் மின்னஞ்சலை சரிபார்க்கவும்',
+  'auth.otpSubtitle': '{email}-க்கு 6-இலக்க குறியீடு அனுப்பப்பட்டது',
+  'auth.otpPlaceholder': '6-இலக்க குறியீட்டை உள்ளிடவும்',
+  'auth.otpVerify': 'சரிபார்',
+  'auth.otpVerifying': 'சரிபார்க்கிறது…',
+  'auth.otpResend': 'குறியீட்டை மீண்டும் அனுப்பு',
+  'auth.otpResending': 'அனுப்புகிறது…',
+  'auth.otpResent': 'குறியீடு மீண்டும் அனுப்பப்பட்டது — உங்கள் இன்பாக்ஸைப் பார்க்கவும்',
+  'auth.otpSkip': 'இப்போது தவிர்',
+  'auth.otpInvalid': '6-இலக்க குறியீட்டை உள்ளிடவும்',
 
   // dashboard
   'dashboard.greeting': 'வணக்கம், {name} 👋',
@@ -196,6 +210,8 @@ export const ta: Record<TranslationKey, string> = {
   'activity.actionCashbookEntryCreated': '📔 ஒரு ரொக்கப் புத்தக பதிவைச் சேர்த்தார்',
   'activity.actionStaffAdded': '🧑‍💼 ஊழியரைச் சேர்த்தார்',
   'activity.actionReminderSent': '🔔 ஒரு நினைவூட்டலை அனுப்பினார்',
+  'activity.actionInvoiceConfirmedByCustomer': '✅ வாடிக்கையாளர் வாட்ஸ்அப்பில் விலைப்பட்டியலை உறுதிசெய்தார்',
+  'activity.actionReminderConfirmedByCustomer': '✅ வாடிக்கையாளர் வாட்ஸ்அப்பில் நினைவூட்டலை உறுதிசெய்தார்',
 
   // staff
   'staff.title': 'ஊழியர்கள்',
@@ -406,7 +422,8 @@ export const ta: Record<TranslationKey, string> = {
   'parties.saveEntry': 'பதிவைச் சேமி',
   'parties.confirmDeleteParty': '{name}-ஐ நீக்கவா? பதிவுகள் மறுசுழற்சி தொட்டிக்கு நகரும்.',
   'parties.confirmDeleteEntry': 'இந்த பதிவை நீக்கவா?',
-  'parties.reminderSent': 'பணம் செலுத்தும் நினைவூட்டல் அனுப்பப்பட்டது (டெவ் மோடில் பேக்கெண்ட் லாக்கைப் பார்க்கவும்).',
+  'parties.reminderSentWhatsapp': 'பணம் செலுத்தும் நினைவூட்டல் வாட்ஸ்அப்பில் அனுப்பப்பட்டது.',
+  'parties.reminderSentDev': 'நினைவூட்டல் பதிவு செய்யப்பட்டது (வாட்ஸ்அப் அமைக்கப்படவில்லை — பேக்கெண்ட் லாக்கைப் பார்க்கவும்).',
 
   // items
   'items.products': 'பொருட்கள்',

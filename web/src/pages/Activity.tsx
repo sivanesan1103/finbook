@@ -19,6 +19,8 @@ const ACTION_KEYS: Record<string, TranslationKey> = {
   CASHBOOK_ENTRY_CREATED: 'activity.actionCashbookEntryCreated',
   STAFF_ADDED: 'activity.actionStaffAdded',
   REMINDER_SENT: 'activity.actionReminderSent',
+  INVOICE_CONFIRMED_BY_CUSTOMER: 'activity.actionInvoiceConfirmedByCustomer',
+  REMINDER_CONFIRMED_BY_CUSTOMER: 'activity.actionReminderConfirmedByCustomer',
 };
 
 export default function Activity() {

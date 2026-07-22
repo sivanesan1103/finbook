@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { requireAuth, requireBusiness } from '../../middlewares/auth.js';
+import { requireAuth, requireBusiness, requirePermission } from '../../middlewares/auth.js';
 import * as ctrl from './reports.controller.js';
 
 const router = Router({ mergeParams: true });
-router.use(requireAuth, requireBusiness);
+router.use(requireAuth, requireBusiness, requirePermission('reports'));
 
 router.get('/dashboard', ctrl.dashboard);
 router.get('/transactions', ctrl.transactionsReport);

@@ -46,10 +46,9 @@ export const register = async ({ name, email, password }) => {
   await ensureDefaultBusiness(user);
   const tokens = await issueTokens(user);
   // Registration succeeds even if the verification email fails to send —
-  // the user can request a fresh code via resendOtp.
-  try {
-    await issueOtp(user.email, 'VERIFY_EMAIL');
-  } catch { /* logged inside mailer */ }
+  // the failure is logged inside mailer.send, and the user can request a
+  // fresh code via resendOtp (which does surface a failure to the caller).
+  await issueOtp(user.email, 'VERIFY_EMAIL');
   return { user: sanitize(user), ...tokens };
 };
 
@@ -57,7 +56,9 @@ export const resendOtp = async ({ email }) => {
   const user = await prisma.user.findFirst({ where: { email, deletedAt: null } });
   if (!user) throw ApiError.notFound('No account with this email');
   if (user.emailVerifiedAt) throw ApiError.conflict('Email is already verified');
-  return issueOtp(email, 'VERIFY_EMAIL');
+  const result = await issueOtp(email, 'VERIFY_EMAIL');
+  if (!result.sent) throw ApiError.badGateway(`Failed to send verification email: ${result.error || 'unknown error'}`);
+  return result;
 };
 
 export const verifyEmail = async ({ email, code }) => {

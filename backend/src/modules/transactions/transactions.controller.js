@@ -45,24 +45,14 @@ export const getOne = asyncHandler(async (req, res) => {
 });
 
 export const update = asyncHandler(async (req, res) => {
-  const existing = await prisma.transaction.findFirst({
-    where: { id: req.params.txId, businessId: req.business.id, deletedAt: null },
-  });
-  if (!existing) throw ApiError.notFound('Transaction not found');
-  const tx = await prisma.transaction.update({
-    where: { id: existing.id },
-    data: { ...req.body, ...(req.file ? { billImage: fileUrl(req) } : {}) },
-  });
+  const patch = { ...req.body, ...(req.file ? { billImage: fileUrl(req) } : {}) };
+  const tx = await service.updateEntry(req.business.id, req.params.txId, patch);
   logActivity(req, 'TRANSACTION_UPDATED', 'Transaction', tx.id, req.body);
   ok(res, tx);
 });
 
 export const softDelete = asyncHandler(async (req, res) => {
-  const { count } = await prisma.transaction.updateMany({
-    where: { id: req.params.txId, businessId: req.business.id, deletedAt: null },
-    data: { deletedAt: new Date() },
-  });
-  if (!count) throw ApiError.notFound('Transaction not found');
+  await service.deleteEntry(req.business.id, req.params.txId);
   logActivity(req, 'TRANSACTION_DELETED', 'Transaction', req.params.txId);
   ok(res, { deleted: true });
 });

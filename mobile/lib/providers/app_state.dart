@@ -36,13 +36,25 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> register(String name, String email, String password) async {
+  /// Registers the account but doesn't enter the app yet — the caller shows
+  /// an OTP step first, then calls [completeAuth] with the returned data
+  /// (or to skip verification for now, still calls [completeAuth]).
+  Future<Map<String, dynamic>> registerPending(String name, String email, String password) async {
     final res = await _api.post('/auth/register',
         {'name': name, 'email': email, 'password': password});
-    final data = res['data'];
+    return res['data'];
+  }
+
+  Future<void> completeAuth(Map<String, dynamic> data) async {
     await _api.saveTokens(data['accessToken'], data['refreshToken']);
     user = User.fromJson(data['user']);
     await loadBusinesses();
+    notifyListeners();
+  }
+
+  Future<void> refreshUser() async {
+    final me = await _api.get('/auth/me');
+    user = User.fromJson(me['data']);
     notifyListeners();
   }
 

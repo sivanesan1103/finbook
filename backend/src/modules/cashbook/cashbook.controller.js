@@ -14,15 +14,21 @@ const dayRange = (dateStr) => {
   return { start, end };
 };
 
-const buildWhere = (businessId, q) => ({
-  businessId,
-  deletedAt: null,
-  ...(q.paymentMode && q.paymentMode !== 'ALL' ? { paymentMode: q.paymentMode } : {}),
-  ...(q.date ? { entryDate: { gte: dayRange(q.date).start, lte: dayRange(q.date).end } } : {}),
-  ...(q.from || q.to
-    ? { entryDate: { ...(q.from ? { gte: new Date(q.from) } : {}), ...(q.to ? { lte: new Date(q.to) } : {}) } }
-    : {}),
-});
+const buildWhere = (businessId, q) => {
+  // `date` (single day) and `from`/`to` (range) both target entryDate — if a
+  // caller ever sends both, a plain double-spread would let the second
+  // silently clobber the first instead of being ignored or combined.
+  let entryDate;
+  if (q.date) entryDate = { gte: dayRange(q.date).start, lte: dayRange(q.date).end };
+  else if (q.from || q.to) entryDate = { ...(q.from ? { gte: new Date(q.from) } : {}), ...(q.to ? { lte: new Date(q.to) } : {}) };
+
+  return {
+    businessId,
+    deletedAt: null,
+    ...(q.paymentMode && q.paymentMode !== 'ALL' ? { paymentMode: q.paymentMode } : {}),
+    ...(entryDate ? { entryDate } : {}),
+  };
+};
 
 const sumByDirection = async (where) => {
   const grouped = await prisma.cashbookEntry.groupBy({

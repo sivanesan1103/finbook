@@ -7,6 +7,9 @@ const ok = (res, data) => res.json({ success: true, data });
 
 const rangeFromQuery = (q) => {
   const to = q.to ? new Date(q.to) : new Date();
+  // A date-only `to` (e.g. "2026-07-21") parses as midnight, which would
+  // silently exclude every record dated on that day from `lte: to` filters.
+  if (q.to) to.setHours(23, 59, 59, 999);
   const from = q.from ? new Date(q.from) : new Date(to.getFullYear(), to.getMonth(), 1);
   return { from, to };
 };
@@ -246,14 +249,13 @@ export const partiesSummary = asyncHandler(async (req, res) => {
     orderBy: { name: 'asc' },
   });
 
+  // balance = GAVE − GOT (same convention as computeBalances everywhere else
+  // in the app); positive means the party owes you ("you will get").
+  const balances = await computeBalances(businessId, parties.map((p) => p.id));
   let totalReceivable = 0;
   let totalPayable = 0;
   for (const p of parties) {
-    const entries = await prisma.transaction.findMany({
-      where: { partyId: p.id, deletedAt: null },
-      select: { type: true, amount: true },
-    });
-    const bal = entries.reduce((s, e) => (e.type === 'GOT' ? s + Number(e.amount) : s - Number(e.amount)), 0);
+    const bal = balances.get(p.id) || 0;
     if (bal >= 0) totalReceivable += bal;
     else totalPayable += -bal;
   }

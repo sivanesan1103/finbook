@@ -22,13 +22,18 @@ export const mailer = {
       logger.info(`[EMAIL:dev-logger] to=${to} subject="${subject}" :: ${text}`);
       return { ok: true, provider: 'dev-logger' };
     }
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
-      to,
-      subject,
-      text,
-    });
-    logger.info(`[EMAIL:smtp] sent to=${to} subject="${subject}"`);
-    return { ok: true, provider: 'smtp' };
+    try {
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to,
+        subject,
+        text,
+      });
+      logger.info(`[EMAIL:smtp] sent to=${to} subject="${subject}"`);
+      return { ok: true, provider: 'smtp' };
+    } catch (e) {
+      logger.error(`[EMAIL:smtp] send failed to=${to} :: ${e.message}`);
+      return { ok: false, provider: 'smtp', error: e.message };
+    }
   },
 };

@@ -34,37 +34,47 @@ export const partyLedger = async (businessId, partyId, { from, to, type, search 
     },
     { gave: 0, got: 0 }
   );
-  totals.balance = balance;
+  // Net balance of the *filtered* range, so it reconciles with gave/got as
+  // displayed together (statement PDF, ledger header). Each entry's own
+  // `runningBalance` above is still the true all-time cumulative balance.
+  totals.balance = totals.gave - totals.got;
 
   return { party, entries: filtered, totals };
 };
 
 export const createEntry = async ({ business, party, user, data }) => {
-  const tx = await prisma.transaction.create({
-    data: {
-      ...data,
-      businessId: business.id,
-      partyId: party.id,
-      createdById: user.id,
-    },
+  // Transaction + its mirrored cashbook entry are written atomically, and the
+  // cashbook entry is linked back via transactionId so edits/deletes can keep
+  // them in sync (see updateEntry/deleteEntry below).
+  const tx = await prisma.$transaction(async (txn) => {
+    const created = await txn.transaction.create({
+      data: {
+        ...data,
+        businessId: business.id,
+        partyId: party.id,
+        createdById: user.id,
+      },
+    });
+    // Cashbook auto-entry: money received (GOT) is cash-in, credit given (GAVE) is cash-out.
+    await txn.cashbookEntry.create({
+      data: {
+        businessId: business.id,
+        transactionId: created.id,
+        direction: data.type === 'GOT' ? 'IN' : 'OUT',
+        amount: data.amount,
+        paymentMode: data.paymentMode || 'CASH',
+        description: `${data.type === 'GOT' ? 'Payment from' : 'Credit to'} ${party.name}`,
+        entryDate: data.entryDate || new Date(),
+      },
+    });
+    return created;
   });
 
-  // Cashbook auto-entry: money received (GOT) is cash-in, credit given (GAVE) is cash-out.
-  await prisma.cashbookEntry.create({
-    data: {
-      businessId: business.id,
-      direction: data.type === 'GOT' ? 'IN' : 'OUT',
-      amount: data.amount,
-      paymentMode: data.paymentMode || 'CASH',
-      description: `${data.type === 'GOT' ? 'Payment from' : 'Credit to'} ${party.name}`,
-      entryDate: data.entryDate || new Date(),
-    },
-  });
-
-  // Transactional SMS (dev: logged only) when the party has SMS enabled.
+  // Transactional notification when the party has SMS enabled. `smsSent` only
+  // reflects a confirmed successful send — the UI shows it as a checkmark.
   if (party.smsEnabled && party.phone) {
     const { totals } = await partyLedger(business.id, party.id);
-    await smsGateway.send({
+    const result = await smsGateway.send({
       to: party.phone,
       message: buildTransactionSms({
         businessName: business.name,
@@ -74,8 +84,50 @@ export const createEntry = async ({ business, party, user, data }) => {
         balance: Math.abs(totals.balance),
       }),
     });
-    await prisma.transaction.update({ where: { id: tx.id }, data: { smsSent: true } });
-    tx.smsSent = true;
+    if (result.ok) {
+      await prisma.transaction.update({ where: { id: tx.id }, data: { smsSent: true } });
+      tx.smsSent = true;
+    }
   }
   return tx;
+};
+
+/** Updates a transaction and keeps its mirrored cashbook entry (direction/amount/etc) in sync. */
+export const updateEntry = async (businessId, txId, patch) => {
+  return prisma.$transaction(async (txn) => {
+    const existing = await txn.transaction.findFirst({
+      where: { id: txId, businessId, deletedAt: null },
+      include: { party: true },
+    });
+    if (!existing) throw ApiError.notFound('Transaction not found');
+    const updated = await txn.transaction.update({ where: { id: txId }, data: patch });
+
+    const type = patch.type ?? existing.type;
+    await txn.cashbookEntry.updateMany({
+      where: { transactionId: txId, deletedAt: null },
+      data: {
+        direction: type === 'GOT' ? 'IN' : 'OUT',
+        amount: patch.amount ?? existing.amount,
+        paymentMode: patch.paymentMode ?? existing.paymentMode,
+        entryDate: patch.entryDate ?? existing.entryDate,
+        description: `${type === 'GOT' ? 'Payment from' : 'Credit to'} ${existing.party.name}`,
+      },
+    });
+    return updated;
+  });
+};
+
+/** Soft-deletes a transaction and its mirrored cashbook entry together. */
+export const deleteEntry = async (businessId, txId) => {
+  return prisma.$transaction(async (txn) => {
+    const { count } = await txn.transaction.updateMany({
+      where: { id: txId, businessId, deletedAt: null },
+      data: { deletedAt: new Date() },
+    });
+    if (!count) throw ApiError.notFound('Transaction not found');
+    await txn.cashbookEntry.updateMany({
+      where: { transactionId: txId, deletedAt: null },
+      data: { deletedAt: new Date() },
+    });
+  });
 };

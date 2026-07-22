@@ -31,15 +31,27 @@ export const listParties = async (businessId, { type, search, sort, skip, take }
       : {}),
   };
 
+  if (sort === 'highest' || sort === 'lowest') {
+    // Balance isn't a DB column — ranking by it requires every matching
+    // party, not just the page the DB would otherwise return, or the sort
+    // only ever reorders whatever page happened to load.
+    const [allRows, total] = await Promise.all([
+      prisma.party.findMany({ where }),
+      prisma.party.count({ where }),
+    ]);
+    const balances = await computeBalances(businessId, allRows.map((p) => p.id));
+    const ranked = allRows
+      .map((p) => ({ ...p, balance: balances.get(p.id) || 0 }))
+      .sort((a, b) => (sort === 'highest' ? Math.abs(b.balance) - Math.abs(a.balance) : Math.abs(a.balance) - Math.abs(b.balance)));
+    return { parties: ranked.slice(skip, skip + take), total };
+  }
+
   const [rows, total] = await Promise.all([
     prisma.party.findMany({ where, orderBy: sort === 'name' ? { name: 'asc' } : { updatedAt: 'desc' }, skip, take }),
     prisma.party.count({ where }),
   ]);
-
   const balances = await computeBalances(businessId, rows.map((p) => p.id));
-  let parties = rows.map((p) => ({ ...p, balance: balances.get(p.id) || 0 }));
-  if (sort === 'highest') parties = parties.sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
-  if (sort === 'lowest') parties = parties.sort((a, b) => Math.abs(a.balance) - Math.abs(b.balance));
+  const parties = rows.map((p) => ({ ...p, balance: balances.get(p.id) || 0 }));
   return { parties, total };
 };
 

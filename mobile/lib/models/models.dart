@@ -3,10 +3,11 @@ double _num(dynamic v) => v == null ? 0 : double.tryParse(v.toString()) ?? 0;
 class User {
   final String id, name;
   final String? phone, email, avatarUrl;
-  User({required this.id, required this.name, this.phone, this.email, this.avatarUrl});
+  final String? emailVerifiedAt;
+  User({required this.id, required this.name, this.phone, this.email, this.avatarUrl, this.emailVerifiedAt});
   factory User.fromJson(Map<String, dynamic> j) => User(
         id: j['id'], name: j['name'], phone: j['phone'],
-        email: j['email'], avatarUrl: j['avatarUrl'],
+        email: j['email'], avatarUrl: j['avatarUrl'], emailVerifiedAt: j['emailVerifiedAt'],
       );
 }
 
@@ -152,6 +153,7 @@ class Invoice {
   final double subtotal, taxAmount, discount, total, amountPaid;
   final DateTime issueDate;
   final DateTime? dueDate;
+  final DateTime? confirmedAt;
   final List<InvoiceItem> items;
   final List<InvoicePayment> payments;
   Invoice({
@@ -159,7 +161,7 @@ class Invoice {
     required this.partyName, this.partyPhone, this.notes,
     this.subtotal = 0, this.taxAmount = 0, this.discount = 0,
     required this.total, required this.amountPaid, required this.issueDate,
-    this.dueDate, this.items = const [], this.payments = const [],
+    this.dueDate, this.confirmedAt, this.items = const [], this.payments = const [],
   });
   factory Invoice.fromJson(Map<String, dynamic> j) => Invoice(
         id: j['id'], invoiceNo: j['invoiceNo'], status: j['status'],
@@ -169,6 +171,7 @@ class Invoice {
         discount: _num(j['discount']), total: _num(j['total']),
         amountPaid: _num(j['amountPaid']), issueDate: DateTime.parse(j['issueDate']),
         dueDate: j['dueDate'] == null ? null : DateTime.parse(j['dueDate']),
+        confirmedAt: j['confirmedAt'] == null ? null : DateTime.parse(j['confirmedAt']),
         items: j['items'] == null
             ? const [] : (j['items'] as List).map((i) => InvoiceItem.fromJson(i)).toList(),
         payments: j['payments'] == null

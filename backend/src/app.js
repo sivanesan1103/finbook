@@ -24,6 +24,7 @@ import reminderRoutes from './modules/reminders/reminders.routes.js';
 import reportRoutes from './modules/reports/reports.routes.js';
 import notificationRoutes from './modules/notifications/notifications.routes.js';
 import activityRoutes from './modules/activity/activity.routes.js';
+import webhookRoutes from './modules/webhooks/webhooks.routes.js';
 
 const app = express();
 
@@ -48,6 +49,9 @@ try {
 }
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'finbook-api', ts: new Date() }));
+
+// Public — Twilio calls these directly, verified via signature rather than JWT.
+app.use('/api/webhooks', webhookRoutes);
 
 const v1 = express.Router();
 v1.use('/auth', authRoutes);

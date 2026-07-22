@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { validate } from '../../middlewares/validate.js';
-import { requireAuth, requireBusiness } from '../../middlewares/auth.js';
+import { requireAuth, requireBusiness, requirePermission } from '../../middlewares/auth.js';
 import * as ctrl from './cashbook.controller.js';
 
 const router = Router({ mergeParams: true });
-router.use(requireAuth, requireBusiness);
+router.use(requireAuth, requireBusiness, requirePermission('cashbook'));
 
 const entryBody = z.object({
   direction: z.enum(['IN', 'OUT']),

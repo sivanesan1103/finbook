@@ -6,6 +6,7 @@ export interface User {
   role: 'ADMIN' | 'STAFF' | 'USER';
   avatarUrl?: string | null;
   language: string;
+  emailVerifiedAt?: string | null;
 }
 
 export interface Business {
@@ -132,6 +133,7 @@ export interface Invoice {
   total: string | number;
   amountPaid: string | number;
   notes?: string | null;
+  confirmedAt?: string | null;
   party?: { id: string; name: string; phone?: string | null };
   items?: InvoiceItem[];
   payments?: { id: string; amount: string | number; mode: PaymentMode; paidAt: string }[];
@@ -161,6 +163,7 @@ export interface Reminder {
   dueDate: string;
   status: 'PENDING' | 'SENT' | 'CANCELLED';
   sentAt?: string | null;
+  confirmedAt?: string | null;
   party: { id: string; name: string; phone?: string | null };
 }
 
