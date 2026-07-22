@@ -1,4 +1,4 @@
-package com.example.finbook
+package com.sivaprj.finbook
 
 import io.flutter.embedding.android.FlutterActivity
 
