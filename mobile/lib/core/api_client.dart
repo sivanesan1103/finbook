@@ -145,11 +145,38 @@ class ApiClient {
       return _send(method, path, body: body, retried: true);
     }
 
-    final json = res.body.isEmpty ? {} : jsonDecode(res.body);
+    final json = _decodeOrNull(res.body);
     if (res.statusCode >= 400) {
-      throw ApiException(res.statusCode, json['message'] ?? 'Request failed');
+      final message = (json is Map && json['message'] != null)
+          ? json['message'] as String
+          : _fallbackErrorMessage(res.statusCode);
+      throw ApiException(res.statusCode, message);
     }
-    return json;
+    // A 2xx with a non-JSON body (e.g. an upstream proxy/CDN error page that
+    // slipped through with a success-looking status) shouldn't crash the UI.
+    return json ?? {};
+  }
+
+  /// The server and Cloudflare (in front of it) always reply with JSON on
+  /// success or a handled error. A non-JSON body means something in between
+  /// — the tunnel, DNS, or the origin itself — is down, not our API.
+  dynamic _decodeOrNull(String body) {
+    if (body.isEmpty) return {};
+    try {
+      return jsonDecode(body);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _fallbackErrorMessage(int status) {
+    if (status >= 520 && status < 530 || status == 530) {
+      return 'Server is unreachable right now. Please try again shortly.';
+    }
+    if (status == 502 || status == 503 || status == 504) {
+      return 'Server is temporarily unavailable. Please try again.';
+    }
+    return 'Request failed (status $status)';
   }
 
   Future<void> _tryRefresh() async {
@@ -158,8 +185,9 @@ class ApiClient {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'refreshToken': _refresh}),
     );
-    if (res.statusCode == 200) {
-      final data = jsonDecode(res.body)['data'];
+    final json = _decodeOrNull(res.body);
+    if (res.statusCode == 200 && json is Map && json['data'] is Map) {
+      final data = json['data'] as Map;
       await saveTokens(data['accessToken'], data['refreshToken']);
     } else {
       await clearTokens();
