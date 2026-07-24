@@ -195,6 +195,12 @@ export function StatusBadge({ status, label }: { status: string; label?: string 
 export const fmtDate = (d: string | Date) =>
   new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
+// Local calendar date as YYYY-MM-DD — Date#toISOString() always converts to
+// UTC, which silently rolls the date back for anyone east of Greenwich
+// between midnight and their UTC offset (all of India, every single night).
+export const localDateStr = (d: Date = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 export const fmtDateTime = (d: string | Date) =>
   new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 

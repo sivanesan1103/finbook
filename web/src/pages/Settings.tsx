@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { api, apiMessage } from '../api/client';
 import type { Notification } from '../types';
-import { Modal, useConfirm, useToast } from '../components/ui';
+import { Modal, localDateStr, useConfirm, useToast } from '../components/ui';
 
 export default function Settings() {
   const { user, business, reloadBusinesses, logout } = useAuth();
@@ -75,7 +75,7 @@ export default function Settings() {
       const url = URL.createObjectURL(res.data);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `finbook-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `finbook-backup-${localDateStr()}.json`;
       a.click();
       URL.revokeObjectURL(url);
       flash(t('settings.backupDownloaded'));

@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { api, apiMessage } from '../api/client';
 import type { CashbookEntry } from '../types';
-import { EmptyState, Money, PAYMENT_MODES as MODES, MODE_LABEL_KEYS, Spinner, useConfirm, useToast } from '../components/ui';
+import { EmptyState, Money, PAYMENT_MODES as MODES, MODE_LABEL_KEYS, Spinner, localDateStr, useConfirm, useToast } from '../components/ui';
 
 const fmtTime = (d: string | Date) =>
   new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
@@ -11,7 +11,7 @@ const fmtTime = (d: string | Date) =>
 const fmtDayLabel = (dateStr: string) =>
   new Date(dateStr + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
-const isToday = (dateStr: string) => new Date().toISOString().slice(0, 10) === dateStr;
+const isToday = (dateStr: string) => localDateStr() === dateStr;
 
 type Pane =
   | { type: 'none' }
@@ -25,7 +25,7 @@ export default function Cashbook() {
   const confirm = useConfirm();
   const [entries, setEntries] = useState<CashbookEntry[]>([]);
   const [summary, setSummary] = useState({ totalBalance: 0, todayBalance: 0 });
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => localDateStr());
   const [mode, setMode] = useState('ALL');
   const [loading, setLoading] = useState(true);
   const [pane, setPane] = useState<Pane>({ type: 'none' });

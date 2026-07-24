@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { api, apiMessage } from '../api/client';
 import type { Expense, ExpenseItem } from '../types';
-import { EmptyState, Money, MODE_LABEL_KEYS, PAYMENT_MODES as MODES, Spinner, fmtDate, useConfirm, useToast } from '../components/ui';
+import { EmptyState, Money, MODE_LABEL_KEYS, PAYMENT_MODES as MODES, Spinner, fmtDate, localDateStr, useConfirm, useToast } from '../components/ui';
 
 /** One picked expense item with quantity. */
 type Picked = { item: ExpenseItem; qty: number };
@@ -48,7 +48,7 @@ export default function Expenses() {
 
   // Create-expense state
   const [picked, setPicked] = useState<Picked[]>([]);
-  const [createForm, setCreateForm] = useState({ date: new Date().toISOString().slice(0, 10), paymentMode: 'CASH', amountPaid: '' });
+  const [createForm, setCreateForm] = useState({ date: localDateStr(), paymentMode: 'CASH', amountPaid: '' });
   const [file, setFile] = useState<File | null>(null);
 
   // Item picker state

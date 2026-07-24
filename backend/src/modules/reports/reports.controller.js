@@ -2,15 +2,17 @@ import prisma from '../../config/db.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { computeBalances } from '../parties/parties.service.js';
 import { streamTransactionsReport, streamSalesReport } from '../../utils/pdf.js';
+import { istDayEnd, istMonthStart } from '../../utils/istDate.js';
 
 const ok = (res, data) => res.json({ success: true, data });
 
 const rangeFromQuery = (q) => {
-  const to = q.to ? new Date(q.to) : new Date();
   // A date-only `to` (e.g. "2026-07-21") parses as midnight, which would
-  // silently exclude every record dated on that day from `lte: to` filters.
-  if (q.to) to.setHours(23, 59, 59, 999);
-  const from = q.from ? new Date(q.from) : new Date(to.getFullYear(), to.getMonth(), 1);
+  // silently exclude every record dated on that day from `lte: to` filters —
+  // and "midnight" / "the 1st of this month" mean IST, not the server's own
+  // timezone (this app is India-only; see utils/istDate.js).
+  const to = q.to ? istDayEnd(new Date(q.to)) : new Date();
+  const from = q.from ? new Date(q.from) : istMonthStart(to);
   return { from, to };
 };
 

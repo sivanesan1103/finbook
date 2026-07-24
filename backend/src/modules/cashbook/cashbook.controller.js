@@ -4,14 +4,13 @@ import { ApiError } from '../../utils/apiError.js';
 import { getPagination, paged } from '../../utils/pagination.js';
 import { logActivity } from '../../middlewares/activity.js';
 import { streamCashbookReport } from '../../utils/pdf.js';
+import { istDayStart, istDayEnd, istMonthStart } from '../../utils/istDate.js';
 
 const ok = (res, data, status = 200) => res.status(status).json({ success: true, data });
 
 const dayRange = (dateStr) => {
   const d = dateStr ? new Date(dateStr) : new Date();
-  const start = new Date(d); start.setHours(0, 0, 0, 0);
-  const end = new Date(d); end.setHours(23, 59, 59, 999);
-  return { start, end };
+  return { start: istDayStart(d), end: istDayEnd(d) };
 };
 
 const buildWhere = (businessId, q) => {
@@ -97,7 +96,7 @@ export const softDelete = asyncHandler(async (req, res) => {
 });
 
 export const reportPdf = asyncHandler(async (req, res) => {
-  const from = req.query.from ? new Date(req.query.from) : new Date(new Date().setDate(1));
+  const from = req.query.from ? new Date(req.query.from) : istMonthStart();
   const to = req.query.to ? new Date(req.query.to) : new Date();
   const where = { businessId: req.business.id, deletedAt: null, entryDate: { gte: from, lte: to } };
   const entries = await prisma.cashbookEntry.findMany({ where, orderBy: { entryDate: 'asc' } });
