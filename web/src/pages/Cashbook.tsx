@@ -274,9 +274,9 @@ export default function Cashbook() {
                   <p className="text-xs text-slate-500">{fmtTime(pane.entry.entryDate)} {new Date(pane.entry.entryDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                 </div>
               </div>
-              {pane.entry.transactionId ? (
+              {pane.entry.transactionId || pane.entry.expenseId ? (
                 <span className="text-xs text-slate-400 bg-slate-50 border border-slate-200 rounded-full px-3 py-1.5">
-                  {t('cashbook.linkedToLedger')}
+                  {pane.entry.expenseId ? t('cashbook.linkedToExpense') : t('cashbook.linkedToLedger')}
                 </span>
               ) : (
                 <div className="flex gap-2">

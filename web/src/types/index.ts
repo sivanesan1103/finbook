@@ -89,6 +89,7 @@ export interface CashbookEntry {
   description?: string | null;
   entryDate: string;
   transactionId?: string | null;
+  expenseId?: string | null;
 }
 
 export interface ExpenseItem {

@@ -68,9 +68,9 @@ export const create = asyncHandler(async (req, res) => {
   ok(res, entry, 201);
 });
 
-// Entries mirrored from a ledger transaction (transactionId set) must only be
-// edited/deleted via the transaction endpoints — otherwise the cashbook total
-// and the party's ledger balance silently diverge.
+// Entries mirrored from a ledger transaction or an expense (transactionId /
+// expenseId set) must only be edited/deleted via their own endpoints —
+// otherwise the cashbook total silently diverges from the source record.
 const guardNotMirrored = async (entryId, businessId) => {
   const entry = await prisma.cashbookEntry.findFirst({
     where: { id: entryId, businessId, deletedAt: null },
@@ -78,6 +78,9 @@ const guardNotMirrored = async (entryId, businessId) => {
   if (!entry) throw ApiError.notFound('Entry not found');
   if (entry.transactionId) {
     throw ApiError.badRequest('This entry is linked to a ledger transaction — edit or delete it from the party ledger instead');
+  }
+  if (entry.expenseId) {
+    throw ApiError.badRequest('This entry is linked to an expense — edit or delete it from Expenses instead');
   }
   return entry;
 };

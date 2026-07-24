@@ -76,8 +76,26 @@ export const byCategory = asyncHandler(async (req, res) => {
 });
 
 export const create = asyncHandler(async (req, res) => {
-  const expense = await prisma.expense.create({
-    data: { ...req.body, businessId: req.business.id, attachment: fileUrl(req) },
+  // Expense + its mirrored cashbook entry are written atomically, and the
+  // cashbook entry is linked back via expenseId so edits/deletes keep them
+  // in sync (see update/softDelete below) — same pattern as ledger
+  // transactions in transactions.service.js.
+  const expense = await prisma.$transaction(async (txn) => {
+    const created = await txn.expense.create({
+      data: { ...req.body, businessId: req.business.id, attachment: fileUrl(req) },
+    });
+    await txn.cashbookEntry.create({
+      data: {
+        businessId: req.business.id,
+        expenseId: created.id,
+        direction: 'OUT',
+        amount: created.amount,
+        paymentMode: created.paymentMode,
+        description: `Expense: ${created.category}`,
+        entryDate: created.entryDate,
+      },
+    });
+    return created;
   });
   logActivity(req, 'EXPENSE_CREATED', 'Expense', expense.id, {
     category: expense.category, amount: Number(expense.amount),
@@ -86,20 +104,39 @@ export const create = asyncHandler(async (req, res) => {
 });
 
 export const update = asyncHandler(async (req, res) => {
-  const { count } = await prisma.expense.updateMany({
-    where: { id: req.params.expenseId, businessId: req.business.id, deletedAt: null },
-    data: { ...req.body, ...(req.file ? { attachment: fileUrl(req) } : {}) },
+  const expense = await prisma.$transaction(async (txn) => {
+    const existing = await txn.expense.findFirst({
+      where: { id: req.params.expenseId, businessId: req.business.id, deletedAt: null },
+    });
+    if (!existing) throw ApiError.notFound('Expense not found');
+    const data = { ...req.body, ...(req.file ? { attachment: fileUrl(req) } : {}) };
+    const updated = await txn.expense.update({ where: { id: existing.id }, data });
+    await txn.cashbookEntry.updateMany({
+      where: { expenseId: existing.id, deletedAt: null },
+      data: {
+        amount: updated.amount,
+        paymentMode: updated.paymentMode,
+        entryDate: updated.entryDate,
+        description: `Expense: ${updated.category}`,
+      },
+    });
+    return updated;
   });
-  if (!count) throw ApiError.notFound('Expense not found');
-  ok(res, await prisma.expense.findUnique({ where: { id: req.params.expenseId } }));
+  ok(res, expense);
 });
 
 export const softDelete = asyncHandler(async (req, res) => {
-  const { count } = await prisma.expense.updateMany({
-    where: { id: req.params.expenseId, businessId: req.business.id, deletedAt: null },
-    data: { deletedAt: new Date() },
+  await prisma.$transaction(async (txn) => {
+    const { count } = await txn.expense.updateMany({
+      where: { id: req.params.expenseId, businessId: req.business.id, deletedAt: null },
+      data: { deletedAt: new Date() },
+    });
+    if (!count) throw ApiError.notFound('Expense not found');
+    await txn.cashbookEntry.updateMany({
+      where: { expenseId: req.params.expenseId, deletedAt: null },
+      data: { deletedAt: new Date() },
+    });
   });
-  if (!count) throw ApiError.notFound('Expense not found');
   logActivity(req, 'EXPENSE_DELETED', 'Expense', req.params.expenseId);
   ok(res, { deleted: true });
 });

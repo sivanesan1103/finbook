@@ -301,6 +301,7 @@ export const en = {
   'cashbook.edit': '✏️ Edit',
   'cashbook.delete': '🗑 Delete',
   'cashbook.linkedToLedger': '🔗 Linked to ledger — edit from the party',
+  'cashbook.linkedToExpense': '🔗 Linked to an expense — edit from Expenses',
   'cashbook.confirmDeleteEntry': 'Delete this entry?',
   'cashbook.entryUpdated': 'Entry updated',
   'cashbook.inEntrySaved': 'In entry saved',

@@ -86,7 +86,7 @@ export default function Expenses() {
   const startCreate = () => {
     setPicked([]);
     setFile(null);
-    setCreateForm({ date: new Date().toISOString().slice(0, 10), paymentMode: 'CASH', amountPaid: '' });
+    setCreateForm({ date: localDateStr(), paymentMode: 'CASH', amountPaid: '' });
     setPane({ type: 'create' });
   };
 
