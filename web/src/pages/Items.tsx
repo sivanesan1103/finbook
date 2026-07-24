@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { api, apiMessage } from '../api/client';
 import type { Item } from '../types';
-import { EmptyState, Money, Spinner, useToast } from '../components/ui';
+import { EmptyState, Money, Spinner, useConfirm, useToast } from '../components/ui';
 
 /** Items with unit SERVICE are shown under the Services tab; everything else is a product. */
 const SERVICE_UNIT = 'SERVICE';
@@ -22,6 +22,7 @@ export default function Items() {
   const { business } = useAuth();
   const { t } = useLanguage();
   const toast = useToast();
+  const confirm = useConfirm();
   const [rows, setRows] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'PRODUCTS' | 'SERVICES'>('PRODUCTS');
@@ -139,7 +140,7 @@ export default function Items() {
   };
 
   const remove = async (item: Item) => {
-    if (!confirm(t('items.confirmDelete', { name: item.name }))) return;
+    if (!(await confirm({ message: t('items.confirmDelete', { name: item.name }), danger: true }))) return;
     try {
       await api.delete(`${base}/${item.id}`);
       toast(t('items.itemDeleted'));

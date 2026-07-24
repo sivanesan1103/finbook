@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { api, apiMessage } from '../api/client';
 import type { Expense, ExpenseItem } from '../types';
-import { EmptyState, Money, MODE_LABEL_KEYS, PAYMENT_MODES as MODES, Spinner, fmtDate, useToast } from '../components/ui';
+import { EmptyState, Money, MODE_LABEL_KEYS, PAYMENT_MODES as MODES, Spinner, fmtDate, useConfirm, useToast } from '../components/ui';
 
 /** One picked expense item with quantity. */
 type Picked = { item: ExpenseItem; qty: number };
@@ -37,6 +37,7 @@ export default function Expenses() {
   const { business } = useAuth();
   const { t } = useLanguage();
   const toast = useToast();
+  const confirm = useConfirm();
   const [rows, setRows] = useState<Expense[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -123,7 +124,7 @@ export default function Expenses() {
   };
 
   const removeItem = async (item: ExpenseItem) => {
-    if (!confirm(t('expenses.confirmDeleteItem', { name: item.name }))) return;
+    if (!(await confirm({ message: t('expenses.confirmDeleteItem', { name: item.name }), danger: true }))) return;
     try {
       await api.delete(`${base}/items/${item.id}`);
       setPicked((ps) => ps.filter((p) => p.item.id !== item.id));
@@ -192,7 +193,7 @@ export default function Expenses() {
   };
 
   const remove = async (expense: Expense) => {
-    if (!confirm(t('expenses.confirmDeleteExpense'))) return;
+    if (!(await confirm({ message: t('expenses.confirmDeleteExpense'), danger: true }))) return;
     try {
       await api.delete(`${base}/${expense.id}`);
       toast(t('expenses.expenseDeleted'));

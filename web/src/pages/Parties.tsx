@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { api, apiMessage } from '../api/client';
 import type { Party, PartyType, LedgerResponse, TxType } from '../types';
-import { Avatar, EmptyState, Modal, Money, MODE_LABEL_KEYS, PAYMENT_MODES, Spinner, fmtDateTime, timeAgo } from '../components/ui';
+import { Avatar, EmptyState, Modal, Money, MODE_LABEL_KEYS, PAYMENT_MODES, Spinner, fmtDateTime, timeAgo, useConfirm, useToast } from '../components/ui';
 
 const emptyParty = {
   name: '', phone: '', type: 'CUSTOMER' as PartyType, gstin: '',
@@ -15,6 +15,8 @@ export default function Parties({ type }: { type: PartyType }) {
   const { business } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const confirm = useConfirm();
+  const toast = useToast();
   const [parties, setParties] = useState<Party[]>([]);
   const [summary, setSummary] = useState({ youWillGet: 0, youWillGive: 0, partyCount: 0 });
   const [selected, setSelected] = useState<Party | null>(null);
@@ -65,7 +67,8 @@ export default function Parties({ type }: { type: PartyType }) {
     setSubmitting(true);
     try {
       if (editOpen && selected) {
-        await api.patch(`${base}/parties/${selected.id}`, cleaned(form));
+        const res = await api.patch(`${base}/parties/${selected.id}`, cleaned(form));
+        setSelected(res.data.data);
         setEditOpen(false);
       } else {
         await api.post(`${base}/parties`, cleaned({ ...form, type }));
@@ -73,7 +76,7 @@ export default function Parties({ type }: { type: PartyType }) {
       }
       setForm({ ...emptyParty, type });
       await load();
-    } catch (e) { alert(apiMessage(e)); } finally { setSubmitting(false); }
+    } catch (e) { toast(apiMessage(e), 'error'); } finally { setSubmitting(false); }
   };
 
   const cleaned = (obj: Record<string, string>) =>
@@ -92,24 +95,26 @@ export default function Parties({ type }: { type: PartyType }) {
       setEntryType(null);
       setEntry({ amount: '', description: '', paymentMode: 'CASH' });
       await Promise.all([openLedger(selected), load()]);
-    } catch (e) { alert(apiMessage(e)); } finally { setSubmitting(false); }
+    } catch (e) { toast(apiMessage(e), 'error'); } finally { setSubmitting(false); }
   };
 
   const deleteParty = async () => {
-    if (!selected || !confirm(t('parties.confirmDeleteParty', { name: selected.name }))) return;
+    if (!selected) return;
+    if (!(await confirm({ message: t('parties.confirmDeleteParty', { name: selected.name }), danger: true }))) return;
     try {
       await api.delete(`${base}/parties/${selected.id}`);
       setSelected(null);
       await load();
-    } catch (e) { alert(apiMessage(e)); }
+    } catch (e) { toast(apiMessage(e), 'error'); }
   };
 
   const deleteTx = async (txId: string) => {
-    if (!selected || !confirm(t('parties.confirmDeleteEntry'))) return;
+    if (!selected) return;
+    if (!(await confirm({ message: t('parties.confirmDeleteEntry'), danger: true }))) return;
     try {
       await api.delete(`${base}/transactions/${txId}`);
       await Promise.all([openLedger(selected), load()]);
-    } catch (e) { alert(apiMessage(e)); }
+    } catch (e) { toast(apiMessage(e), 'error'); }
   };
 
   const remind = async () => {
@@ -118,8 +123,8 @@ export default function Parties({ type }: { type: PartyType }) {
       const r = await api.post(`${base}/reminders`, { partyId: selected.id, dueDate: new Date().toISOString() });
       const sendRes = await api.post(`${base}/reminders/${r.data.data.id}/send`);
       const provider = sendRes.data.data.notification?.provider;
-      alert(provider === 'dev-logger' ? t('parties.reminderSentDev') : t('parties.reminderSentSms'));
-    } catch (e) { alert(apiMessage(e)); }
+      toast(provider === 'dev-logger' ? t('parties.reminderSentDev') : t('parties.reminderSentSms'));
+    } catch (e) { toast(apiMessage(e), 'error'); }
   };
 
   const visibleParties = parties.filter((p) =>
@@ -140,7 +145,7 @@ export default function Parties({ type }: { type: PartyType }) {
       const a = document.createElement('a');
       a.href = url; a.download = `statement-${selected.name}.pdf`; a.click();
       URL.revokeObjectURL(url);
-    } catch (e) { alert(apiMessage(e)); }
+    } catch (e) { toast(apiMessage(e), 'error'); }
   };
 
   return (

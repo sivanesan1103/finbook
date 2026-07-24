@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { api, apiMessage } from '../api/client';
 import type { CashbookEntry } from '../types';
-import { EmptyState, Money, PAYMENT_MODES as MODES, MODE_LABEL_KEYS, Spinner, useToast } from '../components/ui';
+import { EmptyState, Money, PAYMENT_MODES as MODES, MODE_LABEL_KEYS, Spinner, useConfirm, useToast } from '../components/ui';
 
 const fmtTime = (d: string | Date) =>
   new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
@@ -22,6 +22,7 @@ export default function Cashbook() {
   const { business } = useAuth();
   const { t } = useLanguage();
   const toast = useToast();
+  const confirm = useConfirm();
   const [entries, setEntries] = useState<CashbookEntry[]>([]);
   const [summary, setSummary] = useState({ totalBalance: 0, todayBalance: 0 });
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -86,7 +87,7 @@ export default function Cashbook() {
   };
 
   const remove = async (entry: CashbookEntry) => {
-    if (!confirm(t('cashbook.confirmDeleteEntry'))) return;
+    if (!(await confirm({ message: t('cashbook.confirmDeleteEntry'), danger: true }))) return;
     try {
       await api.delete(`${base}/${entry.id}`);
       toast(t('cashbook.entryDeleted'));

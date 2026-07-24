@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import morgan from 'morgan';
 import path from 'path';
 import swaggerUi from 'swagger-ui-express';
@@ -48,6 +49,26 @@ try {
 }
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'finbook-api', ts: new Date() }));
+
+// Login/register are brute-force targets — limit those tightly; everything
+// else under /api/v1 gets a much looser cap just to blunt abusive clients.
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many attempts — please try again later' },
+});
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 600,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many requests — please try again later' },
+});
+app.use('/api/v1/auth/login', authLimiter);
+app.use('/api/v1/auth/register', authLimiter);
+app.use('/api/v1', apiLimiter);
 
 const v1 = express.Router();
 v1.use('/auth', authRoutes);

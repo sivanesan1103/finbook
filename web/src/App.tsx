@@ -13,7 +13,7 @@ import Invoices from './pages/Invoices';
 import Staff from './pages/Staff';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
-import { Spinner, ToastProvider } from './components/ui';
+import { ConfirmProvider, Spinner, ToastProvider } from './components/ui';
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -22,15 +22,23 @@ function Protected({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function PublicOnly({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="h-screen flex items-center justify-center"><Spinner /></div>;
+  if (user) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
 export default function App() {
   return (
     <LanguageProvider>
       <AuthProvider>
         <ToastProvider>
+        <ConfirmProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
+            <Route path="/register" element={<PublicOnly><Register /></PublicOnly>} />
             <Route element={<Protected><Layout /></Protected>}>
               <Route path="/" element={<Navigate to="/customers" replace />} />
               <Route path="/customers" element={<Parties key="c" type="CUSTOMER" />} />
@@ -48,6 +56,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
+        </ConfirmProvider>
         </ToastProvider>
       </AuthProvider>
     </LanguageProvider>

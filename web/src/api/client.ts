@@ -44,6 +44,14 @@ api.interceptors.response.use(
 );
 
 export const apiMessage = (e: unknown): string => {
-  if (axios.isAxiosError(e)) return e.response?.data?.message || e.message;
+  if (axios.isAxiosError(e)) {
+    const data = e.response?.data;
+    const details = data?.details as { path: string; message: string }[] | undefined;
+    if (details?.length) {
+      const [first, ...rest] = details;
+      return rest.length ? `${first.message} (+${rest.length} more)` : first.message;
+    }
+    return data?.message || e.message;
+  }
   return String(e);
 };

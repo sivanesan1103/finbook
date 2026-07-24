@@ -147,10 +147,7 @@ class ApiClient {
 
     final json = _decodeOrNull(res.body);
     if (res.statusCode >= 400) {
-      final message = (json is Map && json['message'] != null)
-          ? json['message'] as String
-          : _fallbackErrorMessage(res.statusCode);
-      throw ApiException(res.statusCode, message);
+      throw ApiException(res.statusCode, _errorMessage(json, res.statusCode));
     }
     // A 2xx with a non-JSON body (e.g. an upstream proxy/CDN error page that
     // slipped through with a success-looking status) shouldn't crash the UI.
@@ -167,6 +164,23 @@ class ApiClient {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Prefers the first field-level validation message (`details[0].message`)
+  /// over the generic "Validation failed" summary, same as the web client.
+  String _errorMessage(dynamic json, int status) {
+    if (json is Map && json['details'] is List && (json['details'] as List).isNotEmpty) {
+      final details = json['details'] as List;
+      final first = details.first;
+      final firstMessage = (first is Map && first['message'] is String)
+          ? first['message'] as String
+          : null;
+      if (firstMessage != null) {
+        return details.length > 1 ? '$firstMessage (+${details.length - 1} more)' : firstMessage;
+      }
+    }
+    if (json is Map && json['message'] != null) return json['message'] as String;
+    return _fallbackErrorMessage(status);
   }
 
   String _fallbackErrorMessage(int status) {

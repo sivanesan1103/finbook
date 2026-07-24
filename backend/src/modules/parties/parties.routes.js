@@ -11,7 +11,7 @@ router.use(requireAuth, requireBusiness, requirePermission('parties'));
 const partyBody = z.object({
   type: z.enum(['CUSTOMER', 'SUPPLIER']).default('CUSTOMER'),
   name: z.string().min(1).max(120),
-  phone: z.string().max(20).optional(),
+  phone: z.string().trim().regex(/^\+?[0-9][0-9\s-]{6,19}$/, 'Enter a valid phone number').optional().or(z.literal('')),
   email: z.string().email().optional(),
   gstin: z.string().max(20).optional(),
   addressLine: z.string().max(200).optional(),

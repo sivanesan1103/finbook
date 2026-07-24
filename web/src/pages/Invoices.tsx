@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { api, apiMessage } from '../api/client';
 import type { Invoice, InvoiceItem, Item, Party } from '../types';
-import { EmptyState, Money, MODE_LABEL_KEYS, PAYMENT_MODES as MODES, Spinner, StatusBadge, STATUS_LABEL_KEYS, fmtDate, inr, useToast } from '../components/ui';
+import { EmptyState, Money, MODE_LABEL_KEYS, PAYMENT_MODES as MODES, Spinner, StatusBadge, STATUS_LABEL_KEYS, fmtDate, inr, useConfirm, useToast } from '../components/ui';
 
 type Pane =
   | { type: 'none' }
@@ -14,6 +14,7 @@ export default function Invoices() {
   const { business } = useAuth();
   const { t } = useLanguage();
   const toast = useToast();
+  const confirm = useConfirm();
   const [rows, setRows] = useState<Invoice[]>([]);
   const [summary, setSummary] = useState({ totalBilled: 0, totalCollected: 0 });
   const [status, setStatus] = useState('');
@@ -131,7 +132,7 @@ export default function Invoices() {
   };
 
   const cancelInvoice = async (invoice: Invoice) => {
-    if (!confirm(t('invoices.confirmCancel', { no: invoice.invoiceNo }))) return;
+    if (!(await confirm({ message: t('invoices.confirmCancel', { no: invoice.invoiceNo }), danger: true }))) return;
     try {
       await api.post(`${base}/invoices/${invoice.id}/cancel`);
       toast(t('invoices.invoiceCancelled'));
@@ -141,7 +142,7 @@ export default function Invoices() {
   };
 
   const removeInvoice = async (invoice: Invoice) => {
-    if (!confirm(t('invoices.confirmDelete', { no: invoice.invoiceNo }))) return;
+    if (!(await confirm({ message: t('invoices.confirmDelete', { no: invoice.invoiceNo }), danger: true }))) return;
     try {
       await api.delete(`${base}/invoices/${invoice.id}`);
       toast(t('invoices.invoiceDeleted'));

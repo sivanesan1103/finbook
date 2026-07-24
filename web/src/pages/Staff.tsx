@@ -4,7 +4,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { api, apiMessage } from '../api/client';
 import type { StaffMember, PermissionFlags } from '../types';
 import type { TranslationKey } from '../i18n';
-import { Avatar, EmptyState, Modal, Spinner } from '../components/ui';
+import { Avatar, EmptyState, Modal, Spinner, useConfirm, useToast } from '../components/ui';
 
 const FLAGS: (keyof PermissionFlags)[] = ['parties', 'bills', 'items', 'cashbook', 'expenses', 'reports'];
 const FLAG_LABEL_KEYS: Record<keyof PermissionFlags, TranslationKey> = {
@@ -19,6 +19,8 @@ const FLAG_LABEL_KEYS: Record<keyof PermissionFlags, TranslationKey> = {
 export default function Staff() {
   const { business } = useAuth();
   const { t } = useLanguage();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [members, setMembers] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -57,7 +59,7 @@ export default function Staff() {
       }
       setForm({ email: '', name: '', role: 'STAFF', password: '' });
       await load();
-    } catch (e) { alert(apiMessage(e)); }
+    } catch (e) { toast(apiMessage(e), 'error'); }
   };
 
   const togglePerm = async (m: StaffMember, flag: keyof PermissionFlags) => {
@@ -65,15 +67,15 @@ export default function Staff() {
     try {
       await api.patch(`${base}/${m.id}`, { permissions: next });
       await load();
-    } catch (e) { alert(apiMessage(e)); }
+    } catch (e) { toast(apiMessage(e), 'error'); }
   };
 
   const remove = async (m: StaffMember) => {
-    if (!confirm(t('staff.confirmRemove', { name: m.user.name }))) return;
+    if (!(await confirm({ message: t('staff.confirmRemove', { name: m.user.name }), danger: true }))) return;
     try {
       await api.delete(`${base}/${m.id}`);
       await load();
-    } catch (e) { alert(apiMessage(e)); }
+    } catch (e) { toast(apiMessage(e), 'error'); }
   };
 
   if (!canManage) {

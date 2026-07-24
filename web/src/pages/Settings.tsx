@@ -4,11 +4,13 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { api, apiMessage } from '../api/client';
 import type { Notification } from '../types';
-import { Modal } from '../components/ui';
+import { Modal, useConfirm, useToast } from '../components/ui';
 
 export default function Settings() {
   const { user, business, reloadBusinesses, logout } = useAuth();
   const { lang, setLang, t } = useLanguage();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [bizForm, setBizForm] = useState({ name: '', phone: '', address: '', gstin: '', category: '' });
   const [invForm, setInvForm] = useState({
     upiId: '', bankName: '', bankAccountName: '', bankAccountNo: '', bankIfsc: '', invoiceTerms: '',
@@ -49,7 +51,7 @@ export default function Settings() {
       });
       await reloadBusinesses();
       flash(t('settings.savedBusinessSettings'));
-    } catch (e) { alert(apiMessage(e)); }
+    } catch (e) { toast(apiMessage(e), 'error'); }
   };
 
   const saveInvoice = async () => {
@@ -64,7 +66,7 @@ export default function Settings() {
       });
       await reloadBusinesses();
       flash(t('settings.savedInvoiceDetails'));
-    } catch (e) { alert(apiMessage(e)); }
+    } catch (e) { toast(apiMessage(e), 'error'); }
   };
 
   const exportData = async () => {
@@ -77,7 +79,7 @@ export default function Settings() {
       a.click();
       URL.revokeObjectURL(url);
       flash(t('settings.backupDownloaded'));
-    } catch (e) { alert(apiMessage(e)); }
+    } catch (e) { toast(apiMessage(e), 'error'); }
   };
 
   const importData = async (file: File) => {
@@ -85,10 +87,10 @@ export default function Settings() {
     try {
       parsed = JSON.parse(await file.text());
     } catch {
-      alert(t('settings.invalidBackupFile'));
+      toast(t('settings.invalidBackupFile'), 'error');
       return;
     }
-    if (!confirm(t('settings.confirmRestore', { file: file.name, business: business?.name || '' }))) return;
+    if (!(await confirm({ message: t('settings.confirmRestore', { file: file.name, business: business?.name || '' }), danger: true }))) return;
     setImporting(true);
     setImportResult('');
     try {
@@ -108,7 +110,7 @@ export default function Settings() {
       );
       await reloadBusinesses();
       flash(t('settings.backupRestored'));
-    } catch (e) { alert(apiMessage(e)); }
+    } catch (e) { toast(apiMessage(e), 'error'); }
     setImporting(false);
   };
 
@@ -116,16 +118,16 @@ export default function Settings() {
     try {
       await api.patch('/auth/me', { name: meForm.name, email: meForm.email || null });
       flash(t('settings.profileUpdated'));
-    } catch (e) { alert(apiMessage(e)); }
+    } catch (e) { toast(apiMessage(e), 'error'); }
   };
 
   const deleteBook = async () => {
-    if (!confirm(t('settings.confirmDeleteBook', { business: business?.name || '' }))) return;
+    if (!(await confirm({ message: t('settings.confirmDeleteBook', { business: business?.name || '' }), danger: true }))) return;
     try {
       await api.delete(`/businesses/${business?.id}`);
       await reloadBusinesses();
       flash(t('settings.bookDeleted'));
-    } catch (e) { alert(apiMessage(e)); }
+    } catch (e) { toast(apiMessage(e), 'error'); }
   };
 
   const markAllRead = async () => {

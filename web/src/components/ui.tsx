@@ -120,6 +120,38 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// ── Confirm dialog (replaces window.confirm, which blocks the tab and can't be styled) ──
+type ConfirmOptions = { title?: string; message: string; confirmLabel?: string; cancelLabel?: string; danger?: boolean };
+const ConfirmCtx = createContext<(opts: ConfirmOptions) => Promise<boolean>>(() => Promise.resolve(false));
+export const useConfirm = () => useContext(ConfirmCtx);
+
+export function ConfirmProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<{ opts: ConfirmOptions; resolve: (v: boolean) => void } | null>(null);
+  const confirm = useCallback(
+    (opts: ConfirmOptions) => new Promise<boolean>((resolve) => setState({ opts, resolve })),
+    []
+  );
+  const close = (v: boolean) => { state?.resolve(v); setState(null); };
+  return (
+    <ConfirmCtx.Provider value={confirm}>
+      {children}
+      <Modal open={!!state} title={state?.opts.title || 'Confirm'} onClose={() => close(false)}>
+        {state && (
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">{state.opts.message}</p>
+            <div className="flex gap-2 justify-end">
+              <button className="btn-outline" onClick={() => close(false)}>{state.opts.cancelLabel || 'Cancel'}</button>
+              <button className={state.opts.danger ? 'btn-danger' : 'btn-primary'} onClick={() => close(true)}>
+                {state.opts.confirmLabel || 'Confirm'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </ConfirmCtx.Provider>
+  );
+}
+
 export function Spinner() {
   return (
     <div className="flex justify-center py-12">
