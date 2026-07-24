@@ -300,6 +300,7 @@ export const en = {
   'cashbook.save': 'Save',
   'cashbook.edit': '✏️ Edit',
   'cashbook.delete': '🗑 Delete',
+  'cashbook.linkedToLedger': '🔗 Linked to ledger — edit from the party',
   'cashbook.confirmDeleteEntry': 'Delete this entry?',
   'cashbook.entryUpdated': 'Entry updated',
   'cashbook.inEntrySaved': 'In entry saved',

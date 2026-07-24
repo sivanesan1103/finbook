@@ -119,11 +119,11 @@ export default function Cashbook() {
         <div className="card p-4 flex items-center gap-10 mb-4">
           <div className="flex items-baseline gap-2">
             <p className="text-sm text-slate-500">{t('cashbook.totalBalance')}</p>
-            <Money value={summary.totalBalance} colored={false} className="text-lg text-link-600" />
+            <Money value={summary.totalBalance} className="text-lg" />
           </div>
           <div className="flex items-baseline gap-2">
             <p className="text-sm text-slate-500">{t('cashbook.todaysBalance')}</p>
-            <Money value={summary.todayBalance} colored={false} className="text-lg text-link-600" />
+            <Money value={summary.todayBalance} className="text-lg" />
           </div>
           <button className="btn border border-link-500 text-link-600 hover:bg-link-50 ml-auto" onClick={downloadReport}>
             {t('cashbook.viewReport')}
@@ -274,11 +274,17 @@ export default function Cashbook() {
                   <p className="text-xs text-slate-500">{fmtTime(pane.entry.entryDate)} {new Date(pane.entry.entryDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                 </div>
               </div>
-              <div className="flex gap-2">
-                <button className="btn border border-link-500 text-link-600 hover:bg-link-50"
-                  onClick={() => openForm(pane.entry.direction, pane.entry)}>{t('cashbook.edit')}</button>
-                <button className="btn-danger" onClick={() => remove(pane.entry)}>{t('cashbook.delete')}</button>
-              </div>
+              {pane.entry.transactionId ? (
+                <span className="text-xs text-slate-400 bg-slate-50 border border-slate-200 rounded-full px-3 py-1.5">
+                  {t('cashbook.linkedToLedger')}
+                </span>
+              ) : (
+                <div className="flex gap-2">
+                  <button className="btn border border-link-500 text-link-600 hover:bg-link-50"
+                    onClick={() => openForm(pane.entry.direction, pane.entry)}>{t('cashbook.edit')}</button>
+                  <button className="btn-danger" onClick={() => remove(pane.entry)}>{t('cashbook.delete')}</button>
+                </div>
+              )}
             </div>
 
             <div className="p-5 text-right border-b border-slate-100">

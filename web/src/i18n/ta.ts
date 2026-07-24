@@ -302,6 +302,7 @@ export const ta: Record<TranslationKey, string> = {
   'cashbook.save': 'சேமி',
   'cashbook.edit': '✏️ திருத்து',
   'cashbook.delete': '🗑 நீக்கு',
+  'cashbook.linkedToLedger': '🔗 பேரேட்டுடன் இணைக்கப்பட்டது — நபரிடமிருந்து திருத்தவும்',
   'cashbook.confirmDeleteEntry': 'இந்த பதிவை நீக்கவா?',
   'cashbook.entryUpdated': 'பதிவு புதுப்பிக்கப்பட்டது',
   'cashbook.inEntrySaved': 'வரவு பதிவு சேமிக்கப்பட்டது',

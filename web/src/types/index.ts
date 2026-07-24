@@ -88,6 +88,7 @@ export interface CashbookEntry {
   paymentMode: PaymentMode;
   description?: string | null;
   entryDate: string;
+  transactionId?: string | null;
 }
 
 export interface ExpenseItem {
