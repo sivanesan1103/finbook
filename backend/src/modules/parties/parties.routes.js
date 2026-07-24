@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { validate } from '../../middlewares/validate.js';
-import { requireAuth, requireBusiness, requirePermission } from '../../middlewares/auth.js';
+import { requireAuth, requireBusiness, requirePermission, requireRole } from '../../middlewares/auth.js';
 import { upload } from '../../middlewares/upload.js';
 import * as ctrl from './parties.controller.js';
 
@@ -39,6 +39,6 @@ router.post('/bulk', validate({
 router.get('/:partyId', ctrl.getOne);
 router.patch('/:partyId', validate({ body: partyBody.partial() }), ctrl.update);
 router.post('/:partyId/photo', upload.single('file'), ctrl.uploadPhoto);
-router.delete('/:partyId', ctrl.softDelete);
+router.delete('/:partyId', requireRole('OWNER', 'PARTNER'), ctrl.softDelete);
 
 export default router;

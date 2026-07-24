@@ -62,9 +62,13 @@ class _PartyProfileScreenState extends State<PartyProfileScreen> {
       ),
     );
     if (ok != true || !mounted) return;
-    final app = context.read<AppState>();
-    await ApiClient.instance.delete('${app.basePath}/parties/${party.id}');
-    if (mounted) Navigator.of(context)..pop()..pop();
+    try {
+      final app = context.read<AppState>();
+      await ApiClient.instance.delete('${app.basePath}/parties/${party.id}');
+      if (mounted) Navigator.of(context)..pop()..pop();
+    } catch (e) {
+      if (mounted) showSnack(context, e.toString(), error: true);
+    }
   }
 
   @override
@@ -133,32 +137,6 @@ class _PartyProfileScreenState extends State<PartyProfileScreen> {
                   style: const TextStyle(fontSize: 16)),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => _editField(context.tr('partyProfile.gstin'), 'gstin', party.gstin),
-            ),
-            const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.swap_horiz),
-              title: Text(context.tr('partyProfile.changeTo', {'type': isCustomer ? context.tr('partyProfile.supplier') : context.tr('partyProfile.customer')}),
-                  style: const TextStyle(fontSize: 16)),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _update({'type': isCustomer ? 'SUPPLIER' : 'CUSTOMER'}),
-            ),
-          ]),
-        ),
-        const SizedBox(height: 10),
-        Container(
-          color: Colors.white,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: Text(context.tr('partyProfile.settingsTitle', {'type': typeLabel}),
-                  style: const TextStyle(color: Colors.black45, fontSize: 13)),
-            ),
-            SwitchListTile(
-              secondary: const Icon(Icons.sms_outlined),
-              title: Text(context.tr('partyProfile.smsSettings')),
-              subtitle: Text(context.tr('partyProfile.smsSettingsSubtitle')),
-              value: party.smsEnabled,
-              onChanged: (v) => _update({'smsEnabled': v}),
             ),
           ]),
         ),

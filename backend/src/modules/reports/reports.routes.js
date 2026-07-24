@@ -9,6 +9,7 @@ router.get('/dashboard', ctrl.dashboard);
 router.get('/transactions', ctrl.transactionsReport);
 router.get('/transactions.pdf', ctrl.transactionsReportPdf);
 router.get('/sales', ctrl.salesReport);
+router.get('/sales.pdf', ctrl.salesReportPdf);
 router.get('/purchases', ctrl.purchasesReport);
 router.get('/parties/summary', ctrl.partiesSummary);
 

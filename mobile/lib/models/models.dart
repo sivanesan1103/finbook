@@ -207,12 +207,22 @@ class StaffMember {
   final String id, role;
   final String userName;
   final String? userEmail, userPhone;
-  StaffMember({required this.id, required this.role, required this.userName, this.userEmail, this.userPhone});
+  final Map<String, bool> permissions;
+  StaffMember({
+    required this.id, required this.role, required this.userName,
+    this.userEmail, this.userPhone, this.permissions = const {},
+  });
   factory StaffMember.fromJson(Map<String, dynamic> j) => StaffMember(
         id: j['id'], role: j['role'] ?? 'STAFF',
         userName: j['user']?['name'] ?? '', userEmail: j['user']?['email'], userPhone: j['user']?['phone'],
+        permissions: (j['permissions'] as Map<String, dynamic>?)
+                ?.map((k, v) => MapEntry(k, v == true)) ??
+            const {},
       );
 }
+
+/// Staff permission flags — keys match the backend's PermissionFlags shape.
+const kPermissionFlags = ['parties', 'bills', 'items', 'cashbook', 'expenses', 'reports'];
 
 class CashEntry {
   final String id, direction, paymentMode;

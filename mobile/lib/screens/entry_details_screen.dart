@@ -47,26 +47,14 @@ class EntryDetailsScreen extends StatelessWidget {
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(12),
-          child: Row(children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _delete(context),
-                icon: const Icon(Icons.delete_outline, color: Colors.red),
-                label: Text(context.tr('entryDetails.delete'), style: const TextStyle(color: Colors.red)),
-                style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.red),
-                    minimumSize: const Size.fromHeight(50)),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () => showSnack(context, context.tr('entryDetails.shareSnack')),
-                icon: const Icon(Icons.share),
-                label: Text(context.tr('entryDetails.share')),
-              ),
-            ),
-          ]),
+          child: OutlinedButton.icon(
+            onPressed: () => _delete(context),
+            icon: const Icon(Icons.delete_outline, color: Colors.red),
+            label: Text(context.tr('entryDetails.delete'), style: const TextStyle(color: Colors.red)),
+            style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Colors.red),
+                minimumSize: const Size.fromHeight(50)),
+          ),
         ),
       ),
       body: ListView(padding: const EdgeInsets.all(14), children: [
@@ -95,17 +83,6 @@ class EntryDetailsScreen extends StatelessWidget {
             const Divider(height: 1),
             ListTile(title: Text(context.tr('entryDetails.paymentMode')), trailing: Text(context.tr(modeLabelKeys[entry.paymentMode] ?? entry.paymentMode))),
           ]),
-        ),
-        const SizedBox(height: 12),
-        Card(
-          child: ListTile(
-            leading: Icon(entry.smsSent ? Icons.sms : Icons.sms_failed_outlined,
-                color: entry.smsSent ? Colors.green : Colors.grey),
-            title: Text(entry.smsSent ? context.tr('entryDetails.smsSent') : context.tr('entryDetails.smsDisabled')),
-            subtitle: Text(entry.smsSent
-                ? context.tr('entryDetails.smsSentSubtitle')
-                : context.tr('entryDetails.smsDisabledSubtitle')),
-          ),
         ),
         const SizedBox(height: 12),
         Card(

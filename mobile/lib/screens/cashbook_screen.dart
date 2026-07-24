@@ -32,15 +32,20 @@ class _CashbookScreenState extends State<CashbookScreen> {
     final app = context.read<AppState>();
     final api = ApiClient.instance;
     final d = date.toIso8601String().substring(0, 10);
-    final list = await api.get('${app.basePath}/cashbook?date=$d&paymentMode=$mode&limit=100');
-    final sum = await api.get('${app.basePath}/cashbook/summary');
-    if (!mounted) return;
-    setState(() {
-      entries = (list['data'] as List).map((e) => CashEntry.fromJson(e)).toList();
-      totalBalance = (sum['data']['totalBalance'] as num).toDouble();
-      todayBalance = (sum['data']['todayBalance'] as num).toDouble();
-      loading = false;
-    });
+    try {
+      final list = await api.get('${app.basePath}/cashbook?date=$d&paymentMode=$mode&limit=100');
+      final sum = await api.get('${app.basePath}/cashbook/summary');
+      if (!mounted) return;
+      setState(() {
+        entries = (list['data'] as List).map((e) => CashEntry.fromJson(e)).toList();
+        totalBalance = (sum['data']['totalBalance'] as num).toDouble();
+        todayBalance = (sum['data']['todayBalance'] as num).toDouble();
+      });
+    } catch (e) {
+      if (mounted) showSnack(context, e.toString(), error: true);
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
   }
 
   Future<void> _add(String direction) async {

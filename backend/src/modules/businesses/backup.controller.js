@@ -11,6 +11,16 @@ const pick = (obj, keys) => {
   return out;
 };
 
+// Import feeds straight into ledger balances, unlike the normal create
+// endpoints which validate every amount through zod (see e.g.
+// transactions.routes.js `amount: z.coerce.number().positive().max(99_999_999)`).
+// A crafted or corrupted backup file with a negative/absurd amount would
+// otherwise be accepted as-is and silently invert balances.
+const isValidAmount = (n) => {
+  const num = Number(n);
+  return Number.isFinite(num) && num > 0 && num <= 99_999_999;
+};
+
 const PARTY_FIELDS = ['type', 'name', 'phone', 'email', 'gstin', 'addressLine', 'area', 'city', 'state', 'pincode', 'smsEnabled'];
 const TX_FIELDS = ['type', 'amount', 'description', 'paymentMode', 'entryDate', 'smsSent'];
 const CASH_FIELDS = ['direction', 'amount', 'paymentMode', 'description', 'entryDate'];
@@ -146,7 +156,7 @@ export const importData = asyncHandler(async (req, res) => {
     for (const raw of arr(d.transactions)) {
       const partyId = partyMap.get(raw._partyId);
       const data = pick(raw, TX_FIELDS);
-      if (!partyId || !data.type || data.amount === undefined) { summary.transactions.skipped++; continue; }
+      if (!partyId || !['GAVE', 'GOT'].includes(data.type) || !isValidAmount(data.amount)) { summary.transactions.skipped++; continue; }
       await tx.transaction.create({ data: { ...data, businessId, partyId } });
       summary.transactions.created++;
     }
@@ -154,7 +164,7 @@ export const importData = asyncHandler(async (req, res) => {
     // Cashbook
     for (const raw of arr(d.cashbookEntries)) {
       const data = pick(raw, CASH_FIELDS);
-      if (!data.direction || data.amount === undefined) continue;
+      if (!['IN', 'OUT'].includes(data.direction) || !isValidAmount(data.amount)) continue;
       await tx.cashbookEntry.create({ data: { ...data, businessId } });
       summary.cashbookEntries.created++;
     }
@@ -162,7 +172,7 @@ export const importData = asyncHandler(async (req, res) => {
     // Expenses
     for (const raw of arr(d.expenses)) {
       const data = pick(raw, EXPENSE_FIELDS);
-      if (data.amount === undefined) continue;
+      if (!isValidAmount(data.amount)) continue;
       await tx.expense.create({ data: { ...data, businessId } });
       summary.expenses.created++;
     }
@@ -173,7 +183,7 @@ export const importData = asyncHandler(async (req, res) => {
     for (const raw of arr(d.invoices)) {
       const data = pick(raw, INVOICE_FIELDS);
       const partyId = partyMap.get(raw._partyId);
-      if (!data.invoiceNo || !partyId || data.total === undefined) { summary.invoices.skipped++; continue; }
+      if (!data.invoiceNo || !partyId || !isValidAmount(data.total)) { summary.invoices.skipped++; continue; }
       if (invoiceNos.has(data.invoiceNo)) { summary.invoices.skipped++; continue; }
       await tx.invoice.create({
         data: {
@@ -183,10 +193,10 @@ export const importData = asyncHandler(async (req, res) => {
           items: {
             create: arr(raw.items)
               .map((it) => ({ ...pick(it, INVOICE_ITEM_FIELDS), itemId: itemMap.get(it._itemId) || undefined }))
-              .filter((it) => it.name && it.amount !== undefined),
+              .filter((it) => it.name && Number.isFinite(Number(it.amount)) && Number(it.amount) >= 0),
           },
           payments: {
-            create: arr(raw.payments).map((p) => pick(p, PAYMENT_FIELDS)).filter((p) => p.amount !== undefined),
+            create: arr(raw.payments).map((p) => pick(p, PAYMENT_FIELDS)).filter((p) => isValidAmount(p.amount)),
           },
         },
       });

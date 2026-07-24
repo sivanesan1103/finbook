@@ -124,9 +124,11 @@ export default function Expenses() {
 
   const removeItem = async (item: ExpenseItem) => {
     if (!confirm(t('expenses.confirmDeleteItem', { name: item.name }))) return;
-    await api.delete(`${base}/items/${item.id}`);
-    setPicked((ps) => ps.filter((p) => p.item.id !== item.id));
-    await loadItems();
+    try {
+      await api.delete(`${base}/items/${item.id}`);
+      setPicked((ps) => ps.filter((p) => p.item.id !== item.id));
+      await loadItems();
+    } catch (e) { toast(apiMessage(e), 'error'); }
   };
 
   const continueFromPicker = () => {

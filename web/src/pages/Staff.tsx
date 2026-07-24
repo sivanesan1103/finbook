@@ -6,12 +6,13 @@ import type { StaffMember, PermissionFlags } from '../types';
 import type { TranslationKey } from '../i18n';
 import { Avatar, EmptyState, Modal, Spinner } from '../components/ui';
 
-const FLAGS: (keyof PermissionFlags)[] = ['parties', 'bills', 'items', 'cashbook', 'reports'];
+const FLAGS: (keyof PermissionFlags)[] = ['parties', 'bills', 'items', 'cashbook', 'expenses', 'reports'];
 const FLAG_LABEL_KEYS: Record<keyof PermissionFlags, TranslationKey> = {
   parties: 'staff.flagParties',
   bills: 'staff.flagBills',
   items: 'staff.flagItems',
   cashbook: 'staff.flagCashbook',
+  expenses: 'staff.flagExpenses',
   reports: 'staff.flagReports',
 };
 
@@ -21,12 +22,14 @@ export default function Staff() {
   const [members, setMembers] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ email: '', name: '', role: 'STAFF' as 'STAFF' | 'PARTNER' });
-  const [perms, setPerms] = useState<PermissionFlags>({ parties: true, bills: true, items: false, cashbook: false, reports: false });
+  const [form, setForm] = useState({ email: '', name: '', role: 'STAFF' as 'STAFF' | 'PARTNER', password: '' });
+  const [perms, setPerms] = useState<PermissionFlags>({ parties: true, bills: true, items: false, cashbook: false, expenses: false, reports: false });
   const [err, setErr] = useState('');
+  const [addedCredentials, setAddedCredentials] = useState<{ email: string; password: string } | null>(null);
 
   const base = `/businesses/${business?.id}/staff`;
   const canManage = business?.role === 'OWNER' || business?.role === 'PARTNER';
+  const isOwner = business?.role === 'OWNER';
 
   const load = useCallback(async () => {
     if (!business || !canManage) { setLoading(false); return; }
@@ -42,23 +45,35 @@ export default function Staff() {
 
   const add = async () => {
     try {
-      await api.post(base, { ...form, name: form.name || undefined, permissions: perms });
+      const res = await api.post(base, {
+        ...form,
+        name: form.name || undefined,
+        password: form.password || undefined,
+        permissions: perms,
+      });
       setOpen(false);
-      setForm({ email: '', name: '', role: 'STAFF' });
+      if (res.data.data.passwordSet) {
+        setAddedCredentials({ email: form.email, password: form.password });
+      }
+      setForm({ email: '', name: '', role: 'STAFF', password: '' });
       await load();
     } catch (e) { alert(apiMessage(e)); }
   };
 
   const togglePerm = async (m: StaffMember, flag: keyof PermissionFlags) => {
     const next = { ...(m.permissions || {}), [flag]: !m.permissions?.[flag] };
-    await api.patch(`${base}/${m.id}`, { permissions: next });
-    await load();
+    try {
+      await api.patch(`${base}/${m.id}`, { permissions: next });
+      await load();
+    } catch (e) { alert(apiMessage(e)); }
   };
 
   const remove = async (m: StaffMember) => {
     if (!confirm(t('staff.confirmRemove', { name: m.user.name }))) return;
-    await api.delete(`${base}/${m.id}`);
-    await load();
+    try {
+      await api.delete(`${base}/${m.id}`);
+      await load();
+    } catch (e) { alert(apiMessage(e)); }
   };
 
   if (!canManage) {
@@ -70,7 +85,7 @@ export default function Staff() {
     <div className="p-6 max-w-4xl">
       <div className="flex items-center justify-between mb-2">
         <h1 className="text-xl font-bold">{t('staff.title')}</h1>
-        <button className="btn-primary" onClick={() => setOpen(true)}>{t('staff.addNew')}</button>
+        {isOwner && <button className="btn-primary" onClick={() => setOpen(true)}>{t('staff.addNew')}</button>}
       </div>
       <ul className="text-sm text-slate-500 mb-4 list-disc pl-5 space-y-0.5">
         <li>{t('staff.note1')}</li>
@@ -133,6 +148,9 @@ export default function Staff() {
             onChange={(e) => setForm({ ...form, email: e.target.value })} />
           <input className="input" placeholder={t('staff.namePlaceholder')} value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          <input className="input" placeholder={t('staff.passwordPlaceholder')} value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })} />
+          <p className="text-xs text-slate-400 -mt-2">{t('staff.passwordHint')}</p>
           <select className="input" value={form.role}
             onChange={(e) => setForm({ ...form, role: e.target.value as 'STAFF' | 'PARTNER' })}>
             <option value="STAFF">{t('staff.roleStaffOption')}</option>
@@ -151,6 +169,17 @@ export default function Staff() {
           <button className="btn-primary w-full justify-center" onClick={add} disabled={!/^\S+@\S+\.\S+$/.test(form.email)}>
             {t('staff.addMember')}
           </button>
+        </div>
+      </Modal>
+
+      <Modal open={!!addedCredentials} title={t('staff.credentialsTitle')} onClose={() => setAddedCredentials(null)}>
+        <div className="space-y-3">
+          <p className="text-sm text-slate-500">{t('staff.credentialsSubtitle')}</p>
+          <div className="rounded-lg bg-slate-50 p-3 space-y-1">
+            <p className="text-sm"><span className="text-slate-400">{t('common.email')}: </span>{addedCredentials?.email}</p>
+            <p className="text-sm font-mono"><span className="text-slate-400 font-sans">{t('staff.password')}: </span>{addedCredentials?.password}</p>
+          </div>
+          <button className="btn-primary w-full justify-center" onClick={() => setAddedCredentials(null)}>{t('common.close')}</button>
         </div>
       </Modal>
     </div>

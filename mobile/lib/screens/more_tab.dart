@@ -46,7 +46,13 @@ class MoreTab extends StatelessWidget {
   }
 
   Future<void> _notifications(BuildContext context) async {
-    final res = await ApiClient.instance.get('/notifications');
+    Map<String, dynamic> res;
+    try {
+      res = await ApiClient.instance.get('/notifications');
+    } catch (e) {
+      if (context.mounted) showSnack(context, e.toString(), error: true);
+      return;
+    }
     if (!context.mounted) return;
     final list = res['data'] as List;
     showModalBottomSheet(

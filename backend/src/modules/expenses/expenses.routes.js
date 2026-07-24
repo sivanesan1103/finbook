@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { validate } from '../../middlewares/validate.js';
-import { requireAuth, requireBusiness } from '../../middlewares/auth.js';
+import { requireAuth, requireBusiness, requirePermission } from '../../middlewares/auth.js';
 import { upload } from '../../middlewares/upload.js';
 import * as ctrl from './expenses.controller.js';
 
 const router = Router({ mergeParams: true });
-router.use(requireAuth, requireBusiness);
+router.use(requireAuth, requireBusiness, requirePermission('expenses'));
 
 const expenseBody = z.object({
   category: z.string().max(60).optional(),

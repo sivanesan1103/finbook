@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { validate } from '../../middlewares/validate.js';
-import { requireAuth, requireBusiness, requirePermission } from '../../middlewares/auth.js';
+import { requireAuth, requireBusiness, requirePermission, requireRole } from '../../middlewares/auth.js';
 import { upload } from '../../middlewares/upload.js';
 import * as ctrl from './items.controller.js';
 
@@ -30,6 +30,6 @@ router.post('/:itemId/stock', validate({
     note: z.string().max(200).optional(),
   }),
 }), ctrl.adjustStock);
-router.delete('/:itemId', ctrl.softDelete);
+router.delete('/:itemId', requireRole('OWNER', 'PARTNER'), ctrl.softDelete);
 
 export default router;

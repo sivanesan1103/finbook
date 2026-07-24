@@ -39,6 +39,7 @@ export interface PermissionFlags {
   bills?: boolean;
   items?: boolean;
   cashbook?: boolean;
+  expenses?: boolean;
   reports?: boolean;
 }
 

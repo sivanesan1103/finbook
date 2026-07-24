@@ -39,12 +39,17 @@ class _ItemsTabState extends State<ItemsTab> with SingleTickerProviderStateMixin
     final app = context.read<AppState>();
     if (app.business == null) return;
     setState(() => loading = true);
-    final res = await ApiClient.instance.get('${app.basePath}/items?limit=200');
-    if (!mounted) return;
-    setState(() {
-      items = (res['data'] as List).map((i) => Item.fromJson(i)).toList();
-      loading = false;
-    });
+    try {
+      final res = await ApiClient.instance.get('${app.basePath}/items?limit=200');
+      if (!mounted) return;
+      setState(() {
+        items = (res['data'] as List).map((i) => Item.fromJson(i)).toList();
+      });
+    } catch (e) {
+      if (mounted) showSnack(context, e.toString(), error: true);
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
   }
 
   List<Item> get products => items.where((i) => !i.isService).toList();
@@ -176,9 +181,13 @@ class _ItemsTabState extends State<ItemsTab> with SingleTickerProviderStateMixin
       ),
     );
     if (ok != true || !mounted) return;
-    final app = context.read<AppState>();
-    await ApiClient.instance.delete('${app.basePath}/items/${item.id}');
-    _load();
+    try {
+      final app = context.read<AppState>();
+      await ApiClient.instance.delete('${app.basePath}/items/${item.id}');
+      _load();
+    } catch (e) {
+      if (mounted) showSnack(context, e.toString(), error: true);
+    }
   }
 
   Widget _list(List<Item> list, bool service) {

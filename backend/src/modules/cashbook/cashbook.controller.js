@@ -69,22 +69,30 @@ export const create = asyncHandler(async (req, res) => {
   ok(res, entry, 201);
 });
 
-export const update = asyncHandler(async (req, res) => {
-  const { count } = await prisma.cashbookEntry.updateMany({
-    where: { id: req.params.entryId, businessId: req.business.id, deletedAt: null },
-    data: req.body,
+// Entries mirrored from a ledger transaction (transactionId set) must only be
+// edited/deleted via the transaction endpoints — otherwise the cashbook total
+// and the party's ledger balance silently diverge.
+const guardNotMirrored = async (entryId, businessId) => {
+  const entry = await prisma.cashbookEntry.findFirst({
+    where: { id: entryId, businessId, deletedAt: null },
   });
-  if (!count) throw ApiError.notFound('Entry not found');
-  ok(res, await prisma.cashbookEntry.findUnique({ where: { id: req.params.entryId } }));
+  if (!entry) throw ApiError.notFound('Entry not found');
+  if (entry.transactionId) {
+    throw ApiError.badRequest('This entry is linked to a ledger transaction — edit or delete it from the party ledger instead');
+  }
+  return entry;
+};
+
+export const update = asyncHandler(async (req, res) => {
+  const entry = await guardNotMirrored(req.params.entryId, req.business.id);
+  const updated = await prisma.cashbookEntry.update({ where: { id: entry.id }, data: req.body });
+  ok(res, updated);
 });
 
 export const softDelete = asyncHandler(async (req, res) => {
-  const { count } = await prisma.cashbookEntry.updateMany({
-    where: { id: req.params.entryId, businessId: req.business.id, deletedAt: null },
-    data: { deletedAt: new Date() },
-  });
-  if (!count) throw ApiError.notFound('Entry not found');
-  logActivity(req, 'CASHBOOK_ENTRY_DELETED', 'CashbookEntry', req.params.entryId);
+  const entry = await guardNotMirrored(req.params.entryId, req.business.id);
+  await prisma.cashbookEntry.update({ where: { id: entry.id }, data: { deletedAt: new Date() } });
+  logActivity(req, 'CASHBOOK_ENTRY_DELETED', 'CashbookEntry', entry.id);
   ok(res, { deleted: true });
 });
 

@@ -12,16 +12,21 @@ const permissionFlags = z.object({
   bills: z.boolean().optional(),
   items: z.boolean().optional(),
   cashbook: z.boolean().optional(),
+  expenses: z.boolean().optional(),
   reports: z.boolean().optional(),
 }).optional();
 
 router.get('/', ctrl.list);
-router.post('/', validate({
+// Adding a member sets their password, so it's OWNER-only — PARTNERs can
+// still view/edit permissions/remove (router-level requireRole above), just
+// not mint new credentials.
+router.post('/', requireRole('OWNER'), validate({
   body: z.object({
     email: z.string().email(),
     name: z.string().min(2).max(80).optional(),
     role: z.enum(['PARTNER', 'STAFF']).default('STAFF'),
     permissions: permissionFlags,
+    password: z.string().min(6).max(100).optional(),
   }),
 }), ctrl.add);
 router.patch('/:memberId', validate({

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { validate } from '../../middlewares/validate.js';
-import { requireAuth, requireBusiness, requirePermission } from '../../middlewares/auth.js';
+import { requireAuth, requireBusiness, requirePermission, requireRole } from '../../middlewares/auth.js';
 import * as ctrl from './invoices.controller.js';
 
 /**
@@ -32,7 +32,7 @@ router.get('/:invoiceId', ctrl.getOne);
 router.get('/:invoiceId/pdf', ctrl.pdf);
 router.post('/', validate({ body: proformaBody }), ctrl.create);
 router.post('/:invoiceId/convert', ctrl.convert);
-router.post('/:invoiceId/cancel', ctrl.cancel);
-router.delete('/:invoiceId', ctrl.softDelete);
+router.post('/:invoiceId/cancel', requireRole('OWNER', 'PARTNER'), ctrl.cancel);
+router.delete('/:invoiceId', requireRole('OWNER', 'PARTNER'), ctrl.softDelete);
 
 export default router;

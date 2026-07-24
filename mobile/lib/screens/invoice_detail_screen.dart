@@ -29,8 +29,12 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
 
   Future<void> _load() async {
     final app = context.read<AppState>();
-    final res = await ApiClient.instance.get('${app.basePath}/invoices/${widget.invoiceId}');
-    if (mounted) setState(() => invoice = Invoice.fromJson(res['data']));
+    try {
+      final res = await ApiClient.instance.get('${app.basePath}/invoices/${widget.invoiceId}');
+      if (mounted) setState(() => invoice = Invoice.fromJson(res['data']));
+    } catch (e) {
+      if (mounted) showSnack(context, e.toString(), error: true);
+    }
   }
 
   Future<void> _collect() async {
@@ -83,9 +87,13 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
       ),
     );
     if (ok != true || !mounted) return;
-    final app = context.read<AppState>();
-    await ApiClient.instance.post('${app.basePath}/invoices/${invoice!.id}/cancel');
-    _load();
+    try {
+      final app = context.read<AppState>();
+      await ApiClient.instance.post('${app.basePath}/invoices/${invoice!.id}/cancel');
+      _load();
+    } catch (e) {
+      if (mounted) showSnack(context, e.toString(), error: true);
+    }
   }
 
   Future<void> _delete() async {
@@ -101,9 +109,13 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
       ),
     );
     if (ok != true || !mounted) return;
-    final app = context.read<AppState>();
-    await ApiClient.instance.delete('${app.basePath}/invoices/${invoice!.id}');
-    if (mounted) Navigator.pop(context);
+    try {
+      final app = context.read<AppState>();
+      await ApiClient.instance.delete('${app.basePath}/invoices/${invoice!.id}');
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) showSnack(context, e.toString(), error: true);
+    }
   }
 
   Color _statusColor(String s) => switch (s) {

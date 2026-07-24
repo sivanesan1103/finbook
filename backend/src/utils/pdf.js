@@ -113,6 +113,41 @@ export const streamTransactionsReport = (res, { business, entries, totals, from,
   doc.end();
 };
 
+/** Streams a sales report PDF (invoices in a date range). */
+export const streamSalesReport = (res, { business, entries, totals, from, to }) => {
+  const doc = new PDFDocument({ margin: 40, size: 'A4' });
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'attachment; filename="sales-report.pdf"');
+  doc.pipe(res);
+
+  doc.fontSize(18).fillColor('#0d47a1').text(business.name);
+  doc.fontSize(10).fillColor('#555').text(`Sales report ${fmtDate(from)} – ${fmtDate(to)} — FinBook`);
+  doc.moveDown();
+  doc.fontSize(12).fillColor('#000')
+    .text(`Billed: ${INR(totals.billed)}    Collected: ${INR(totals.collected)}    Pending: ${INR(totals.pending)}    Bills: ${totals.count}`);
+  doc.moveDown();
+
+  const x = doc.x;
+  let y = doc.y;
+  doc.fontSize(9).fillColor('#333')
+    .text('Date', x, y).text('Invoice', x + 80, y).text('Party', x + 170, y)
+    .text('Status', x + 300, y).text('Total', x + 380, y).text('Balance', x + 460, y);
+  y += 14;
+  doc.moveTo(x, y).lineTo(x + 515, y).strokeColor('#ccc').stroke();
+  y += 6;
+  for (const e of entries) {
+    if (y > 760) { doc.addPage(); y = 40; }
+    doc.fillColor('#000').text(fmtDate(e.date), x, y, { width: 75 });
+    doc.fillColor('#000').text(e.invoiceNo, x + 80, y, { width: 85 });
+    doc.fillColor('#555').text(e.partyName, x + 170, y, { width: 125 });
+    doc.fillColor('#555').text(e.status, x + 300, y, { width: 75 });
+    doc.fillColor('#000').text(INR(e.total), x + 380, y, { width: 75 });
+    doc.fillColor(e.balance > 0 ? '#b71c1c' : '#1b5e20').text(INR(e.balance), x + 460, y);
+    y += 16;
+  }
+  doc.end();
+};
+
 /** Indian-numbering amount in words, e.g. 5346 → "Five Thousand Three Hundred Forty Six Rupees Only". */
 const amountInWords = (amount) => {
   const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven',

@@ -76,11 +76,36 @@ export const uploadPhoto = asyncHandler(async (req, res) => {
 });
 
 export const softDelete = asyncHandler(async (req, res) => {
+  const partyId = req.params.partyId;
+  const businessId = req.business.id;
+
+  // Deleting the party but leaving its balance/bills behind would silently
+  // orphan them — they'd stop showing in the party list yet still count in
+  // reports, dashboard totals, and (for bills) remain payable. Require the
+  // ledger to be settled and bills closed first, same as invoice cancel/delete.
+  const grouped = await prisma.transaction.groupBy({
+    by: ['type'],
+    where: { partyId, businessId, deletedAt: null },
+    _sum: { amount: true },
+  });
+  const gave = Number(grouped.find((g) => g.type === 'GAVE')?._sum.amount || 0);
+  const got = Number(grouped.find((g) => g.type === 'GOT')?._sum.amount || 0);
+  if (gave !== got) {
+    throw ApiError.badRequest('Cannot delete a party with an outstanding balance — settle it first');
+  }
+
+  const openInvoices = await prisma.invoice.count({
+    where: { partyId, businessId, deletedAt: null, status: { in: ['UNPAID', 'PARTIAL', 'OPEN'] } },
+  });
+  if (openInvoices > 0) {
+    throw ApiError.badRequest('Cannot delete a party with open bills — cancel or settle them first');
+  }
+
   const { count } = await prisma.party.updateMany({
-    where: { id: req.params.partyId, businessId: req.business.id, deletedAt: null },
+    where: { id: partyId, businessId, deletedAt: null },
     data: { deletedAt: new Date() },
   });
   if (!count) throw ApiError.notFound('Party not found');
-  logActivity(req, 'PARTY_DELETED', 'Party', req.params.partyId);
+  logActivity(req, 'PARTY_DELETED', 'Party', partyId);
   ok(res, { deleted: true });
 });

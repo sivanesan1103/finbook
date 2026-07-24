@@ -31,13 +31,18 @@ class _ExpensesTabState extends State<ExpensesTab> {
     final app = context.read<AppState>();
     if (app.business == null) return;
     setState(() => loading = true);
-    final res = await ApiClient.instance.get('${app.basePath}/expenses?limit=100');
-    if (!mounted) return;
-    setState(() {
-      rows = (res['data'] as List).map((e) => Expense.fromJson(e)).toList();
-      total = (res['summary']['totalAmount'] as num).toDouble();
-      loading = false;
-    });
+    try {
+      final res = await ApiClient.instance.get('${app.basePath}/expenses?limit=100');
+      if (!mounted) return;
+      setState(() {
+        rows = (res['data'] as List).map((e) => Expense.fromJson(e)).toList();
+        total = (res['summary']['totalAmount'] as num).toDouble();
+      });
+    } catch (e) {
+      if (mounted) showSnack(context, e.toString(), error: true);
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
   }
 
   double get _thisMonth {
@@ -60,9 +65,13 @@ class _ExpensesTabState extends State<ExpensesTab> {
       ),
     );
     if (ok != true || !mounted) return;
-    final app = context.read<AppState>();
-    await ApiClient.instance.delete('${app.basePath}/expenses/${e.id}');
-    _load();
+    try {
+      final app = context.read<AppState>();
+      await ApiClient.instance.delete('${app.basePath}/expenses/${e.id}');
+      _load();
+    } catch (err) {
+      if (mounted) showSnack(context, err.toString(), error: true);
+    }
   }
 
   Future<void> _addExpense() async {

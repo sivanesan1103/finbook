@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { validate } from '../../middlewares/validate.js';
-import { requireAuth, requireBusiness, requirePermission } from '../../middlewares/auth.js';
+import { requireAuth, requireBusiness, requirePermission, requireRole } from '../../middlewares/auth.js';
 import { upload } from '../../middlewares/upload.js';
 import * as ctrl from './transactions.controller.js';
 
@@ -33,6 +33,6 @@ router.post('/parties/:partyId/transactions', upload.single('billImage'),
 router.get('/transactions/:txId', ctrl.getOne);
 router.patch('/transactions/:txId', upload.single('billImage'),
   validate({ body: txBody.partial() }), ctrl.update);
-router.delete('/transactions/:txId', ctrl.softDelete);
+router.delete('/transactions/:txId', requireRole('OWNER', 'PARTNER'), ctrl.softDelete);
 
 export default router;

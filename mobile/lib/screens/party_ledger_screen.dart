@@ -29,11 +29,19 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
     _load();
   }
 
+  // Callers that only fire-and-forget (initState, post-add-entry refresh) get
+  // an error snackbar; the one caller that expects a throw here — detecting
+  // the party was deleted from the profile screen — still gets its rethrow.
   Future<void> _load() async {
     final app = context.read<AppState>();
-    final res = await ApiClient.instance
-        .get('${app.basePath}/parties/${widget.partyId}/transactions');
-    if (mounted) setState(() => ledger = LedgerData.fromJson(res['data']));
+    try {
+      final res = await ApiClient.instance
+          .get('${app.basePath}/parties/${widget.partyId}/transactions');
+      if (mounted) setState(() => ledger = LedgerData.fromJson(res['data']));
+    } catch (e) {
+      if (mounted) showSnack(context, e.toString(), error: true);
+      rethrow;
+    }
   }
 
   Future<void> _addEntry(String type) async {

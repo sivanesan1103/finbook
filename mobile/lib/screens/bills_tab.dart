@@ -48,8 +48,14 @@ class _BillsTabState extends State<BillsTab> {
   Future<void> _createInvoice() async {
     final app = context.read<AppState>();
     final api = ApiClient.instance;
-    final partiesRes = await api.get('${app.basePath}/parties?limit=100');
-    final parties = (partiesRes['data'] as List).map((p) => Party.fromJson(p)).toList();
+    List<Party> parties;
+    try {
+      final partiesRes = await api.get('${app.basePath}/parties?limit=100');
+      parties = (partiesRes['data'] as List).map((p) => Party.fromJson(p)).toList();
+    } catch (e) {
+      if (mounted) showSnack(context, e.toString(), error: true);
+      return;
+    }
     if (!mounted) return;
     if (parties.isEmpty) {
       showSnack(context, context.tr('bills.addCustomerFirst'), error: true);

@@ -37,9 +37,13 @@ class _PartyReportScreenState extends State<PartyReportScreen> {
     if (filter != 'ALL') params.add('type=$filter');
     if (searchCtrl.text.isNotEmpty) params.add('search=${Uri.encodeComponent(searchCtrl.text)}');
     final q = params.isEmpty ? '' : '?${params.join('&')}';
-    final res = await ApiClient.instance
-        .get('${app.basePath}/parties/${widget.party.id}/transactions$q');
-    if (mounted) setState(() => data = LedgerData.fromJson(res['data']));
+    try {
+      final res = await ApiClient.instance
+          .get('${app.basePath}/parties/${widget.party.id}/transactions$q');
+      if (mounted) setState(() => data = LedgerData.fromJson(res['data']));
+    } catch (e) {
+      if (mounted) showSnack(context, e.toString(), error: true);
+    }
   }
 
   Future<void> _pickDate(bool start) async {

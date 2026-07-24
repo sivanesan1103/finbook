@@ -1,7 +1,7 @@
 import prisma from '../../config/db.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { computeBalances } from '../parties/parties.service.js';
-import { streamTransactionsReport } from '../../utils/pdf.js';
+import { streamTransactionsReport, streamSalesReport } from '../../utils/pdf.js';
 
 const ok = (res, data) => res.json({ success: true, data });
 
@@ -194,6 +194,42 @@ export const salesReport = asyncHandler(async (req, res) => {
   };
 
   ok(res, { range: { from, to }, totals, entries: rows });
+});
+
+/** Sales report as a downloadable PDF. */
+export const salesReportPdf = asyncHandler(async (req, res) => {
+  const { from, to } = rangeFromQuery(req.query);
+  const where = {
+    businessId: req.business.id,
+    deletedAt: null,
+    issueDate: { gte: from, lte: to },
+    ...(req.query.partyId ? { partyId: req.query.partyId } : {}),
+  };
+  const [invoices, agg] = await Promise.all([
+    prisma.invoice.findMany({
+      where,
+      include: { party: { select: { name: true, type: true } } },
+      orderBy: { issueDate: 'desc' },
+    }),
+    prisma.invoice.aggregate({ where, _sum: { total: true, amountPaid: true }, _count: true }),
+  ]);
+
+  const rows = invoices.map((inv) => ({
+    invoiceNo: inv.invoiceNo,
+    date: inv.issueDate,
+    partyName: inv.party.name,
+    status: inv.status,
+    total: Number(inv.total),
+    balance: Number(inv.total) - Number(inv.amountPaid),
+  }));
+  const totals = {
+    count: agg._count,
+    billed: Number(agg._sum.total || 0),
+    collected: Number(agg._sum.amountPaid || 0),
+    pending: Number((agg._sum.total || 0) - (agg._sum.amountPaid || 0)),
+  };
+
+  streamSalesReport(res, { business: req.business, entries: rows, totals, from, to });
 });
 
 /** Purchases report: transactions with SUPPLIER parties in range. */

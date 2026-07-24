@@ -85,15 +85,28 @@ export const createInvoice = async (businessId, { partyId, items, discount = 0, 
   const { lines, subtotal, taxAmount, total } = computeTotals(items, discount);
   const finalStatus = docType === 'PROFORMA' ? 'OPEN' : status || 'UNPAID';
 
-  const invoice = await prisma.$transaction((txn) =>
-    createDocument(
-      txn,
-      businessId,
-      { partyId, docType, status: finalStatus, dueDate, notes, discount, lines, subtotal, taxAmount, total },
-      // Proformas never touch stock; draft invoices wait until finalised.
-      { deductStock: docType === 'INVOICE' && finalStatus !== 'DRAFT' }
-    )
-  );
+  // nextInvoiceNo() reads a count outside any lock, so two concurrent sales
+  // for the same business/docType can land on the same number — the unique
+  // constraint on (businessId, invoiceNo) catches it (P2002); retry with a
+  // fresh count instead of failing a legitimate concurrent sale outright.
+  let invoice;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      invoice = await prisma.$transaction((txn) =>
+        createDocument(
+          txn,
+          businessId,
+          { partyId, docType, status: finalStatus, dueDate, notes, discount, lines, subtotal, taxAmount, total },
+          // Proformas never touch stock; draft invoices wait until finalised.
+          { deductStock: docType === 'INVOICE' && finalStatus !== 'DRAFT' }
+        )
+      );
+      break;
+    } catch (e) {
+      if (e.code === 'P2002' && attempt < 5) continue;
+      throw e;
+    }
+  }
 
   if (docType === 'INVOICE' && party.smsEnabled && party.phone) {
     const business = await prisma.business.findUnique({ where: { id: businessId }, select: { name: true } });

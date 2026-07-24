@@ -1,6 +1,5 @@
 import prisma from '../../config/db.js';
 import { ApiError } from '../../utils/apiError.js';
-import { smsGateway, buildTransactionSms } from '../../utils/sms.js';
 
 /** Ledger entries for a party, oldest first, with running balance attached. */
 export const partyLedger = async (businessId, partyId, { from, to, type, search } = {}) => {
@@ -70,25 +69,6 @@ export const createEntry = async ({ business, party, user, data }) => {
     return created;
   });
 
-  // Transactional notification when the party has SMS enabled. `smsSent` only
-  // reflects a confirmed successful send — the UI shows it as a checkmark.
-  if (party.smsEnabled && party.phone) {
-    const { totals } = await partyLedger(business.id, party.id);
-    const result = await smsGateway.send({
-      to: party.phone,
-      message: buildTransactionSms({
-        businessName: business.name,
-        partyName: party.name,
-        type: data.type,
-        amount: Number(data.amount),
-        balance: Math.abs(totals.balance),
-      }),
-    });
-    if (result.ok) {
-      await prisma.transaction.update({ where: { id: tx.id }, data: { smsSent: true } });
-      tx.smsSent = true;
-    }
-  }
   return tx;
 };
 
