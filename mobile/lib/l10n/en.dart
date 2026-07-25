@@ -208,6 +208,14 @@ const Map<String, String> en = {
   'cashbookScreen.emptySubtitle': 'Looks a bit empty in here!',
   'cashbookScreen.noDescription': '(no description)',
   'cashbookScreen.entryLine': '{mode} · {date}',
+  'cashbookScreen.edit': 'Edit',
+  'cashbookScreen.delete': 'Delete',
+  'cashbookScreen.editPrefix': 'Edit ',
+  'cashbookScreen.saveChanges': 'SAVE CHANGES',
+  'cashbookScreen.linkedToLedger': 'Linked to ledger — edit from the party',
+  'cashbookScreen.linkedToExpense': 'Linked to an expense — edit from Expenses',
+  'cashbookScreen.confirmDeleteEntry': 'Delete this entry?',
+  'cashbookScreen.entryDeleted': 'Entry deleted',
 
   // invoice detail screen
   'invoiceDetail.title': 'Invoice',
@@ -287,6 +295,13 @@ const Map<String, String> en = {
   'itemsTab.low': 'LOW',
   'itemsTab.gstOnly': 'GST {rate}%',
   'itemsTab.stockGstLine': 'Stock: {qty} {unit} · GST {rate}%',
+  'itemsTab.gstRateOptional': 'GST rate % (optional)',
+  'itemsTab.purchasePriceOptional': 'Purchase price ₹ (optional)',
+  'itemsTab.editProductTitle': 'Edit Product',
+  'itemsTab.editServiceTitle': 'Edit Service',
+  'itemsTab.saveChanges': 'SAVE CHANGES',
+  'itemsTab.editTooltip': 'Edit',
+  'itemsTab.stockChangedNote': 'Use Adjust Stock to change quantity',
 
   // expenses tab
   'expensesTab.confirmDeleteTitle': 'Delete expense?',

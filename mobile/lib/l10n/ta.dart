@@ -208,6 +208,14 @@ const Map<String, String> ta = {
   'cashbookScreen.emptySubtitle': 'இங்கே கொஞ்சம் காலியாக உள்ளது!',
   'cashbookScreen.noDescription': '(விவரம் இல்லை)',
   'cashbookScreen.entryLine': '{mode} · {date}',
+  'cashbookScreen.edit': 'திருத்து',
+  'cashbookScreen.delete': 'நீக்கு',
+  'cashbookScreen.editPrefix': 'திருத்து ',
+  'cashbookScreen.saveChanges': 'மாற்றங்களைச் சேமி',
+  'cashbookScreen.linkedToLedger': 'கணக்குடன் இணைக்கப்பட்டுள்ளது — தரப்பினரிடமிருந்து திருத்தவும்',
+  'cashbookScreen.linkedToExpense': 'செலவுடன் இணைக்கப்பட்டுள்ளது — செலவுகளிலிருந்து திருத்தவும்',
+  'cashbookScreen.confirmDeleteEntry': 'இந்த பதிவை நீக்கவா?',
+  'cashbookScreen.entryDeleted': 'பதிவு நீக்கப்பட்டது',
 
   // invoice detail screen
   'invoiceDetail.title': 'விலைப்பட்டியல்',
@@ -287,6 +295,13 @@ const Map<String, String> ta = {
   'itemsTab.low': 'குறைவு',
   'itemsTab.gstOnly': 'GST {rate}%',
   'itemsTab.stockGstLine': 'சரக்கு: {qty} {unit} · GST {rate}%',
+  'itemsTab.gstRateOptional': 'GST விகிதம் % (விருப்பம்)',
+  'itemsTab.purchasePriceOptional': 'கொள்முதல் விலை ₹ (விருப்பம்)',
+  'itemsTab.editProductTitle': 'பொருளைத் திருத்து',
+  'itemsTab.editServiceTitle': 'சேவையைத் திருத்து',
+  'itemsTab.saveChanges': 'மாற்றங்களைச் சேமி',
+  'itemsTab.editTooltip': 'திருத்து',
+  'itemsTab.stockChangedNote': 'அளவை மாற்ற சரக்கு சரிசெய்யலைப் பயன்படுத்தவும்',
 
   // expenses tab
   'expensesTab.confirmDeleteTitle': 'செலவை நீக்கவா?',

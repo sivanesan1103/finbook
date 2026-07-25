@@ -58,13 +58,15 @@ class _ItemsTabState extends State<ItemsTab> with SingleTickerProviderStateMixin
       products.fold(0.0, (s, i) => s + i.stockQty * (i.purchasePrice ?? i.salePrice));
   int get lowCount => products.where((i) => i.isLow).length;
 
-  Future<void> _addItem() async {
-    bool isService = tabCtrl.index == 1;
-    final name = TextEditingController();
-    final price = TextEditingController();
+  Future<void> _addItem({Item? editing}) async {
+    bool isService = editing != null ? editing.isService : tabCtrl.index == 1;
+    final name = TextEditingController(text: editing?.name ?? '');
+    final price = TextEditingController(text: editing != null ? _trimNum(editing.salePrice) : '');
     final stock = TextEditingController();
-    final lowAlert = TextEditingController();
-    String unit = 'PCS';
+    final lowAlert = TextEditingController(text: editing?.lowStockAlert != null ? _trimNum(editing!.lowStockAlert!) : '');
+    final gstRate = TextEditingController(text: editing != null && editing.taxRate > 0 ? _trimNum(editing.taxRate) : '');
+    final purchasePrice = TextEditingController(text: editing?.purchasePrice != null ? _trimNum(editing!.purchasePrice!) : '');
+    String unit = editing != null && !isService ? editing.unit : 'PCS';
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -74,7 +76,12 @@ class _ItemsTabState extends State<ItemsTab> with SingleTickerProviderStateMixin
         child: StatefulBuilder(
           builder: (ctx, setSheet) => SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(isService ? context.tr('itemsTab.addServiceTitle') : context.tr('itemsTab.addProductTitle'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+              Text(
+                editing != null
+                    ? (isService ? context.tr('itemsTab.editServiceTitle') : context.tr('itemsTab.editProductTitle'))
+                    : (isService ? context.tr('itemsTab.addServiceTitle') : context.tr('itemsTab.addProductTitle')),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+              ),
               const SizedBox(height: 14),
               SegmentedButton<bool>(
                 segments: [
@@ -82,7 +89,7 @@ class _ItemsTabState extends State<ItemsTab> with SingleTickerProviderStateMixin
                   ButtonSegment(value: true, label: Text(context.tr('itemsTab.service'))),
                 ],
                 selected: {isService},
-                onSelectionChanged: (s) => setSheet(() => isService = s.first),
+                onSelectionChanged: editing != null ? null : (s) => setSheet(() => isService = s.first),
               ),
               const SizedBox(height: 14),
               TextField(controller: name, autofocus: true,
@@ -90,6 +97,9 @@ class _ItemsTabState extends State<ItemsTab> with SingleTickerProviderStateMixin
               const SizedBox(height: 10),
               TextField(controller: price, keyboardType: TextInputType.number,
                   decoration: InputDecoration(labelText: context.tr('itemsTab.salePrice'))),
+              const SizedBox(height: 10),
+              TextField(controller: gstRate, keyboardType: TextInputType.number,
+                  decoration: InputDecoration(labelText: context.tr('itemsTab.gstRateOptional'))),
               if (!isService) ...[
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
@@ -99,15 +109,25 @@ class _ItemsTabState extends State<ItemsTab> with SingleTickerProviderStateMixin
                   onChanged: (v) => setSheet(() => unit = v!),
                 ),
                 const SizedBox(height: 10),
-                TextField(controller: stock, keyboardType: TextInputType.number,
-                    decoration: InputDecoration(labelText: context.tr('itemsTab.openingStockOptional'))),
+                TextField(controller: purchasePrice, keyboardType: TextInputType.number,
+                    decoration: InputDecoration(labelText: context.tr('itemsTab.purchasePriceOptional'))),
+                const SizedBox(height: 10),
+                if (editing == null)
+                  TextField(controller: stock, keyboardType: TextInputType.number,
+                      decoration: InputDecoration(labelText: context.tr('itemsTab.openingStockOptional')))
+                else
+                  Text(context.tr('itemsTab.stockChangedNote'), style: const TextStyle(color: Colors.black45, fontSize: 12)),
                 const SizedBox(height: 10),
                 TextField(controller: lowAlert, keyboardType: TextInputType.number,
                     decoration: InputDecoration(labelText: context.tr('itemsTab.lowStockAlertOptional'))),
               ],
               const SizedBox(height: 14),
-              ElevatedButton(onPressed: () => Navigator.pop(ctx, true),
-                  child: Text(isService ? context.tr('itemsTab.saveService') : context.tr('itemsTab.saveProduct'))),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(editing != null
+                    ? context.tr('itemsTab.saveChanges')
+                    : (isService ? context.tr('itemsTab.saveService') : context.tr('itemsTab.saveProduct'))),
+              ),
             ]),
           ),
         ),
@@ -116,19 +136,28 @@ class _ItemsTabState extends State<ItemsTab> with SingleTickerProviderStateMixin
     if (saved != true || name.text.isEmpty || price.text.isEmpty || !mounted) return;
     try {
       final app = context.read<AppState>();
-      await ApiClient.instance.post('${app.basePath}/items', {
+      final payload = {
         'name': name.text.trim(),
         'salePrice': double.parse(price.text),
         'unit': isService ? kServiceUnit : unit,
-        if (!isService && stock.text.isNotEmpty) 'stockQty': double.parse(stock.text),
+        'taxRate': gstRate.text.isNotEmpty ? double.parse(gstRate.text) : 0,
+        if (!isService && purchasePrice.text.isNotEmpty) 'purchasePrice': double.parse(purchasePrice.text),
+        if (!isService && editing == null && stock.text.isNotEmpty) 'stockQty': double.parse(stock.text),
         if (!isService && lowAlert.text.isNotEmpty) 'lowStockAlert': double.parse(lowAlert.text),
-      });
-      setState(() => tabCtrl.index = isService ? 1 : 0);
+      };
+      if (editing != null) {
+        await ApiClient.instance.patch('${app.basePath}/items/${editing.id}', payload);
+      } else {
+        await ApiClient.instance.post('${app.basePath}/items', payload);
+        setState(() => tabCtrl.index = isService ? 1 : 0);
+      }
       _load();
     } catch (e) {
       if (mounted) showSnack(context, e.toString(), error: true);
     }
   }
+
+  static String _trimNum(double n) => n == n.roundToDouble() ? n.toInt().toString() : n.toString();
 
   Future<void> _adjust(Item item) async {
     final qty = TextEditingController();
@@ -231,6 +260,11 @@ class _ItemsTabState extends State<ItemsTab> with SingleTickerProviderStateMixin
             subtitle: Text(service ? context.tr('itemsTab.gstOnly', {'rate': it.taxRate}) : context.tr('itemsTab.stockGstLine', {'qty': it.stockQty, 'unit': it.unit, 'rate': it.taxRate})),
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
               Text(inr(it.salePrice), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+              IconButton(
+                icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.black38),
+                tooltip: context.tr('itemsTab.editTooltip'),
+                onPressed: () => _addItem(editing: it),
+              ),
               IconButton(icon: const Icon(Icons.delete_outline, size: 20, color: Colors.black38), onPressed: () => _delete(it)),
             ]),
             onTap: service ? null : () => _adjust(it),

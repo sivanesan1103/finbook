@@ -226,14 +226,16 @@ const kPermissionFlags = ['parties', 'bills', 'items', 'cashbook', 'expenses', '
 
 class CashEntry {
   final String id, direction, paymentMode;
-  final String? description;
+  final String? description, transactionId, expenseId;
   final double amount;
   final DateTime entryDate;
   CashEntry({required this.id, required this.direction, required this.paymentMode,
-      this.description, required this.amount, required this.entryDate});
+      this.description, required this.amount, required this.entryDate, this.transactionId, this.expenseId});
+  bool get isMirrored => transactionId != null || expenseId != null;
   factory CashEntry.fromJson(Map<String, dynamic> j) => CashEntry(
         id: j['id'], direction: j['direction'], paymentMode: j['paymentMode'] ?? 'CASH',
         description: j['description'], amount: _num(j['amount']),
         entryDate: DateTime.parse(j['entryDate']),
+        transactionId: j['transactionId'], expenseId: j['expenseId'],
       );
 }

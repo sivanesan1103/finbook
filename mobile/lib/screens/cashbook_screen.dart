@@ -48,10 +48,10 @@ class _CashbookScreenState extends State<CashbookScreen> {
     }
   }
 
-  Future<void> _add(String direction) async {
-    final amount = TextEditingController();
-    final desc = TextEditingController();
-    String payMode = 'CASH';
+  Future<void> _add(String direction, {CashEntry? editing}) async {
+    final amount = TextEditingController(text: editing != null ? _trimNum(editing.amount) : '');
+    final desc = TextEditingController(text: editing?.description ?? '');
+    String payMode = editing?.paymentMode ?? 'CASH';
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -60,10 +60,14 @@ class _CashbookScreenState extends State<CashbookScreen> {
         padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
         child: StatefulBuilder(
           builder: (ctx, setSheet) => Column(mainAxisSize: MainAxisSize.min, children: [
-            Text(direction == 'IN' ? context.tr('cashbookScreen.cashIn') : context.tr('cashbookScreen.cashOut'),
-                style: TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w800,
-                    color: direction == 'IN' ? AppColors.got : AppColors.gave)),
+            Text(
+              editing != null
+                  ? '${context.tr('cashbookScreen.editPrefix')}${direction == 'IN' ? context.tr('cashbookScreen.cashIn') : context.tr('cashbookScreen.cashOut')}'
+                  : (direction == 'IN' ? context.tr('cashbookScreen.cashIn') : context.tr('cashbookScreen.cashOut')),
+              style: TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.w800,
+                  color: direction == 'IN' ? AppColors.got : AppColors.gave),
+            ),
             const SizedBox(height: 14),
             TextField(controller: amount, autofocus: true,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -83,7 +87,7 @@ class _CashbookScreenState extends State<CashbookScreen> {
               style: ElevatedButton.styleFrom(
                   backgroundColor: direction == 'IN' ? AppColors.got : AppColors.gave),
               onPressed: () => Navigator.pop(ctx, true),
-              child: Text(context.tr('cashbookScreen.save')),
+              child: Text(editing != null ? context.tr('cashbookScreen.saveChanges') : context.tr('cashbookScreen.save')),
             ),
           ]),
         ),
@@ -92,17 +96,99 @@ class _CashbookScreenState extends State<CashbookScreen> {
     if (saved != true || amount.text.isEmpty || !mounted) return;
     try {
       final app = context.read<AppState>();
-      await ApiClient.instance.post('${app.basePath}/cashbook', {
+      final payload = {
         'direction': direction,
         'amount': double.parse(amount.text),
         if (desc.text.trim().isNotEmpty) 'description': desc.text.trim(),
         'paymentMode': payMode,
         'entryDate': date.toIso8601String(),
-      });
+      };
+      if (editing != null) {
+        await ApiClient.instance.patch('${app.basePath}/cashbook/${editing.id}', payload);
+      } else {
+        await ApiClient.instance.post('${app.basePath}/cashbook', payload);
+      }
       _load();
     } catch (e) {
       if (mounted) showSnack(context, e.toString(), error: true);
     }
+  }
+
+  static String _trimNum(double n) => n == n.roundToDouble() ? n.toInt().toString() : n.toString();
+
+  Future<void> _delete(CashEntry e) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(context.tr('cashbookScreen.confirmDeleteEntry')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('itemsTab.cancel'))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('cashbookScreen.delete'))),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      final app = context.read<AppState>();
+      await ApiClient.instance.delete('${app.basePath}/cashbook/${e.id}');
+      if (mounted) showSnack(context, context.tr('cashbookScreen.entryDeleted'));
+      _load();
+    } catch (err) {
+      if (mounted) showSnack(context, err.toString(), error: true);
+    }
+  }
+
+  void _showDetail(CashEntry e) {
+    final isIn = e.direction == 'IN';
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            CircleAvatar(
+              backgroundColor: isIn ? const Color(0xFFEFF7F0) : const Color(0xFFFBE9EA),
+              child: Icon(isIn ? Icons.south_west : Icons.north_east, color: isIn ? AppColors.got : AppColors.gave),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Text(e.description ?? context.tr('cashbookScreen.noDescription'),
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16))),
+            Text(inr(e.amount), style: TextStyle(color: isIn ? AppColors.got : AppColors.gave, fontWeight: FontWeight.w800, fontSize: 18)),
+          ]),
+          const SizedBox(height: 6),
+          Text(context.tr('cashbookScreen.entryLine', {'mode': context.tr(modeLabelKeys[e.paymentMode] ?? e.paymentMode), 'date': fmtDateTime(e.entryDate)}),
+              style: const TextStyle(color: Colors.black54, fontSize: 12)),
+          const SizedBox(height: 18),
+          if (e.isMirrored)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(color: Colors.black.withOpacity(0.04), borderRadius: BorderRadius.circular(8)),
+              child: Text(
+                e.expenseId != null ? context.tr('cashbookScreen.linkedToExpense') : context.tr('cashbookScreen.linkedToLedger'),
+                style: const TextStyle(color: Colors.black54, fontSize: 12),
+              ),
+            )
+          else
+            Row(children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () { Navigator.pop(ctx); _add(e.direction, editing: e); },
+                  child: Text(context.tr('cashbookScreen.edit')),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(foregroundColor: AppColors.gave),
+                  onPressed: () { Navigator.pop(ctx); _delete(e); },
+                  child: Text(context.tr('cashbookScreen.delete')),
+                ),
+              ),
+            ]),
+        ]),
+      ),
+    );
   }
 
   @override
@@ -228,6 +314,7 @@ class _CashbookScreenState extends State<CashbookScreen> {
                                   style: TextStyle(
                                       color: isIn ? AppColors.got : AppColors.gave,
                                       fontWeight: FontWeight.w800, fontSize: 16)),
+                              onTap: () => _showDetail(e),
                             );
                           },
                         ),
