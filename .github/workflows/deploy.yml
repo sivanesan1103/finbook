@@ -40,6 +40,12 @@ jobs:
 
       - name: Health check
         run: |
-          sleep 5
-          curl -sf -o /dev/null -w "web  HTTP %{http_code}\n" http://localhost:8080/
-          curl -s  -o /dev/null -w "api  HTTP %{http_code}\n" http://localhost:4000/
+          for i in $(seq 1 10); do
+            sleep 3
+            web_code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/ || echo 000)
+            api_code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:4000/ || echo 000)
+            echo "attempt $i: web=$web_code api=$api_code"
+            [ "$web_code" = "200" ] && [ -n "$api_code" ] && [ "$api_code" != "000" ] && exit 0
+          done
+          echo "services did not come up in time" >&2
+          exit 1
