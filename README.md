@@ -156,11 +156,18 @@ it, following the naming used by earlier releases.
 **Updating the deployed web/API:**
 - Local dev: `docker compose up --build` picks up the override in
   `docker-compose.override.yml` (Vite dev server, hot reload).
-- Remote host: sync `web/` (excluding `node_modules`/`dist`) to the target's
-  `finbook/web/`, then on the host run `docker compose build web && docker
-  compose up -d web`. Never overwrite the host's `docker-compose.yml` — it
-  holds production DB/JWT secrets that differ from this repo's dev defaults.
-  Only rebuild/restart `backend`'s container the same way if `backend/` was
-  actually changed.
-- After any deploy, sanity-check with `docker compose ps` (all services
-  `Up`/`healthy`) and `curl localhost:8080` / the API's auth endpoint.
+- Production: **automatic** — [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
+  runs on every push to `main`, syncing `web/` and `backend/` to `DEPLOY_PATH`
+  and rebuilding/restarting just the `api`/`web` containers. It never touches
+  `docker-compose.yml` at `DEPLOY_PATH` — that file holds production DB/JWT
+  secrets that differ from this repo's dev defaults — and never touches `db`.
+- The deploy job runs on a **self-hosted runner installed on the production
+  host itself** (`Settings → Actions → Runners` in GitHub), not a GitHub-hosted
+  one — the current host sits behind Tailscale, which GitHub's cloud runners
+  can't route to. Moving to a new server: install a runner there
+  (`https://github.com/sivanesan1103/finbook/settings/actions/runners/new`,
+  give it the `rpi` label or update `runs-on:` in the workflow to match),
+  remove the old runner, and update the `DEPLOY_PATH` repo secret if the path
+  differs. Nothing else in the workflow needs to change.
+- After any deploy (manual or automatic), sanity-check with `docker compose
+  ps` (all services `Up`/`healthy`) and `curl localhost:8080` / the API.
