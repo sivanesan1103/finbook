@@ -4,23 +4,10 @@ import { validate } from '../../middlewares/validate.js';
 import { requireAuth, requireBusiness, requirePermission, requireRole } from '../../middlewares/auth.js';
 import { upload } from '../../middlewares/upload.js';
 import * as ctrl from './parties.controller.js';
+import { partyBody } from './parties.schema.js';
 
 const router = Router({ mergeParams: true });
 router.use(requireAuth, requireBusiness, requirePermission('parties'));
-
-const partyBody = z.object({
-  type: z.enum(['CUSTOMER', 'SUPPLIER']).default('CUSTOMER'),
-  name: z.string().min(1).max(120),
-  phone: z.string().trim().regex(/^\+?[0-9][0-9\s-]{6,19}$/, 'Enter a valid phone number').optional().or(z.literal('')),
-  email: z.string().email().optional(),
-  gstin: z.string().max(20).optional(),
-  addressLine: z.string().max(200).optional(),
-  area: z.string().max(100).optional(),
-  city: z.string().max(80).optional(),
-  state: z.string().max(80).optional(),
-  pincode: z.string().max(10).optional(),
-  smsEnabled: z.boolean().optional(),
-});
 
 const listQuery = z.object({
   type: z.enum(['CUSTOMER', 'SUPPLIER']).optional(),
@@ -33,8 +20,11 @@ const listQuery = z.object({
 router.get('/', validate({ query: listQuery }), ctrl.list);
 router.get('/summary', ctrl.summary);
 router.post('/', validate({ body: partyBody }), ctrl.create);
+// Loose shape check only — each row is validated individually inside
+// bulkCreate so one bad row (e.g. a messy phone number in a 500-row
+// spreadsheet) skips just that row instead of rejecting the whole batch.
 router.post('/bulk', validate({
-  body: z.object({ parties: z.array(partyBody).min(1).max(500) }),
+  body: z.object({ parties: z.array(z.record(z.unknown())).min(1).max(500) }),
 }), ctrl.bulkCreate);
 router.get('/:partyId', ctrl.getOne);
 router.patch('/:partyId', validate({ body: partyBody.partial() }), ctrl.update);

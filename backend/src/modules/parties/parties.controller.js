@@ -6,6 +6,7 @@ import { logActivity } from '../../middlewares/activity.js';
 import { fileUrl } from '../../middlewares/upload.js';
 import { smsGateway, buildPartyWelcomeMessage } from '../../utils/sms.js';
 import * as service from './parties.service.js';
+import { partyBody } from './parties.schema.js';
 
 const ok = (res, data, status = 200) => res.status(status).json({ success: true, data });
 
@@ -46,13 +47,24 @@ export const create = asyncHandler(async (req, res) => {
   ok(res, { ...party, balance: 0 }, 201);
 });
 
-/** Contact-book style bulk import: [{name, phone, type}] */
+/**
+ * Contact-book style bulk import: [{name, phone, type}]. Each row is
+ * validated independently — a messy phone number or missing name in one
+ * row of a large spreadsheet skips just that row instead of failing the
+ * whole batch (unlike the single-create route, which is strict since it's
+ * one row a human is actively filling in).
+ */
 export const bulkCreate = asyncHandler(async (req, res) => {
-  const result = await prisma.party.createMany({
-    data: req.body.parties.map((p) => ({ ...p, businessId: req.business.id })),
+  const valid = [];
+  const skipped = [];
+  req.body.parties.forEach((raw, i) => {
+    const result = partyBody.safeParse(raw);
+    if (result.success) valid.push({ ...result.data, businessId: req.business.id });
+    else skipped.push({ row: i, reason: result.error.issues[0]?.message || 'Invalid data' });
   });
-  logActivity(req, 'PARTY_BULK_IMPORTED', 'Party', null, { count: result.count });
-  ok(res, { created: result.count }, 201);
+  const result = valid.length ? await prisma.party.createMany({ data: valid }) : { count: 0 };
+  logActivity(req, 'PARTY_BULK_IMPORTED', 'Party', null, { count: result.count, skipped: skipped.length });
+  ok(res, { created: result.count, skipped }, 201);
 });
 
 export const update = asyncHandler(async (req, res) => {

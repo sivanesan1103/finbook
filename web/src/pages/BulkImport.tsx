@@ -14,6 +14,7 @@ const SAMPLE_ROWS = [
 interface ParsedParty {
   name: string; phone?: string; email?: string; gstin?: string;
   addressLine?: string; area?: string; city?: string; state?: string; pincode?: string;
+  row: number;
 }
 interface RowError { row: number; reason: string }
 
@@ -72,9 +73,11 @@ export default function BulkImport({ type = 'CUSTOMER' as PartyType }: { type?: 
         const phone = pick(row, 'phone', 'mobile');
         if (!name) { errors.push({ row: rowNo, reason: t('bulkImport.nameMissing') }); return; }
         if (name.length > 120) { errors.push({ row: rowNo, reason: t('bulkImport.nameTooLong') }); return; }
-        if (phone && phone.replace(/[\s+-]/g, '').length > 20) { errors.push({ row: rowNo, reason: t('bulkImport.phoneTooLong') }); return; }
+        // Same shape the backend requires (see parties.schema.js) — catch it
+        // here with the real row number instead of a generic post-hoc skip.
+        if (phone && !/^\+?[0-9][0-9\s-]{6,19}$/.test(phone)) { errors.push({ row: rowNo, reason: t('bulkImport.phoneInvalid') }); return; }
         const email = pick(row, 'email');
-        const p: ParsedParty = { name };
+        const p: ParsedParty = { name, row: rowNo };
         if (phone) p.phone = phone;
         if (email && /^\S+@\S+\.\S+$/.test(email)) p.email = email;
         const gstin = pick(row, 'gstin'); if (gstin) p.gstin = gstin.slice(0, 20);
@@ -101,12 +104,17 @@ export default function BulkImport({ type = 'CUSTOMER' as PartyType }: { type?: 
     setState({ phase: 'uploading', fileName });
     try {
       let created = 0;
+      const serverErrors: RowError[] = [];
       for (let i = 0; i < parties.length; i += 500) {
-        const chunk = parties.slice(i, i + 500).map((p) => ({ ...p, type }));
-        const res = await api.post(`/businesses/${business.id}/parties/bulk`, { parties: chunk });
-        created += res.data.data.created ?? chunk.length;
+        const chunk = parties.slice(i, i + 500);
+        const payload = chunk.map(({ row: _row, ...p }) => ({ ...p, type }));
+        const res = await api.post(`/businesses/${business.id}/parties/bulk`, { parties: payload });
+        created += res.data.data.created ?? payload.length;
+        for (const skip of res.data.data.skipped ?? []) {
+          serverErrors.push({ row: chunk[skip.row]?.row ?? -1, reason: skip.reason });
+        }
       }
-      setState({ phase: 'done', fileName, created, errors });
+      setState({ phase: 'done', fileName, created, errors: [...errors, ...serverErrors] });
     } catch (e) {
       setState({ phase: 'failed', fileName, message: apiMessage(e) });
     }
@@ -225,7 +233,14 @@ export default function BulkImport({ type = 'CUSTOMER' as PartyType }: { type?: 
             <span className="text-6xl mb-4">✅</span>
             <p className="font-bold text-lg text-slate-800 mb-1">{t('bulkImport.importedSuccess', { count: state.created, label: labelFor(state.created) })}</p>
             {state.errors.length > 0 && (
-              <p className="text-sm text-amber-600 mb-2">{t('bulkImport.rowsSkippedInvalid', { count: state.errors.length })}</p>
+              <>
+                <p className="text-sm text-amber-600 mb-2">{t('bulkImport.rowsSkippedInvalid', { count: state.errors.length })}</p>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-2 max-h-36 overflow-y-auto w-full max-w-md">
+                  {state.errors.map((er, i) => (
+                    <p key={i} className="text-xs text-amber-700">{t('bulkImport.rowError', { row: er.row, reason: er.reason })}</p>
+                  ))}
+                </div>
+              </>
             )}
             <div className="flex gap-3 mt-3">
               <button className="btn-primary" onClick={() => navigate(isCustomer ? '/customers' : '/suppliers')}>

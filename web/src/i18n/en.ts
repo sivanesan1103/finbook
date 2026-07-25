@@ -269,7 +269,7 @@ export const en = {
   'bulkImport.couldNotRead': 'Could not read this file. Upload an .xlsx / .xls / .csv sheet in the sample format.',
   'bulkImport.nameMissing': 'Name is missing',
   'bulkImport.nameTooLong': 'Name is longer than 120 characters',
-  'bulkImport.phoneTooLong': 'Phone number is too long',
+  'bulkImport.phoneInvalid': 'Enter a valid phone number',
 
   // cashbook
   'cashbook.title': 'Cashbook',

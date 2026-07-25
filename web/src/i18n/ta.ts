@@ -271,7 +271,7 @@ export const ta: Record<TranslationKey, string> = {
   'bulkImport.couldNotRead': 'இந்த கோப்பைப் படிக்க முடியவில்லை. மாதிரி வடிவமைப்பில் .xlsx / .xls / .csv ஷீட்டைப் பதிவேற்றவும்.',
   'bulkImport.nameMissing': 'பெயர் இல்லை',
   'bulkImport.nameTooLong': 'பெயர் 120 எழுத்துக்களுக்கு மேல் உள்ளது',
-  'bulkImport.phoneTooLong': 'தொலைபேசி எண் மிக நீளமானது',
+  'bulkImport.phoneInvalid': 'சரியான தொலைபேசி எண்ணை உள்ளிடவும்',
 
   // cashbook
   'cashbook.title': 'ரொக்கப் புத்தகம்',
