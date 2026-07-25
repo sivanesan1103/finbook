@@ -11,6 +11,7 @@ export const en = {
   'common.search': 'Search',
   'common.add': 'Add',
   'common.name': 'Name',
+  'common.status': 'Status',
   'common.phone': 'Phone',
   'common.email': 'Email',
   'common.address': 'Address',
@@ -345,6 +346,11 @@ export const en = {
   'reports.totalOut': 'Total Out',
   'reports.cashOut': 'Cash Out',
   'reports.cashIn': 'Cash In',
+  'reports.salesReport': 'Sales Report',
+  'reports.salesReportSub': 'Invoices, GST and collections',
+  'reports.billedCount': 'Billed ({count} bills)',
+  'reports.collected': 'Collected',
+  'reports.pending': 'Pending',
 
   // parties
   'parties.customerLabel': 'Customer',
@@ -513,6 +519,7 @@ export const en = {
   'invoices.grossTotal': 'Gross Total',
   'invoices.paid': 'Paid',
   'invoices.balanceDue': 'Balance Due',
+  'invoices.invoiceNo': 'Invoice No.',
   'invoices.payments': 'Payments',
   'invoices.collectPayment': 'Collect Payment',
   'invoices.collectPaymentDue': 'Collect payment — due {amount}',

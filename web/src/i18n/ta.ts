@@ -13,6 +13,7 @@ export const ta: Record<TranslationKey, string> = {
   'common.search': 'தேடு',
   'common.add': 'சேர்',
   'common.name': 'பெயர்',
+  'common.status': 'நிலை',
   'common.phone': 'தொலைபேசி எண்',
   'common.email': 'மின்னஞ்சல்',
   'common.address': 'முகவரி',
@@ -347,6 +348,11 @@ export const ta: Record<TranslationKey, string> = {
   'reports.totalOut': 'மொத்த செலவு',
   'reports.cashOut': 'ரொக்க செலவு',
   'reports.cashIn': 'ரொக்க வரவு',
+  'reports.salesReport': 'விற்பனை அறிக்கை',
+  'reports.salesReportSub': 'பில்கள், GST மற்றும் வசூல்',
+  'reports.billedCount': 'பில் செய்யப்பட்டது ({count} பில்கள்)',
+  'reports.collected': 'வசூலிக்கப்பட்டது',
+  'reports.pending': 'நிலுவையில்',
 
   // parties
   'parties.customerLabel': 'வாடிக்கையாளர்',
@@ -515,6 +521,7 @@ export const ta: Record<TranslationKey, string> = {
   'invoices.grossTotal': 'மொத்த தொகை',
   'invoices.paid': 'செலுத்தப்பட்டது',
   'invoices.balanceDue': 'நிலுவை இருப்பு',
+  'invoices.invoiceNo': 'பில் எண்.',
   'invoices.payments': 'பணம் செலுத்துதல்கள்',
   'invoices.collectPayment': 'பணம் வசூலி',
   'invoices.collectPaymentDue': 'பணம் வசூலி — நிலுவை {amount}',

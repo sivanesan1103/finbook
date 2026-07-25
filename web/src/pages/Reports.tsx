@@ -5,9 +5,13 @@ import { useLanguage } from '../context/LanguageContext';
 import { api } from '../api/client';
 import type { Transaction, CashbookEntry, PartyType } from '../types';
 import type { TranslationKey } from '../i18n';
-import { EmptyState, Money, Spinner, fmtDate } from '../components/ui';
+import { EmptyState, Money, Spinner, StatusBadge, STATUS_LABEL_KEYS, fmtDate } from '../components/ui';
 
-type ReportKind = 'transactions' | 'cashbook';
+type ReportKind = 'transactions' | 'cashbook' | 'sales';
+type SalesRow = {
+  id: string; invoiceNo: string; date: string; partyName: string;
+  status: string; total: number; paid: number; balance: number;
+};
 type Period = 'today' | 'yesterday' | 'week' | 'month' | 'lastMonth' | 'year' | 'custom';
 
 const iso = (d: Date) =>
@@ -67,6 +71,7 @@ export default function Reports() {
   const [tabCounts, setTabCounts] = useState({ CUSTOMER: 0, SUPPLIER: 0 });
   const [cashEntries, setCashEntries] = useState<CashbookEntry[] | null>(null);
   const [cashTotals, setCashTotals] = useState({ in: 0, out: 0, balance: 0 });
+  const [salesData, setSalesData] = useState<{ totals: { count: number; billed: number; collected: number; pending: number }; entries: SalesRow[] } | null>(null);
 
   const base = `/businesses/${business?.id}`;
   const dateParams = { from, to: to + 'T23:59:59' };
@@ -107,10 +112,19 @@ export default function Reports() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [business, from, to, base]);
 
+  const loadSales = useCallback(async () => {
+    if (!business) return;
+    setSalesData(null);
+    const res = await api.get(`${base}/reports/sales`, { params: { ...dateParams, search: search || undefined } });
+    setSalesData(res.data.data);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [business, from, to, search, base]);
+
   useEffect(() => {
     if (kind === 'transactions') loadTransactions();
-    else loadCashbook();
-  }, [kind, loadTransactions, loadCashbook]);
+    else if (kind === 'cashbook') loadCashbook();
+    else loadSales();
+  }, [kind, loadTransactions, loadCashbook, loadSales]);
 
   // ── downloads ──
   const downloadPdf = async () => {
@@ -122,9 +136,14 @@ export default function Reports() {
           params: { ...dateParams, partyType, search: search || undefined }, responseType: 'blob',
         });
         downloadBlob(res.data, 'transactions-report.pdf');
-      } else {
+      } else if (kind === 'cashbook') {
         const res = await api.get(`${base}/cashbook/report.pdf`, { params: dateParams, responseType: 'blob' });
         downloadBlob(res.data, 'cashbook-report.pdf');
+      } else {
+        const res = await api.get(`${base}/reports/sales.pdf`, {
+          params: { ...dateParams, search: search || undefined }, responseType: 'blob',
+        });
+        downloadBlob(res.data, 'sales-report.pdf');
       }
     } finally { setDownloading(false); }
   };
@@ -144,7 +163,7 @@ export default function Reports() {
       rows.push({ Date: '', Party: '', Details: 'TOTALS', 'Payment Mode': '', 'You Gave': txData.totals.gave, 'You Got': txData.totals.got });
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Transactions');
       XLSX.writeFile(wb, 'transactions-report.xlsx');
-    } else {
+    } else if (kind === 'cashbook') {
       if (!cashEntries) return;
       const rows = cashEntries.map((e) => ({
         Date: fmtDate(e.entryDate),
@@ -156,17 +175,31 @@ export default function Reports() {
       rows.push({ Date: '', Details: 'TOTALS', 'Payment Mode': '', 'Cash Out': cashTotals.out, 'Cash In': cashTotals.in });
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Cashbook');
       XLSX.writeFile(wb, 'cashbook-report.xlsx');
+    } else {
+      if (!salesData) return;
+      const rows = salesData.entries.map((s) => ({
+        Date: fmtDate(s.date),
+        Invoice: s.invoiceNo,
+        Party: s.partyName,
+        Status: s.status,
+        Total: s.total,
+        Paid: s.paid,
+        Balance: s.balance,
+      }));
+      rows.push({ Date: '', Invoice: '', Party: '', Status: 'TOTALS', Total: salesData.totals.billed, Paid: salesData.totals.collected, Balance: salesData.totals.pending });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Sales');
+      XLSX.writeFile(wb, 'sales-report.xlsx');
     }
   };
 
-  const hasRows = kind === 'transactions' ? !!txData?.entries.length : !!cashEntries?.length;
-  const loading = kind === 'transactions' ? !txData : !cashEntries;
+  const hasRows = kind === 'transactions' ? !!txData?.entries.length : kind === 'cashbook' ? !!cashEntries?.length : !!salesData?.entries.length;
+  const loading = kind === 'transactions' ? !txData : kind === 'cashbook' ? !cashEntries : !salesData;
 
-  const filters = (withSearch: boolean) => (
+  const filters = (withSearch: boolean, searchLabelKey: TranslationKey = 'reports.customerName') => (
     <div className={`grid grid-cols-2 ${withSearch ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-3 mb-5`}>
       {withSearch && (
         <div>
-          <label className="label">{t('reports.customerName')}</label>
+          <label className="label">{t(searchLabelKey)}</label>
           <input className="input" placeholder={t('reports.search')} value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
       )}
@@ -217,16 +250,26 @@ export default function Reports() {
             <span className="block text-xs text-slate-400">{t('reports.cashbookReportSub')}</span>
           </span>
         </button>
+        <button onClick={() => setKind('sales')}
+          className={`flex items-center gap-3 px-5 py-4 text-left border-l-4 transition ${
+            kind === 'sales' ? 'border-brand-500 bg-brand-50' : 'border-transparent hover:bg-slate-50'
+          }`}>
+          <span className={`w-11 h-11 rounded-full flex items-center justify-center text-lg ${kind === 'sales' ? 'bg-brand-500 text-white' : 'bg-slate-100'}`}>🧾</span>
+          <span>
+            <span className="block font-semibold text-sm">{t('reports.salesReport')}</span>
+            <span className="block text-xs text-slate-400">{t('reports.salesReportSub')}</span>
+          </span>
+        </button>
       </section>
 
       {/* ── Report detail panel ── */}
       <section className="flex-1 overflow-y-auto bg-white min-w-0">
         <div className="px-6 py-4 flex items-center gap-3 border-b border-slate-100">
           <span className="w-12 h-12 rounded-full bg-brand-500 text-white flex items-center justify-center text-xl">
-            {kind === 'transactions' ? '⇄' : '📔'}
+            {kind === 'transactions' ? '⇄' : kind === 'cashbook' ? '📔' : '🧾'}
           </span>
           <h1 className="text-xl font-bold text-slate-800 flex-1">
-            {kind === 'transactions' ? t('reports.transactionsReportsTitle') : t('reports.cashbookReport')}
+            {kind === 'transactions' ? t('reports.transactionsReportsTitle') : kind === 'cashbook' ? t('reports.cashbookReport') : t('reports.salesReport')}
           </h1>
           <button className="btn-outline" onClick={downloadPdf} disabled={!hasRows || downloading}>
             {downloading ? '…' : t('reports.downloadPdf')}
@@ -336,6 +379,54 @@ export default function Reports() {
                         <td className="text-slate-400">{e.paymentMode}</td>
                         <td className="text-right">{e.direction === 'OUT' && <Money value={Number(e.amount)} colored={false} className="text-get" />}</td>
                         <td className="text-right px-5">{e.direction === 'IN' && <Money value={Number(e.amount)} colored={false} className="text-give" />}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {kind === 'sales' && (
+          <div className="px-6 pt-5">
+            {filters(true, 'invoices.invoiceNo')}
+
+            <div className="grid grid-cols-3 gap-4 mb-5">
+              <div className="card p-4 bg-brand-50 border-brand-100">
+                <Money value={salesData?.totals.billed ?? 0} colored={false} className="text-xl text-slate-800" />
+                <p className="text-xs font-semibold text-slate-500 mt-1">{t('reports.billedCount', { count: salesData?.totals.count ?? 0 })}</p>
+              </div>
+              <div className="card p-4 bg-green-50 border-green-100">
+                <Money value={salesData?.totals.collected ?? 0} colored={false} className="text-xl text-give" />
+                <p className="text-xs font-semibold text-give mt-1">{t('reports.collected')}</p>
+              </div>
+              <div className="card p-4 bg-red-50 border-red-100">
+                <Money value={salesData?.totals.pending ?? 0} colored={false} className="text-xl text-get" />
+                <p className="text-xs font-semibold text-get mt-1">{t('reports.pending')}</p>
+              </div>
+            </div>
+
+            {loading ? <Spinner /> : !salesData?.entries.length ? (
+              <EmptyState icon="🧾" title={t('reports.noTransactionsAvailable')} />
+            ) : (
+              <div className="card mb-6">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-slate-400 uppercase border-b border-slate-100">
+                      <th className="px-5 py-3">{t('reports.date')}</th><th>{t('invoices.invoiceNo')}</th><th>{t('reports.party')}</th>
+                      <th>{t('common.status')}</th><th className="text-right">{t('invoices.total')}</th><th className="text-right px-5">{t('invoices.balanceDue')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {salesData.entries.map((s) => (
+                      <tr key={s.id} className="border-b border-slate-50 last:border-0">
+                        <td className="px-5 py-3 text-slate-500">{fmtDate(s.date)}</td>
+                        <td className="font-medium">{s.invoiceNo}</td>
+                        <td>{s.partyName}</td>
+                        <td><StatusBadge status={s.status} label={t(STATUS_LABEL_KEYS[s.status] ?? 'common.statusUnpaid')} /></td>
+                        <td className="text-right"><Money value={s.total} colored={false} /></td>
+                        <td className="text-right px-5"><Money value={s.balance} colored={false} className={s.balance > 0 ? 'text-get' : 'text-give'} /></td>
                       </tr>
                     ))}
                   </tbody>
