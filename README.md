@@ -137,6 +137,7 @@ store-upload-only or secret material, not something apps install directly.
 | v2 | 1.0.0+2 | 2026-07-19 | Renamed to FinBook; Tamil language support; nav cleanup | — |
 | v3 | 1.0.0+5 | 2026-07-23 | OTP verification flow; WhatsApp channel removed (SMS-only); production Android signing config; graceful non-JSON API error handling | [`releases/v3/FinBook-v3-signed.apk`](releases/v3/FinBook-v3-signed.apk) |
 | v4 | 1.0.0+6 | 2026-07-25 | Staff/party/invoice permission hardening; IST/UTC day-boundary fixes in cashbook & reports; report PDF redesign; fixed duplicate-submission bugs (cashbook/expenses) and infinite-spinner-on-permission-denied bugs across web + mobile | [`releases/v4/FinBook-v4-signed.apk`](releases/v4/FinBook-v4-signed.apk) |
+| v5 | 1.0.0+7 | 2026-07-26 | Full logging/observability stack (Loki + Promtail + Grafana) with a segmented dashboard; Discord alerting for server/DB errors, client crashes, and failed logins; web + mobile now report crashes to the backend | [`releases/v5/FinBook-v5-signed.apk`](releases/v5/FinBook-v5-signed.apk) |
 
 ## Maintenance directions
 
