@@ -1,8 +1,10 @@
 name: Deploy to production
 
-# Deploys web/ and backend/ to whatever host DEPLOY_HOST points at. Moving to
-# a new server later is just updating the DEPLOY_HOST/DEPLOY_USER/DEPLOY_PATH
-# secrets below — nothing in this file needs to change.
+# Runs on a self-hosted runner installed directly on the production host —
+# the Pi sits behind Tailscale, so a GitHub-hosted cloud runner has no route
+# to it. Moving to a new server later means installing a runner there (see
+# README "Maintenance directions") and swapping DEPLOY_PATH; the deploy
+# steps themselves don't change.
 on:
   push:
     branches: [main]
@@ -14,51 +16,30 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, rpi]
+    env:
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up SSH
-        env:
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      # docker-compose.yml at DEPLOY_PATH holds production secrets and is
+      # never touched — only app source under web/ and backend/ is synced
+      # from the runner's checkout, then those two services are rebuilt.
+      - name: Sync source to deploy path
         run: |
-          mkdir -p ~/.ssh
-          echo "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          rsync -a --delete --exclude node_modules --exclude dist --exclude .env \
+            web/ "$DEPLOY_PATH/web/"
+          rsync -a --delete --exclude node_modules --exclude .env \
+            backend/ "$DEPLOY_PATH/backend/"
 
-      - name: Sync source to server
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-        run: |
-          SSH="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes"
-          RSYNC="rsync -az --delete -e \"$SSH\""
-          eval $RSYNC --exclude node_modules --exclude dist --exclude .env \
-            web/ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/web/"
-          eval $RSYNC --exclude node_modules --exclude .env \
-            backend/ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/backend/"
-
-      # docker-compose.yml on the server holds production secrets and is
-      # never touched by this workflow — only the app source under web/ and
-      # backend/ is synced, then those two services are rebuilt in place.
       - name: Rebuild and restart services
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" \
-            "cd $DEPLOY_PATH && docker compose build api web && docker compose up -d api web"
+          cd "$DEPLOY_PATH"
+          docker compose build api web
+          docker compose up -d api web
 
       - name: Health check
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
           sleep 5
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" \
-            'curl -sf -o /dev/null -w "web  HTTP %{http_code}\n" http://localhost:8080/ && \
-             curl -s  -o /dev/null -w "api  HTTP %{http_code}\n" http://localhost:4000/'
+          curl -sf -o /dev/null -w "web  HTTP %{http_code}\n" http://localhost:8080/
+          curl -s  -o /dev/null -w "api  HTTP %{http_code}\n" http://localhost:4000/
