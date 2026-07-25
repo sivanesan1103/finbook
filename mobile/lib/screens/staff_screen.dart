@@ -16,6 +16,7 @@ class StaffScreen extends StatefulWidget {
 class _StaffScreenState extends State<StaffScreen> {
   List<StaffMember> members = [];
   bool loading = true;
+  final removingIds = <String>{};
   bool get _isOwner => context.read<AppState>().business?.role == 'OWNER';
 
   @override
@@ -171,6 +172,7 @@ class _StaffScreenState extends State<StaffScreen> {
   }
 
   Future<void> _remove(StaffMember m) async {
+    if (removingIds.contains(m.id)) return;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -182,12 +184,16 @@ class _StaffScreenState extends State<StaffScreen> {
       ),
     );
     if (ok != true || !mounted) return;
+    setState(() => removingIds.add(m.id));
     try {
       final app = context.read<AppState>();
       await ApiClient.instance.delete('${app.basePath}/staff/${m.id}');
       _load();
     } catch (e) {
-      if (mounted) showSnack(context, e.toString(), error: true);
+      if (mounted) {
+        showSnack(context, e.toString(), error: true);
+        setState(() => removingIds.remove(m.id));
+      }
     }
   }
 
@@ -243,7 +249,8 @@ class _StaffScreenState extends State<StaffScreen> {
                           child: Text(m.role, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.primary)),
                         ),
                         if (m.role != 'OWNER')
-                          IconButton(icon: const Icon(Icons.close, size: 18, color: Colors.black38), onPressed: () => _remove(m)),
+                          IconButton(icon: const Icon(Icons.close, size: 18, color: Colors.black38),
+                              onPressed: removingIds.contains(m.id) ? null : () => _remove(m)),
                       ]),
                     );
                   },

@@ -30,9 +30,12 @@ export default function Activity() {
   const load = useCallback(async () => {
     if (!business) return;
     setLoading(true);
-    const res = await api.get(`/businesses/${business.id}/activity`, { params: { limit: 100 } });
-    setRows(res.data.data);
-    setLoading(false);
+    try {
+      const res = await api.get(`/businesses/${business.id}/activity`, { params: { limit: 100 } });
+      setRows(res.data.data);
+    } finally {
+      setLoading(false);
+    }
   }, [business]);
 
   useEffect(() => { load(); }, [load]);

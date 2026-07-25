@@ -19,6 +19,7 @@ class PartyReportScreen extends StatefulWidget {
 
 class _PartyReportScreenState extends State<PartyReportScreen> {
   LedgerData? data;
+  bool loadFailed = false;
   DateTime? from, to;
   String filter = 'ALL';
   final searchCtrl = TextEditingController();
@@ -40,9 +41,12 @@ class _PartyReportScreenState extends State<PartyReportScreen> {
     try {
       final res = await ApiClient.instance
           .get('${app.basePath}/parties/${widget.party.id}/transactions$q');
-      if (mounted) setState(() => data = LedgerData.fromJson(res['data']));
+      if (mounted) setState(() { data = LedgerData.fromJson(res['data']); loadFailed = false; });
     } catch (e) {
-      if (mounted) showSnack(context, e.toString(), error: true);
+      if (mounted) {
+        showSnack(context, e.toString(), error: true);
+        setState(() => loadFailed = true);
+      }
     }
   }
 
@@ -134,7 +138,7 @@ class _PartyReportScreenState extends State<PartyReportScreen> {
           ]),
         ),
         if (d == null)
-          const Expanded(child: Center(child: CircularProgressIndicator()))
+          Expanded(child: loadFailed ? RetryState(onRetry: _load) : const Center(child: CircularProgressIndicator()))
         else ...[
           ListTile(
             tileColor: Colors.white,

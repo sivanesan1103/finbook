@@ -5,6 +5,8 @@ const Map<String, String> en = {
   'common.delete': 'Delete',
   'common.edit': 'Edit',
   'common.loading': 'Loading…',
+  'common.loadFailed': "Couldn't load this. Check your connection and try again.",
+  'common.retry': 'Retry',
   'common.yes': 'Yes',
   'common.no': 'No',
   'common.close': 'Close',

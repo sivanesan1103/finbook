@@ -5,6 +5,8 @@ const Map<String, String> ta = {
   'common.delete': 'நீக்கு',
   'common.edit': 'திருத்து',
   'common.loading': 'ஏற்றுகிறது…',
+  'common.loadFailed': 'இதை ஏற்ற முடியவில்லை. உங்கள் இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.',
+  'common.retry': 'மீண்டும் முயற்சி',
   'common.yes': 'ஆம்',
   'common.no': 'இல்லை',
   'common.close': 'மூடு',

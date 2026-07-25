@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { api, apiMessage } from '../api/client';
+import { api, apiMessage, isForbidden } from '../api/client';
 import type { CashbookEntry } from '../types';
-import { EmptyState, Money, PAYMENT_MODES as MODES, MODE_LABEL_KEYS, Spinner, localDateStr, useConfirm, useToast } from '../components/ui';
+import { EmptyState, LockedState, Money, PAYMENT_MODES as MODES, MODE_LABEL_KEYS, Spinner, localDateStr, useConfirm, useToast } from '../components/ui';
 
 const fmtTime = (d: string | Date) =>
   new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
@@ -28,6 +28,7 @@ export default function Cashbook() {
   const [date, setDate] = useState(() => localDateStr());
   const [mode, setMode] = useState('ALL');
   const [loading, setLoading] = useState(true);
+  const [forbidden, setForbidden] = useState(false);
   const [pane, setPane] = useState<Pane>({ type: 'none' });
   const [form, setForm] = useState({ amount: '', description: '', paymentMode: 'CASH', entryDate: date });
   const [submitting, setSubmitting] = useState(false);
@@ -37,13 +38,19 @@ export default function Cashbook() {
   const load = useCallback(async () => {
     if (!business) return;
     setLoading(true);
-    const [list, sum] = await Promise.all([
-      api.get(base, { params: { date, paymentMode: mode, limit: 100 } }),
-      api.get(`${base}/summary`),
-    ]);
-    setEntries(list.data.data);
-    setSummary(sum.data.data);
-    setLoading(false);
+    setForbidden(false);
+    try {
+      const [list, sum] = await Promise.all([
+        api.get(base, { params: { date, paymentMode: mode, limit: 100 } }),
+        api.get(`${base}/summary`),
+      ]);
+      setEntries(list.data.data);
+      setSummary(sum.data.data);
+    } catch (e) {
+      if (isForbidden(e)) setForbidden(true); else toast(apiMessage(e), 'error');
+    } finally {
+      setLoading(false);
+    }
   }, [business, date, mode]);
 
   // Switching businesses re-runs `load` (business is in its deps), but the
@@ -163,7 +170,7 @@ export default function Cashbook() {
             </span>
           </div>
 
-          {loading ? <Spinner /> : entries.length === 0 ? (
+          {loading ? <Spinner /> : forbidden ? <LockedState /> : entries.length === 0 ? (
             <EmptyState icon="📔" title={t('cashbook.addFirstTransaction')} subtitle={t('cashbook.emptySubtitle')} />
           ) : (
             entries.map((e) => (
@@ -198,12 +205,14 @@ export default function Cashbook() {
           )}
         </div>
 
-        <div className="card mt-4 p-4 flex gap-4">
-          <button className="flex-1 py-3 rounded-lg bg-red-100 text-red-700 font-bold tracking-wide hover:bg-red-200"
-            onClick={() => openForm('OUT')}>{t('cashbook.outButton')}</button>
-          <button className="flex-1 py-3 rounded-lg bg-green-100 text-green-700 font-bold tracking-wide hover:bg-green-200"
-            onClick={() => openForm('IN')}>{t('cashbook.inButton')}</button>
-        </div>
+        {!forbidden && (
+          <div className="card mt-4 p-4 flex gap-4">
+            <button className="flex-1 py-3 rounded-lg bg-red-100 text-red-700 font-bold tracking-wide hover:bg-red-200"
+              onClick={() => openForm('OUT')}>{t('cashbook.outButton')}</button>
+            <button className="flex-1 py-3 rounded-lg bg-green-100 text-green-700 font-bold tracking-wide hover:bg-green-200"
+              onClick={() => openForm('IN')}>{t('cashbook.inButton')}</button>
+          </div>
+        )}
       </div>
 
       {/* ── Right: panel ── */}

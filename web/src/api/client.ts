@@ -43,6 +43,10 @@ api.interceptors.response.use(
   }
 );
 
+/** True when the request failed because the logged-in staff member lacks the permission for this section. */
+export const isForbidden = (e: unknown): boolean =>
+  axios.isAxiosError(e) && e.response?.status === 403;
+
 export const apiMessage = (e: unknown): string => {
   if (axios.isAxiosError(e)) {
     const data = e.response?.data;

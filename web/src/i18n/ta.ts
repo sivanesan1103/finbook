@@ -23,6 +23,8 @@ export const ta: Record<TranslationKey, string> = {
   'common.modeUpi': 'UPI',
   'common.modeBank': 'வங்கி',
   'common.modeCheque': 'காசோலை',
+  'common.noAccessTitle': 'இந்தப் பகுதிக்கு உங்களுக்கு அணுகல் இல்லை',
+  'common.noAccessSubtitle': 'இந்தப் பகுதிக்கான அனுமதியைப் பெற வணிக உரிமையாளரிடம் கேளுங்கள்.',
   'common.secondsAgo': '{count} விநாடிகளுக்கு முன்',
   'common.minutesAgo': '{count} நிமிடங்களுக்கு முன்',
   'common.hoursAgo': '{count} மணி நேரத்திற்கு முன்',

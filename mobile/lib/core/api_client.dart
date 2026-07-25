@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
@@ -124,20 +125,30 @@ class ApiClient {
         if (_access != null) 'Authorization': 'Bearer $_access',
       };
 
+  static const _requestTimeout = Duration(seconds: 20);
+
   Future<dynamic> _send(String method, String path,
       {Map<String, dynamic>? body, bool retried = false}) async {
     late http.Response res;
     final encoded = body == null ? null : jsonEncode(body);
     final uri = _uri(path);
-    switch (method) {
-      case 'GET':
-        res = await _client.get(uri, headers: _headers);
-      case 'POST':
-        res = await _client.post(uri, headers: _headers, body: encoded);
-      case 'PATCH':
-        res = await _client.patch(uri, headers: _headers, body: encoded);
-      case 'DELETE':
-        res = await _client.delete(uri, headers: _headers);
+    try {
+      switch (method) {
+        case 'GET':
+          res = await _client.get(uri, headers: _headers).timeout(_requestTimeout);
+        case 'POST':
+          res = await _client.post(uri, headers: _headers, body: encoded).timeout(_requestTimeout);
+        case 'PATCH':
+          res = await _client.patch(uri, headers: _headers, body: encoded).timeout(_requestTimeout);
+        case 'DELETE':
+          res = await _client.delete(uri, headers: _headers).timeout(_requestTimeout);
+      }
+    } on TimeoutException {
+      // A request that hangs this long should fail loudly rather than let
+      // the user assume it failed and retry — a retried "collect payment"
+      // or "add expense" after the first one actually landed server-side
+      // creates duplicate cashbook entries.
+      throw ApiException(0, 'Request timed out. Please check your connection before retrying.');
     }
 
     if (res.statusCode == 401 && !retried && _refresh != null) {

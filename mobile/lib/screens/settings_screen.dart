@@ -31,6 +31,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final invoiceTerms = TextEditingController();
 
   bool importing = false;
+  bool savingBiz = false;
+  bool savingInv = false;
   String? importResult;
 
   @override
@@ -53,6 +55,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _saveBusiness() async {
+    if (savingBiz) return;
+    setState(() => savingBiz = true);
     final app = context.read<AppState>();
     try {
       await ApiClient.instance.patch('/businesses/${app.business!.id}', {
@@ -66,10 +70,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) showSnack(context, context.tr('settings.savedBusinessSettings'));
     } catch (e) {
       if (mounted) showSnack(context, e.toString(), error: true);
+    } finally {
+      if (mounted) setState(() => savingBiz = false);
     }
   }
 
   Future<void> _saveInvoiceDetails() async {
+    if (savingInv) return;
+    setState(() => savingInv = true);
     final app = context.read<AppState>();
     try {
       await ApiClient.instance.patch('/businesses/${app.business!.id}', {
@@ -84,6 +92,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) showSnack(context, context.tr('settings.savedInvoiceDetails'));
     } catch (e) {
       if (mounted) showSnack(context, e.toString(), error: true);
+    } finally {
+      if (mounted) setState(() => savingInv = false);
     }
   }
 
@@ -184,7 +194,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _field(gstin, context.tr('settings.gstin')),
           _field(category, context.tr('settings.category')),
           _field(address, context.tr('settings.address'), maxLines: 2),
-          ElevatedButton(onPressed: _saveBusiness, child: Text(context.tr('settings.saveBusinessSettings'))),
+          ElevatedButton(onPressed: savingBiz ? null : _saveBusiness, child: Text(context.tr('settings.saveBusinessSettings'))),
         ]),
         _card(context.tr('settings.invoicePaymentTitle'), [
           _field(upiId, context.tr('settings.upiId')),
@@ -193,7 +203,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _field(bankAccountNo, context.tr('settings.bankAccountNo')),
           _field(bankIfsc, context.tr('settings.bankIfsc')),
           _field(invoiceTerms, context.tr('settings.invoiceTerms'), maxLines: 3),
-          ElevatedButton(onPressed: _saveInvoiceDetails, child: Text(context.tr('settings.saveInvoiceDetails'))),
+          ElevatedButton(onPressed: savingInv ? null : _saveInvoiceDetails, child: Text(context.tr('settings.saveInvoiceDetails'))),
         ], subtitle: context.tr('settings.invoicePaymentSubtitle')),
         _card(context.tr('settings.backupTitle'), [
           Row(children: [

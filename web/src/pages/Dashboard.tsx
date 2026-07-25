@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { api } from '../api/client';
+import { api, apiMessage, isForbidden } from '../api/client';
 import type { DashboardData } from '../types';
-import { Money, Spinner, fmtDateTime } from '../components/ui';
+import { LockedState, Money, Spinner, fmtDateTime, useToast } from '../components/ui';
 
 function Stat({ title, children, sub, to }: { title: string; children: React.ReactNode; sub?: string; to?: string }) {
   const inner = (
@@ -20,14 +20,23 @@ function Stat({ title, children, sub, to }: { title: string; children: React.Rea
 export default function Dashboard() {
   const { business, user } = useAuth();
   const { t } = useLanguage();
+  const toast = useToast();
   const [data, setData] = useState<DashboardData | null>(null);
+  const [forbidden, setForbidden] = useState(false);
 
   useEffect(() => {
     if (!business) return;
     setData(null);
-    api.get(`/businesses/${business.id}/reports/dashboard`).then((r) => setData(r.data.data));
+    setForbidden(false);
+    api.get(`/businesses/${business.id}/reports/dashboard`)
+      .then((r) => setData(r.data.data))
+      .catch((e) => {
+        if (isForbidden(e)) setForbidden(true);
+        else toast(apiMessage(e), 'error');
+      });
   }, [business]);
 
+  if (forbidden) return <LockedState />;
   if (!data) return <Spinner />;
 
   return (

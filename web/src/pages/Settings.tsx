@@ -22,6 +22,10 @@ export default function Settings() {
   const [unread, setUnread] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
   const [msg, setMsg] = useState('');
+  const [savingBiz, setSavingBiz] = useState(false);
+  const [savingInv, setSavingInv] = useState(false);
+  const [savingMe, setSavingMe] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,12 +41,16 @@ export default function Settings() {
       });
     }
     if (user) setMeForm({ name: user.name, email: user.email || '' });
-    api.get('/notifications').then((r) => { setNotifs(r.data.data); setUnread(r.data.unread); });
+    api.get('/notifications')
+      .then((r) => { setNotifs(r.data.data); setUnread(r.data.unread); })
+      .catch((e) => toast(apiMessage(e), 'error'));
   }, [business, user]);
 
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(''), 2500); };
 
   const saveBusiness = async () => {
+    if (savingBiz) return;
+    setSavingBiz(true);
     try {
       await api.patch(`/businesses/${business?.id}`, {
         ...bizForm,
@@ -51,10 +59,12 @@ export default function Settings() {
       });
       await reloadBusinesses();
       flash(t('settings.savedBusinessSettings'));
-    } catch (e) { toast(apiMessage(e), 'error'); }
+    } catch (e) { toast(apiMessage(e), 'error'); } finally { setSavingBiz(false); }
   };
 
   const saveInvoice = async () => {
+    if (savingInv) return;
+    setSavingInv(true);
     try {
       await api.patch(`/businesses/${business?.id}`, {
         upiId: invForm.upiId.trim() || null,
@@ -66,7 +76,7 @@ export default function Settings() {
       });
       await reloadBusinesses();
       flash(t('settings.savedInvoiceDetails'));
-    } catch (e) { toast(apiMessage(e), 'error'); }
+    } catch (e) { toast(apiMessage(e), 'error'); } finally { setSavingInv(false); }
   };
 
   const exportData = async () => {
@@ -115,25 +125,30 @@ export default function Settings() {
   };
 
   const saveMe = async () => {
+    if (savingMe) return;
+    setSavingMe(true);
     try {
       await api.patch('/auth/me', { name: meForm.name, email: meForm.email || null });
       flash(t('settings.profileUpdated'));
-    } catch (e) { toast(apiMessage(e), 'error'); }
+    } catch (e) { toast(apiMessage(e), 'error'); } finally { setSavingMe(false); }
   };
 
   const deleteBook = async () => {
-    if (!(await confirm({ message: t('settings.confirmDeleteBook', { business: business?.name || '' }), danger: true }))) return;
+    if (deleting || !(await confirm({ message: t('settings.confirmDeleteBook', { business: business?.name || '' }), danger: true }))) return;
+    setDeleting(true);
     try {
       await api.delete(`/businesses/${business?.id}`);
       await reloadBusinesses();
       flash(t('settings.bookDeleted'));
-    } catch (e) { toast(apiMessage(e), 'error'); }
+    } catch (e) { toast(apiMessage(e), 'error'); } finally { setDeleting(false); }
   };
 
   const markAllRead = async () => {
-    await api.post('/notifications/read-all');
-    setUnread(0);
-    setNotifs((n) => n.map((x) => ({ ...x, readAt: x.readAt || new Date().toISOString() })));
+    try {
+      await api.post('/notifications/read-all');
+      setUnread(0);
+      setNotifs((n) => n.map((x) => ({ ...x, readAt: x.readAt || new Date().toISOString() })));
+    } catch (e) { toast(apiMessage(e), 'error'); }
   };
 
   return (
@@ -158,7 +173,7 @@ export default function Settings() {
           <div><label className="label">{t('settings.address')}</label>
             <textarea className="input" rows={2} value={bizForm.address}
               onChange={(e) => setBizForm({ ...bizForm, address: e.target.value })} /></div>
-          <button className="btn-primary" onClick={saveBusiness}>{t('settings.saveBusinessSettings')}</button>
+          <button className="btn-primary" onClick={saveBusiness} disabled={savingBiz}>{t('settings.saveBusinessSettings')}</button>
         </div>
       </div>
 
@@ -189,7 +204,7 @@ export default function Settings() {
               value={invForm.invoiceTerms}
               onChange={(e) => setInvForm({ ...invForm, invoiceTerms: e.target.value })} />
             <p className="text-xs text-slate-400 mt-1">{t('settings.invoiceTermsHint')}</p></div>
-          <button className="btn-primary" onClick={saveInvoice}>{t('settings.saveInvoiceDetails')}</button>
+          <button className="btn-primary" onClick={saveInvoice} disabled={savingInv}>{t('settings.saveInvoiceDetails')}</button>
         </div>
       </div>
 
@@ -232,7 +247,7 @@ export default function Settings() {
           <div><label className="label">{t('common.email')}</label>
             <input className="input" value={meForm.email} onChange={(e) => setMeForm({ ...meForm, email: e.target.value })} /></div>
           <p className="text-xs text-slate-400">{t('settings.emailLoginHint', { email: user?.email || '' })}</p>
-          <button className="btn-primary" onClick={saveMe}>{t('settings.updateProfile')}</button>
+          <button className="btn-primary" onClick={saveMe} disabled={savingMe}>{t('settings.updateProfile')}</button>
         </div>
       </div>
 
@@ -243,8 +258,8 @@ export default function Settings() {
             <p className="text-xs text-slate-400">{t('settings.unreadCount', { count: unread })}</p></div>
           <span className="text-slate-300">›</span>
         </button>
-        <button className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-50"
-          onClick={deleteBook}>
+        <button className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-50 disabled:opacity-50"
+          onClick={deleteBook} disabled={deleting}>
           <div><p className="font-medium text-red-600">{t('settings.deleteBookTitle')}</p>
             <p className="text-xs text-slate-400">{t('settings.deleteBookSubtitle')}</p></div>
           <span className="text-slate-300">›</span>

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { api, apiMessage } from '../api/client';
+import { api, apiMessage, isForbidden } from '../api/client';
 import type { Invoice, InvoiceItem, Item, Party } from '../types';
-import { EmptyState, Money, MODE_LABEL_KEYS, PAYMENT_MODES as MODES, Spinner, StatusBadge, STATUS_LABEL_KEYS, fmtDate, inr, useConfirm, useToast } from '../components/ui';
+import { EmptyState, LockedState, Money, MODE_LABEL_KEYS, PAYMENT_MODES as MODES, Spinner, StatusBadge, STATUS_LABEL_KEYS, fmtDate, inr, useConfirm, useToast } from '../components/ui';
 
 type Pane =
   | { type: 'none' }
@@ -21,6 +21,7 @@ export default function Invoices() {
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<'latest' | 'oldest'>('latest');
   const [loading, setLoading] = useState(true);
+  const [forbidden, setForbidden] = useState(false);
   const [pane, setPane] = useState<Pane>({ type: 'none' });
   const [submitting, setSubmitting] = useState(false);
 
@@ -42,10 +43,16 @@ export default function Invoices() {
   const load = useCallback(async () => {
     if (!business) return;
     setLoading(true);
-    const res = await api.get(`${base}/invoices`, { params: { status: status || undefined, limit: 100 } });
-    setRows(res.data.data);
-    setSummary(res.data.summary);
-    setLoading(false);
+    setForbidden(false);
+    try {
+      const res = await api.get(`${base}/invoices`, { params: { status: status || undefined, limit: 100 } });
+      setRows(res.data.data);
+      setSummary(res.data.summary);
+    } catch (e) {
+      if (isForbidden(e)) setForbidden(true); else toast(apiMessage(e), 'error');
+    } finally {
+      setLoading(false);
+    }
   }, [business, status]);
 
   // `business` in `load`'s deps means switching businesses re-runs this, but
@@ -224,7 +231,7 @@ export default function Invoices() {
           <div className="flex justify-between px-5 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide border-b border-slate-100 bg-slate-50/60">
             <span>{t('invoices.name')}</span><span>{t('invoices.amount')}</span>
           </div>
-          {loading ? <Spinner /> : visibleRows.length === 0 ? (
+          {loading ? <Spinner /> : forbidden ? <LockedState /> : visibleRows.length === 0 ? (
             <EmptyState icon="🧮" title={t('invoices.noSalesYet')}
               subtitle={t('invoices.noSalesSubtitle')} />
           ) : (
@@ -256,9 +263,11 @@ export default function Invoices() {
           )}
         </div>
 
-        <div className="flex justify-center py-4">
-          <button className="btn-primary px-8 py-3" onClick={openCreate}>{t('invoices.addSale')}</button>
-        </div>
+        {!forbidden && (
+          <div className="flex justify-center py-4">
+            <button className="btn-primary px-8 py-3" onClick={openCreate}>{t('invoices.addSale')}</button>
+          </div>
+        )}
       </div>
 
       {/* ── Right: panel ── */}

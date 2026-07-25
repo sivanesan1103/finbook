@@ -17,6 +17,7 @@ class PartyProfileScreen extends StatefulWidget {
 
 class _PartyProfileScreenState extends State<PartyProfileScreen> {
   late Party party = widget.party;
+  bool deleting = false;
 
   Future<void> _editField(String label, String field, String? current,
       {TextInputType? keyboard}) async {
@@ -49,6 +50,7 @@ class _PartyProfileScreenState extends State<PartyProfileScreen> {
   }
 
   Future<void> _delete() async {
+    if (deleting) return;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -62,12 +64,16 @@ class _PartyProfileScreenState extends State<PartyProfileScreen> {
       ),
     );
     if (ok != true || !mounted) return;
+    setState(() => deleting = true);
     try {
       final app = context.read<AppState>();
       await ApiClient.instance.delete('${app.basePath}/parties/${party.id}');
       if (mounted) Navigator.of(context)..pop()..pop();
     } catch (e) {
-      if (mounted) showSnack(context, e.toString(), error: true);
+      if (mounted) {
+        showSnack(context, e.toString(), error: true);
+        setState(() => deleting = false);
+      }
     }
   }
 
@@ -143,7 +149,7 @@ class _PartyProfileScreenState extends State<PartyProfileScreen> {
         Padding(
           padding: const EdgeInsets.all(16),
           child: OutlinedButton.icon(
-            onPressed: _delete,
+            onPressed: deleting ? null : _delete,
             icon: const Icon(Icons.delete_outline, color: Colors.red),
             label: Text(context.tr('partyProfile.deleteType', {'type': typeLabel.toUpperCase()}),
                 style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w700)),

@@ -1,5 +1,6 @@
 import { ReactNode, createContext, useCallback, useContext, useRef, useState } from 'react';
 import type { TranslationKey } from '../i18n';
+import { useLanguage } from '../context/LanguageContext';
 
 /** Payment modes shared by cashbook, expenses and invoices. */
 export const PAYMENT_MODES = ['CASH', 'ONLINE', 'UPI', 'BANK', 'CHEQUE'];
@@ -52,6 +53,12 @@ export function EmptyState({ icon = '📒', title, subtitle, action }: { icon?: 
       {action && <div className="mt-4">{action}</div>}
     </div>
   );
+}
+
+/** Shown instead of a page's content when the staff member's role doesn't have permission for it. */
+export function LockedState() {
+  const { t } = useLanguage();
+  return <EmptyState icon="🔒" title={t('common.noAccessTitle')} subtitle={t('common.noAccessSubtitle')} />;
 }
 
 export function Modal({ open, title, onClose, children, wide = false }: { open: boolean; title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {

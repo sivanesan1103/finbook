@@ -22,6 +22,7 @@ class PartyLedgerScreen extends StatefulWidget {
 
 class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
   LedgerData? ledger;
+  bool loadFailed = false;
 
   @override
   void initState() {
@@ -37,9 +38,12 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
     try {
       final res = await ApiClient.instance
           .get('${app.basePath}/parties/${widget.partyId}/transactions');
-      if (mounted) setState(() => ledger = LedgerData.fromJson(res['data']));
+      if (mounted) setState(() { ledger = LedgerData.fromJson(res['data']); loadFailed = false; });
     } catch (e) {
-      if (mounted) showSnack(context, e.toString(), error: true);
+      if (mounted) {
+        showSnack(context, e.toString(), error: true);
+        setState(() => loadFailed = true);
+      }
       rethrow;
     }
   }
@@ -99,7 +103,7 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
         ],
       ),
       body: l == null
-          ? const Center(child: CircularProgressIndicator())
+          ? (loadFailed ? RetryState(onRetry: _load) : const Center(child: CircularProgressIndicator()))
           : Column(children: [
               // Balance header
               Container(

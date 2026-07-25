@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { api, apiMessage } from '../api/client';
+import { api, apiMessage, isForbidden } from '../api/client';
 import type { Item } from '../types';
-import { EmptyState, Money, Spinner, useConfirm, useToast } from '../components/ui';
+import { EmptyState, LockedState, Money, Spinner, useConfirm, useToast } from '../components/ui';
 
 /** Items with unit SERVICE are shown under the Services tab; everything else is a product. */
 const SERVICE_UNIT = 'SERVICE';
@@ -25,6 +25,7 @@ export default function Items() {
   const confirm = useConfirm();
   const [rows, setRows] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
+  const [forbidden, setForbidden] = useState(false);
   const [tab, setTab] = useState<'PRODUCTS' | 'SERVICES'>('PRODUCTS');
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'ALL' | 'LOW' | 'IN' | 'OUT'>('ALL');
@@ -43,9 +44,15 @@ export default function Items() {
   const load = useCallback(async () => {
     if (!business) return;
     setLoading(true);
-    const res = await api.get(base, { params: { limit: 500 } });
-    setRows(res.data.data);
-    setLoading(false);
+    setForbidden(false);
+    try {
+      const res = await api.get(base, { params: { limit: 500 } });
+      setRows(res.data.data);
+    } catch (e) {
+      if (isForbidden(e)) setForbidden(true); else toast(apiMessage(e), 'error');
+    } finally {
+      setLoading(false);
+    }
   }, [business]);
 
   useEffect(() => { load(); }, [load]);
@@ -217,7 +224,7 @@ export default function Items() {
 
         {/* List */}
         <div className="card overflow-hidden flex-1">
-          {loading ? <Spinner /> : visible.length === 0 ? (
+          {loading ? <Spinner /> : forbidden ? <LockedState /> : visible.length === 0 ? (
             <EmptyState icon="📦" title={t('items.noResults')}
               subtitle={tab === 'PRODUCTS' ? t('items.addProductsSubtitle') : t('items.addServicesSubtitle')}
               action={<button className="btn-primary" onClick={() => openForm()}>{t('items.addLabel', { label: tab === 'PRODUCTS' ? t('items.productLabel') : t('items.serviceLabel') })}</button>} />
@@ -255,11 +262,13 @@ export default function Items() {
           )}
         </div>
 
-        <div className="flex justify-center py-4">
-          <button className="btn-primary px-8 py-3" onClick={() => openForm()}>
-            {t('items.addLabel', { label: tab === 'PRODUCTS' ? t('items.productLabel') : t('items.serviceLabel') })}
-          </button>
-        </div>
+        {!forbidden && (
+          <div className="flex justify-center py-4">
+            <button className="btn-primary px-8 py-3" onClick={() => openForm()}>
+              {t('items.addLabel', { label: tab === 'PRODUCTS' ? t('items.productLabel') : t('items.serviceLabel') })}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Right panel ── */}

@@ -21,6 +21,8 @@ export const en = {
   'common.modeUpi': 'UPI',
   'common.modeBank': 'Bank',
   'common.modeCheque': 'Cheque',
+  'common.noAccessTitle': "You don't have access to this section",
+  'common.noAccessSubtitle': 'Ask the business owner to grant you permission for this section.',
   'common.secondsAgo': '{count} seconds ago',
   'common.minutesAgo': '{count} minutes ago',
   'common.hoursAgo': '{count} hours ago',

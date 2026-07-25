@@ -8,12 +8,20 @@ import '../models/models.dart';
 import '../providers/app_state.dart';
 import '../widgets/common.dart';
 
-class EntryDetailsScreen extends StatelessWidget {
+class EntryDetailsScreen extends StatefulWidget {
   final Party party;
   final TxEntry entry;
   const EntryDetailsScreen({super.key, required this.party, required this.entry});
 
+  @override
+  State<EntryDetailsScreen> createState() => _EntryDetailsScreenState();
+}
+
+class _EntryDetailsScreenState extends State<EntryDetailsScreen> {
+  bool deleting = false;
+
   Future<void> _delete(BuildContext context) async {
+    if (deleting) return;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -27,14 +35,21 @@ class EntryDetailsScreen extends StatelessWidget {
       ),
     );
     if (confirm != true || !context.mounted) return;
+    setState(() => deleting = true);
     try {
       final app = context.read<AppState>();
       await ApiClient.instance.delete('${app.basePath}/transactions/${entry.id}');
       if (context.mounted) Navigator.pop(context, true);
     } catch (e) {
-      if (context.mounted) showSnack(context, e.toString(), error: true);
+      if (context.mounted) {
+        showSnack(context, e.toString(), error: true);
+        setState(() => deleting = false);
+      }
     }
   }
+
+  Party get party => widget.party;
+  TxEntry get entry => widget.entry;
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +63,7 @@ class EntryDetailsScreen extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: OutlinedButton.icon(
-            onPressed: () => _delete(context),
+            onPressed: deleting ? null : () => _delete(context),
             icon: const Icon(Icons.delete_outline, color: Colors.red),
             label: Text(context.tr('entryDetails.delete'), style: const TextStyle(color: Colors.red)),
             style: OutlinedButton.styleFrom(

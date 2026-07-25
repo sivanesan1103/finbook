@@ -3,6 +3,26 @@ import '../core/formatters.dart';
 import '../core/theme.dart';
 import '../l10n/translations.dart';
 
+/// Shown instead of a spinner when a screen's initial load fails, so a
+/// network hiccup doesn't leave the user staring at a spinner forever.
+class RetryState extends StatelessWidget {
+  final VoidCallback onRetry;
+  const RetryState({super.key, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.cloud_off, size: 40, color: Colors.black26),
+        const SizedBox(height: 10),
+        Text(context.tr('common.loadFailed'), style: const TextStyle(color: Colors.black54)),
+        const SizedBox(height: 14),
+        OutlinedButton(onPressed: onRetry, child: Text(context.tr('common.retry'))),
+      ]),
+    );
+  }
+}
+
 class MoneyText extends StatelessWidget {
   final double value;
   final double size;

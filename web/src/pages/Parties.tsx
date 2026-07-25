@@ -2,9 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { api, apiMessage } from '../api/client';
+import { api, apiMessage, isForbidden } from '../api/client';
 import type { Party, PartyType, LedgerResponse, TxType } from '../types';
-import { Avatar, EmptyState, Modal, Money, MODE_LABEL_KEYS, PAYMENT_MODES, Spinner, fmtDateTime, timeAgo, useConfirm, useToast } from '../components/ui';
+import { Avatar, EmptyState, LockedState, Modal, Money, MODE_LABEL_KEYS, PAYMENT_MODES, Spinner, fmtDateTime, timeAgo, useConfirm, useToast } from '../components/ui';
 
 const emptyParty = {
   name: '', phone: '', type: 'CUSTOMER' as PartyType, gstin: '',
@@ -26,6 +26,7 @@ export default function Parties({ type }: { type: PartyType }) {
   const [sort, setSort] = useState('recent');
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
+  const [forbidden, setForbidden] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   // modals
@@ -43,6 +44,8 @@ export default function Parties({ type }: { type: PartyType }) {
   const load = useCallback(async () => {
     if (!business) return;
     setLoading(true);
+    setErr('');
+    setForbidden(false);
     try {
       const [p, s] = await Promise.all([
         api.get(`${base}/parties`, { params: { type, search: search || undefined, sort, limit: 100 } }),
@@ -50,7 +53,9 @@ export default function Parties({ type }: { type: PartyType }) {
       ]);
       setParties(p.data.data);
       setSummary(s.data.data);
-    } catch (e) { setErr(apiMessage(e)); } finally { setLoading(false); }
+    } catch (e) {
+      if (isForbidden(e)) setForbidden(true); else setErr(apiMessage(e));
+    } finally { setLoading(false); }
   }, [business, type, search, sort]);
 
   useEffect(() => { load(); setSelected(null); setLedger(null); }, [load]);
@@ -186,7 +191,7 @@ export default function Parties({ type }: { type: PartyType }) {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {loading ? <Spinner /> : err ? (
+          {loading ? <Spinner /> : forbidden ? <LockedState /> : err ? (
             <p className="text-red-600 text-sm p-5">{err}</p>
           ) : visibleParties.length === 0 ? (
             search || filter !== 'all' ? (

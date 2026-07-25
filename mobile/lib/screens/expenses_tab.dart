@@ -90,6 +90,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
     final amount = TextEditingController();
     final notes = TextEditingController();
     String payMode = 'CASH';
+    bool saving = false;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -119,7 +120,8 @@ class _ExpensesTabState extends State<ExpensesTab> {
           }
 
           Future<void> saveExpense() async {
-            if (selected == null || amount.text.isEmpty) return;
+            if (selected == null || amount.text.isEmpty || saving) return;
+            setSheet(() => saving = true);
             try {
               await api.post('${app.basePath}/expenses', {
                 'category': selected!.name,
@@ -130,7 +132,10 @@ class _ExpensesTabState extends State<ExpensesTab> {
               if (ctx.mounted) Navigator.pop(ctx);
               _load();
             } catch (e) {
-              if (ctx.mounted) showSnack(ctx, e.toString(), error: true);
+              if (ctx.mounted) {
+                showSnack(ctx, e.toString(), error: true);
+                setSheet(() => saving = false);
+              }
             }
           }
 
@@ -230,7 +235,13 @@ class _ExpensesTabState extends State<ExpensesTab> {
                       onChanged: (v) => setSheet(() => payMode = v!),
                     ),
                     const SizedBox(height: 14),
-                    ElevatedButton(onPressed: saveExpense, child: Text(context.tr('expensesTab.saveExpense'))),
+                    ElevatedButton(
+                      onPressed: saving ? null : saveExpense,
+                      child: saving
+                          ? const SizedBox(width: 20, height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : Text(context.tr('expensesTab.saveExpense')),
+                    ),
                   ]),
           );
         },

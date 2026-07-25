@@ -16,6 +16,7 @@ class ReportsScreen extends StatefulWidget {
 
 class _ReportsScreenState extends State<ReportsScreen> {
   Map<String, dynamic>? data;
+  bool loadFailed = false;
   late DateTime from, to;
 
   @override
@@ -32,9 +33,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
     try {
       final res = await ApiClient.instance.get(
           '${app.basePath}/reports/dashboard?from=${from.toIso8601String()}&to=${to.toIso8601String()}');
-      if (mounted) setState(() => data = res['data']);
+      if (mounted) setState(() { data = res['data']; loadFailed = false; });
     } catch (e) {
-      if (mounted) showSnack(context, e.toString(), error: true);
+      if (mounted) {
+        showSnack(context, e.toString(), error: true);
+        setState(() => loadFailed = true);
+      }
     }
   }
 
@@ -142,7 +146,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       backgroundColor: AppColors.surface,
       appBar: AppBar(title: Text(context.tr('reports.title'))),
       body: d == null
-          ? const Center(child: CircularProgressIndicator())
+          ? (loadFailed ? RetryState(onRetry: _load) : const Center(child: CircularProgressIndicator()))
           : ListView(padding: const EdgeInsets.all(14), children: [
               // ── Period picker ──
               Container(

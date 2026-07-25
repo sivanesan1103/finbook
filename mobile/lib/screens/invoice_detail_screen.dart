@@ -20,6 +20,7 @@ class InvoiceDetailScreen extends StatefulWidget {
 
 class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
   Invoice? invoice;
+  bool _collecting = false;
 
   @override
   void initState() {
@@ -38,8 +39,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
   }
 
   Future<void> _collect() async {
+    if (_collecting) return;
     final inv = invoice!;
-    final amount = TextEditingController(text: inv.due.toStringAsFixed(0));
+    final amount = TextEditingController(text: inv.due.toStringAsFixed(2));
     String mode = 'CASH';
     final ok = await showDialog<bool>(
       context: context,
@@ -65,6 +67,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
       ),
     );
     if (ok != true || amount.text.isEmpty || !mounted) return;
+    setState(() => _collecting = true);
     try {
       final app = context.read<AppState>();
       await ApiClient.instance.post('${app.basePath}/invoices/${inv.id}/payments',
@@ -72,6 +75,8 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
       _load();
     } catch (e) {
       if (mounted) showSnack(context, e.toString(), error: true);
+    } finally {
+      if (mounted) setState(() => _collecting = false);
     }
   }
 
@@ -161,8 +166,11 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                       flex: 2,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(backgroundColor: AppColors.got),
-                        onPressed: _collect,
-                        child: Text(context.tr('invoiceDetail.collectPaymentButton')),
+                        onPressed: _collecting ? null : _collect,
+                        child: _collecting
+                            ? const SizedBox(width: 20, height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : Text(context.tr('invoiceDetail.collectPaymentButton')),
                       ),
                     ),
                   ],

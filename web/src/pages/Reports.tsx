@@ -2,10 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { api } from '../api/client';
+import { api, apiMessage, isForbidden } from '../api/client';
 import type { Transaction, CashbookEntry, PartyType } from '../types';
 import type { TranslationKey } from '../i18n';
-import { EmptyState, Money, Spinner, StatusBadge, STATUS_LABEL_KEYS, fmtDate } from '../components/ui';
+import { EmptyState, LockedState, Money, Spinner, StatusBadge, STATUS_LABEL_KEYS, fmtDate, useToast } from '../components/ui';
 
 type ReportKind = 'transactions' | 'cashbook' | 'sales';
 type SalesRow = {
@@ -60,12 +60,14 @@ const downloadBlob = (data: Blob, filename: string) => {
 export default function Reports() {
   const { business } = useAuth();
   const { t } = useLanguage();
+  const toast = useToast();
   const [kind, setKind] = useState<ReportKind>('transactions');
   const [partyType, setPartyType] = useState<PartyType>('CUSTOMER');
   const [search, setSearch] = useState('');
   const [period, setPeriod] = useState<Period>('month');
   const [{ from, to }, setRange] = useState(periodRange('month'));
   const [downloading, setDownloading] = useState(false);
+  const [forbidden, setForbidden] = useState(false);
 
   const [txData, setTxData] = useState<{ totals: { gave: number; got: number; net: number }; count: number; entries: Transaction[] } | null>(null);
   const [tabCounts, setTabCounts] = useState({ CUSTOMER: 0, SUPPLIER: 0 });
@@ -84,39 +86,57 @@ export default function Reports() {
   const loadTransactions = useCallback(async () => {
     if (!business) return;
     setTxData(null);
-    const params = { ...dateParams, search: search || undefined };
-    const [cust, supp] = await Promise.all([
-      api.get(`${base}/reports/transactions`, { params: { ...params, partyType: 'CUSTOMER' } }),
-      api.get(`${base}/reports/transactions`, { params: { ...params, partyType: 'SUPPLIER' } }),
-    ]);
-    setTabCounts({ CUSTOMER: cust.data.data.count, SUPPLIER: supp.data.data.count });
-    setTxData(partyType === 'CUSTOMER' ? cust.data.data : supp.data.data);
+    setForbidden(false);
+    try {
+      const params = { ...dateParams, search: search || undefined };
+      const [cust, supp] = await Promise.all([
+        api.get(`${base}/reports/transactions`, { params: { ...params, partyType: 'CUSTOMER' } }),
+        api.get(`${base}/reports/transactions`, { params: { ...params, partyType: 'SUPPLIER' } }),
+      ]);
+      setTabCounts({ CUSTOMER: cust.data.data.count, SUPPLIER: supp.data.data.count });
+      setTxData(partyType === 'CUSTOMER' ? cust.data.data : supp.data.data);
+    } catch (e) {
+      if (isForbidden(e)) setForbidden(true);
+      else { toast(apiMessage(e), 'error'); setTxData({ totals: { gave: 0, got: 0, net: 0 }, count: 0, entries: [] }); }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [business, from, to, search, partyType, base]);
 
   const loadCashbook = useCallback(async () => {
     if (!business) return;
     setCashEntries(null);
-    const all: CashbookEntry[] = [];
-    let page = 1, pages = 1;
-    do {
-      const res = await api.get(`${base}/cashbook`, { params: { ...dateParams, page, limit: 100 } });
-      all.push(...res.data.data);
-      pages = res.data.meta.pages;
-      page++;
-    } while (page <= pages && page <= 50);
-    const totalIn = all.filter((e) => e.direction === 'IN').reduce((s, e) => s + Number(e.amount), 0);
-    const totalOut = all.filter((e) => e.direction === 'OUT').reduce((s, e) => s + Number(e.amount), 0);
-    setCashEntries(all);
-    setCashTotals({ in: totalIn, out: totalOut, balance: totalIn - totalOut });
+    setForbidden(false);
+    try {
+      const all: CashbookEntry[] = [];
+      let page = 1, pages = 1;
+      do {
+        const res = await api.get(`${base}/cashbook`, { params: { ...dateParams, page, limit: 100 } });
+        all.push(...res.data.data);
+        pages = res.data.meta.pages;
+        page++;
+      } while (page <= pages && page <= 50);
+      const totalIn = all.filter((e) => e.direction === 'IN').reduce((s, e) => s + Number(e.amount), 0);
+      const totalOut = all.filter((e) => e.direction === 'OUT').reduce((s, e) => s + Number(e.amount), 0);
+      setCashEntries(all);
+      setCashTotals({ in: totalIn, out: totalOut, balance: totalIn - totalOut });
+    } catch (e) {
+      if (isForbidden(e)) setForbidden(true);
+      else { toast(apiMessage(e), 'error'); setCashEntries([]); }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [business, from, to, base]);
 
   const loadSales = useCallback(async () => {
     if (!business) return;
     setSalesData(null);
-    const res = await api.get(`${base}/reports/sales`, { params: { ...dateParams, search: search || undefined } });
-    setSalesData(res.data.data);
+    setForbidden(false);
+    try {
+      const res = await api.get(`${base}/reports/sales`, { params: { ...dateParams, search: search || undefined } });
+      setSalesData(res.data.data);
+    } catch (e) {
+      if (isForbidden(e)) setForbidden(true);
+      else { toast(apiMessage(e), 'error'); setSalesData({ totals: { count: 0, billed: 0, collected: 0, pending: 0 }, entries: [] }); }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [business, from, to, search, base]);
 
@@ -313,7 +333,7 @@ export default function Reports() {
               </div>
             </div>
 
-            {loading ? <Spinner /> : !txData?.entries.length ? (
+            {forbidden ? <LockedState /> : loading ? <Spinner /> : !txData?.entries.length ? (
               <EmptyState icon="🗃️" title={t('reports.noTransactionsAvailable')} />
             ) : (
               <div className="card mb-6">
@@ -360,7 +380,7 @@ export default function Reports() {
               </div>
             </div>
 
-            {loading ? <Spinner /> : !cashEntries?.length ? (
+            {forbidden ? <LockedState /> : loading ? <Spinner /> : !cashEntries?.length ? (
               <EmptyState icon="🗃️" title={t('reports.noTransactionsAvailable')} />
             ) : (
               <div className="card mb-6">
@@ -407,7 +427,7 @@ export default function Reports() {
               </div>
             </div>
 
-            {loading ? <Spinner /> : !salesData?.entries.length ? (
+            {forbidden ? <LockedState /> : loading ? <Spinner /> : !salesData?.entries.length ? (
               <EmptyState icon="🧾" title={t('reports.noTransactionsAvailable')} />
             ) : (
               <div className="card mb-6">

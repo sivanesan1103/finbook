@@ -64,70 +64,92 @@ class _PartiesTabState extends State<PartiesTab>
   void _editBusinessName() {
     final app = context.read<AppState>();
     final ctrl = TextEditingController(text: app.business?.name);
+    bool saving = false;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-            20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
-        child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(context.tr('partiesTab.editBusinessName'),
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 14),
-              TextField(controller: ctrl, autofocus: true),
-              const SizedBox(height: 14),
-              ElevatedButton(
-                onPressed: () async {
-                  await app.renameBusiness(ctrl.text.trim());
-                  if (ctx.mounted) Navigator.pop(ctx);
-                },
-                child: Text(context.tr('partiesTab.save')),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  _createBook();
-                },
-                child: Center(child: Text(context.tr('partiesTab.createNewFinBook'))),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  _chooseBook();
-                },
-                child: Center(child: Text(context.tr('partiesTab.chooseAnotherBook'))),
-              ),
-            ]),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setD) => Padding(
+          padding: EdgeInsets.fromLTRB(
+              20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+          child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(context.tr('partiesTab.editBusinessName'),
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 14),
+                TextField(controller: ctrl, autofocus: true),
+                const SizedBox(height: 14),
+                ElevatedButton(
+                  onPressed: saving ? null : () async {
+                    setD(() => saving = true);
+                    try {
+                      await app.renameBusiness(ctrl.text.trim());
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    } catch (e) {
+                      if (ctx.mounted) {
+                        showSnack(ctx, e.toString(), error: true);
+                        setD(() => saving = false);
+                      }
+                    }
+                  },
+                  child: Text(context.tr('partiesTab.save')),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _createBook();
+                  },
+                  child: Center(child: Text(context.tr('partiesTab.createNewFinBook'))),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _chooseBook();
+                  },
+                  child: Center(child: Text(context.tr('partiesTab.chooseAnotherBook'))),
+                ),
+              ]),
+        ),
       ),
     );
   }
 
   void _createBook() {
     final ctrl = TextEditingController();
+    bool creating = false;
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(context.tr('partiesTab.createNewFinBook')),
-        content: TextField(
-            controller: ctrl,
-            decoration: InputDecoration(hintText: context.tr('partiesTab.businessNameHint'))),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: Text(context.tr('partiesTab.cancel'))),
-          ElevatedButton(
-            onPressed: () async {
-              await context.read<AppState>().createBusiness(ctrl.text.trim());
-              if (ctx.mounted) Navigator.pop(ctx);
-              _load();
-            },
-            child: Text(context.tr('partiesTab.create')),
-          ),
-        ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setD) => AlertDialog(
+          title: Text(context.tr('partiesTab.createNewFinBook')),
+          content: TextField(
+              controller: ctrl,
+              decoration: InputDecoration(hintText: context.tr('partiesTab.businessNameHint'))),
+          actions: [
+            TextButton(
+                onPressed: creating ? null : () => Navigator.pop(ctx), child: Text(context.tr('partiesTab.cancel'))),
+            ElevatedButton(
+              onPressed: creating ? null : () async {
+                setD(() => creating = true);
+                try {
+                  await context.read<AppState>().createBusiness(ctrl.text.trim());
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  _load();
+                } catch (e) {
+                  if (ctx.mounted) {
+                    showSnack(ctx, e.toString(), error: true);
+                    setD(() => creating = false);
+                  }
+                }
+              },
+              child: Text(context.tr('partiesTab.create')),
+            ),
+          ],
+        ),
       ),
     );
   }
