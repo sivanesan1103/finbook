@@ -58,6 +58,8 @@ const Map<String, String> en = {
 
   // reports screen
   'reports.title': 'Reports',
+  'reports.start': 'Start',
+  'reports.end': 'End',
   'reports.ledger': 'Ledger',
   'reports.youWillGet': 'You will get',
   'reports.youWillGive': 'You will give',
@@ -74,6 +76,10 @@ const Map<String, String> en = {
   'reports.downloadTransactionsReport': 'DOWNLOAD TRANSACTIONS REPORT',
   'reports.downloadSalesReport': 'DOWNLOAD SALES REPORT',
   'reports.downloadCashbookReport': 'DOWNLOAD CASHBOOK REPORT',
+  'reports.downloads': 'Downloads',
+  'reports.netPosition': 'NET POSITION',
+  'reports.netPositionGet': 'You will get overall',
+  'reports.netPositionGive': 'You will give overall',
 
   // add party screen
   'addParty.title': 'Add Party',

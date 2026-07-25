@@ -58,6 +58,8 @@ const Map<String, String> ta = {
 
   // reports screen
   'reports.title': 'அறிக்கைகள்',
+  'reports.start': 'தொடக்கம்',
+  'reports.end': 'முடிவு',
   'reports.ledger': 'கணக்கு',
   'reports.youWillGet': 'நீங்கள் பெறுவது',
   'reports.youWillGive': 'நீங்கள் கொடுப்பது',
@@ -74,6 +76,10 @@ const Map<String, String> ta = {
   'reports.downloadTransactionsReport': 'பரிவர்த்தனை அறிக்கையைப் பதிவிறக்கு',
   'reports.downloadSalesReport': 'விற்பனை அறிக்கையைப் பதிவிறக்கு',
   'reports.downloadCashbookReport': 'ரொக்கப் புத்தக அறிக்கையைப் பதிவிறக்கு',
+  'reports.downloads': 'பதிவிறக்கங்கள்',
+  'reports.netPosition': 'மொத்த நிலை',
+  'reports.netPositionGet': 'மொத்தமாக நீங்கள் பெறுவீர்கள்',
+  'reports.netPositionGive': 'மொத்தமாக நீங்கள் கொடுப்பீர்கள்',
 
   // add party screen
   'addParty.title': 'நபரைச் சேர்',
