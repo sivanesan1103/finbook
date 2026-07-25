@@ -9,6 +9,7 @@ with **original code, branding and assets**.
 | Shared REST API | Node.js · Express · Prisma · MySQL | [`backend/`](backend) |
 | Web app (desktop UI) | React 18 · TypeScript · Vite · Tailwind | [`web/`](web) |
 | Mobile app | Flutter (Material 3) | [`mobile/`](mobile) |
+| Signed Android app releases | Versioned `.apk` files | [`releases/`](releases) |
 | Orchestration | Docker Compose (MySQL + API + Web) | [`docker-compose.yml`](docker-compose.yml) |
 | API docs | OpenAPI 3 + Swagger UI | `backend/docs/openapi.yaml` → `/api/docs` |
 
@@ -121,3 +122,45 @@ middleware.
 - Uploaded files persist in the `api_uploads` volume; put them behind S3/CDN
   for scale.
 - Web container proxies `/api` and `/uploads` to the API service via nginx.
+
+## Releases
+
+Mobile build number lives in `mobile/pubspec.yaml` (`version: 1.0.0+N`).
+Signed installable APKs are kept in [`releases/vN/`](releases) in this repo;
+the `.aab` (Play Store upload format) and the signing keystore itself stay
+outside the repo at `../finbook-releases/` since they're either
+store-upload-only or secret material, not something apps install directly.
+
+| Version | Build | Date | Highlights | APK |
+|---|---|---|---|---|
+| v1 | 1.0.0+1 | — | Initial prototype (pre-dates this repo's history; no artifact kept) | — |
+| v2 | 1.0.0+2 | 2026-07-19 | Renamed to FinBook; Tamil language support; nav cleanup | — |
+| v3 | 1.0.0+5 | 2026-07-23 | OTP verification flow; WhatsApp channel removed (SMS-only); production Android signing config; graceful non-JSON API error handling | [`releases/v3/FinBook-v3-signed.apk`](releases/v3/FinBook-v3-signed.apk) |
+| v4 | 1.0.0+6 | 2026-07-25 | Staff/party/invoice permission hardening; IST/UTC day-boundary fixes in cashbook & reports; report PDF redesign; fixed duplicate-submission bugs (cashbook/expenses) and infinite-spinner-on-permission-denied bugs across web + mobile | [`releases/v4/FinBook-v4-signed.apk`](releases/v4/FinBook-v4-signed.apk) |
+
+## Maintenance directions
+
+**Cutting a new mobile release:**
+```bash
+cd mobile
+# bump the build number in pubspec.yaml, e.g. 1.0.0+6 -> 1.0.0+7
+flutter build appbundle --release   # -> build/app/outputs/bundle/release/app-release.aab
+flutter build apk --release         # -> build/app/outputs/flutter-apk/app-release.apk
+```
+Both are signed automatically via `mobile/android/key.properties`, which
+points at the shared keystore in `../finbook-releases/keystore/`. Copy the
+`.apk` into a new `releases/vN/FinBook-vN-signed.apk` in this repo (add a row
+to the table above), and the `.aab` into `../finbook-releases/vN/` alongside
+it, following the naming used by earlier releases.
+
+**Updating the deployed web/API:**
+- Local dev: `docker compose up --build` picks up the override in
+  `docker-compose.override.yml` (Vite dev server, hot reload).
+- Remote host: sync `web/` (excluding `node_modules`/`dist`) to the target's
+  `finbook/web/`, then on the host run `docker compose build web && docker
+  compose up -d web`. Never overwrite the host's `docker-compose.yml` — it
+  holds production DB/JWT secrets that differ from this repo's dev defaults.
+  Only rebuild/restart `backend`'s container the same way if `backend/` was
+  actually changed.
+- After any deploy, sanity-check with `docker compose ps` (all services
+  `Up`/`healthy`) and `curl localhost:8080` / the API's auth endpoint.
