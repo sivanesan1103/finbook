@@ -1,0 +1,61 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /positions/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Every container's stdout/stderr — db, api, web(nginx access logs with
+  # client IPs), grafana, etc. The api container logs JSON (see
+  # backend/src/config/logger.js); other containers log plain text and just
+  # get ingested as-is, still full-text searchable in Grafana.
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+    relabel_configs:
+      - target_label: 'job'
+        replacement: 'docker'
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: 'container'
+      - source_labels: ['__meta_docker_container_log_stream']
+        target_label: 'stream'
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        target_label: 'service'
+    pipeline_stages:
+      # Parses the JSON lines finbook-api emits; silently leaves non-JSON
+      # lines (nginx, mysql, ...) untouched rather than erroring on them.
+      - json:
+          expressions:
+            level: level
+            type: type
+            action: action
+            entity: entity
+            platform: platform
+      - labels:
+          level:
+          type:
+          action:
+          entity:
+          platform:
+
+  # Linux host system log, read straight from systemd-journald rather than
+  # a /var/log/syslog file — verified against the actual production host
+  # (Debian 12/bookworm) and it has no rsyslog installed at all, only the
+  # journal, which is the modern default across most current distros anyway.
+  # A no-op on macOS/local dev, where there's no systemd and these mounted
+  # paths won't exist.
+  - job_name: journal
+    journal:
+      max_age: 12h
+      path: /var/log/journal
+      labels:
+        job: syslog
+    relabel_configs:
+      - source_labels: ['__journal__systemd_unit']
+        target_label: 'unit'

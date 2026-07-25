@@ -1,0 +1,109 @@
+{
+  "title": "FinBook Logs",
+  "uid": "finbook-logs",
+  "tags": ["finbook", "logs"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 2,
+  "refresh": "10s",
+  "time": { "from": "now-24h", "to": "now" },
+  "panels": [
+    { "id": 100, "type": "row", "title": "Overview (last 24h)", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "collapsed": false, "panels": [] },
+    {
+      "id": 101, "type": "stat", "title": "Logins",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "targets": [{ "expr": "sum(count_over_time({type=\"activity\", action=\"LOGIN\"}[24h]))", "refId": "A" }],
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }] } }, "overrides": [] }
+    },
+    {
+      "id": 102, "type": "stat", "title": "Failed logins",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "targets": [{ "expr": "sum(count_over_time({type=\"activity\", action=\"LOGIN_FAILED\"}[24h]))", "refId": "A" }],
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "orange", "value": null }] } }, "overrides": [] }
+    },
+    {
+      "id": 103, "type": "stat", "title": "Backend errors",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "targets": [{ "expr": "sum(count_over_time({container=\"finbook-api\"} | json | type=~\"server_error|db\" [24h]))", "refId": "A" }],
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "red", "value": null }] } }, "overrides": [] }
+    },
+    {
+      "id": 104, "type": "stat", "title": "Client crashes (web+mobile)",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "targets": [{ "expr": "sum(count_over_time({type=\"client_error\"}[24h]))", "refId": "A" }],
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "red", "value": null }] } }, "overrides": [] }
+    },
+
+    { "id": 200, "type": "row", "title": "Authentication — login, logout, register", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 }, "collapsed": false, "panels": [] },
+    {
+      "id": 201, "type": "logs", "title": "Login / Logout / Register",
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 6 },
+      "targets": [{ "expr": "{type=\"activity\", action=~\"LOGIN|LOGIN_FAILED|LOGOUT|REGISTER\"}", "refId": "A" }],
+      "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Descending", "enableLogDetails": true }
+    },
+
+    { "id": 300, "type": "row", "title": "Activity — add, change, delete (every entity)", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 13 }, "collapsed": false, "panels": [] },
+    {
+      "id": 301, "type": "logs", "title": "Created / Added",
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 14 },
+      "targets": [{ "expr": "{type=\"activity\", action=~\".*_CREATED|.*_ADDED|.*_IMPORTED\"}", "refId": "A" }],
+      "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Descending", "enableLogDetails": true }
+    },
+    {
+      "id": 302, "type": "logs", "title": "Updated / Changed",
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 21 },
+      "targets": [{ "expr": "{type=\"activity\", action=~\".*_UPDATED|.*_ADJUSTED|.*_CONVERTED|.*_RECORDED|.*_SENT\"}", "refId": "A" }],
+      "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Descending", "enableLogDetails": true }
+    },
+    {
+      "id": 303, "type": "logs", "title": "Deleted / Removed / Cancelled",
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 28 },
+      "targets": [{ "expr": "{type=\"activity\", action=~\".*_DELETED|.*_REMOVED|.*_CANCELLED\"}", "refId": "A" }],
+      "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Descending", "enableLogDetails": true }
+    },
+
+    { "id": 400, "type": "row", "title": "Access & errors", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 35 }, "collapsed": false, "panels": [] },
+    {
+      "id": 401, "type": "logs", "title": "Access log — method, path, status, IP",
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 36 },
+      "targets": [{ "expr": "{type=\"access\"}", "refId": "A" }],
+      "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Descending", "enableLogDetails": true }
+    },
+    {
+      "id": 402, "type": "logs", "title": "Client errors & crashes — web",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 43 },
+      "targets": [{ "expr": "{type=\"client_error\", platform=\"web\"}", "refId": "A" }],
+      "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Descending", "enableLogDetails": true }
+    },
+    {
+      "id": 403, "type": "logs", "title": "Client errors & crashes — mobile",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 43 },
+      "targets": [{ "expr": "{type=\"client_error\", platform=\"mobile\"}", "refId": "A" }],
+      "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Descending", "enableLogDetails": true }
+    },
+    {
+      "id": 404, "type": "logs", "title": "Backend server errors (5xx / exceptions / DB errors)",
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 49 },
+      "targets": [{ "expr": "{container=\"finbook-api\"} | json | type=~\"server_error|db\" | level=\"error\"", "refId": "A" }],
+      "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Descending", "enableLogDetails": true }
+    },
+
+    { "id": 500, "type": "row", "title": "System & raw logs", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 56 }, "collapsed": false, "panels": [] },
+    {
+      "id": 501, "type": "logs", "title": "Linux system log (host)",
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 57 },
+      "targets": [{ "expr": "{job=\"syslog\"}", "refId": "A" }],
+      "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Descending", "enableLogDetails": true }
+    },
+    {
+      "id": 502, "type": "logs", "title": "All logs (every container, unfiltered)",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 64 },
+      "targets": [{ "expr": "{job=\"docker\"}", "refId": "A" }],
+      "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Descending", "enableLogDetails": true }
+    }
+  ]
+}

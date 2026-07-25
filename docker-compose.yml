@@ -55,6 +55,66 @@ services:
     depends_on:
       - api
 
+  # ── Logging dashboard: Loki (store) + Promtail (collector) + Grafana (UI) ──
+  # Promtail tails every container's stdout (including finbook-api's
+  # structured JSON — activity/access/client-error events) plus the host's
+  # Linux syslog; Grafana ships pre-provisioned with a Loki datasource and a
+  # starter "FinBook Logs" dashboard, so it works with zero manual setup.
+  loki:
+    image: grafana/loki:2.9.8
+    container_name: finbook-loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./observability/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+
+  promtail:
+    image: grafana/promtail:2.9.8
+    container_name: finbook-promtail
+    restart: unless-stopped
+    # Reading /var/log/journal requires root (or systemd-journal group
+    # membership, which isn't practical to arrange generically here) —
+    # same as the docker.sock mount below, which needs root either way.
+    user: "0:0"
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./observability/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/log/journal:/var/log/journal:ro
+      - /etc/machine-id:/etc/machine-id:ro
+      # Without this, positions.yaml (see promtail-config.yml) resets on
+      # every container restart, so promtail re-reads every container's
+      # entire log history from scratch each time — enough volume to blow
+      # past Loki's default per-tenant ingestion rate limit and start
+      # dropping lines.
+      - promtail_positions:/positions
+    depends_on:
+      - loki
+
+  grafana:
+    image: grafana/grafana:10.4.3
+    container_name: finbook-grafana
+    restart: unless-stopped
+    environment:
+      # Single admin login, sign-up disabled — change this password before
+      # exposing the dashboard beyond localhost.
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: change-me-grafana-admin-pw
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - loki
+
 volumes:
   db_data:
   api_uploads:
+  loki_data:
+  grafana_data:
+  promtail_positions:

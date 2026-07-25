@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import morgan from 'morgan';
 import path from 'path';
 import swaggerUi from 'swagger-ui-express';
 import YAML from 'yamljs';
@@ -25,8 +24,17 @@ import reminderRoutes from './modules/reminders/reminders.routes.js';
 import reportRoutes from './modules/reports/reports.routes.js';
 import notificationRoutes from './modules/notifications/notifications.routes.js';
 import activityRoutes from './modules/activity/activity.routes.js';
+import clientLogsRoutes from './modules/clientLogs/clientLogs.routes.js';
 
 const app = express();
+
+// Exactly one hop of proxying in front of this container in every real
+// deployment (Cloudflare Tunnel in production; direct/no proxy locally) —
+// `true` (trust unconditionally) makes express-rate-limit refuse to start
+// its IP-based limiters, since a client could spoof X-Forwarded-For to
+// bypass them; a specific hop count avoids that while still resolving the
+// real client IP for logging.
+app.set('trust proxy', 1);
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({
@@ -35,7 +43,25 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '25mb' })); // large enough for backup-file imports
 app.use(express.urlencoded({ extended: true }));
-app.use(morgan('tiny', { stream: { write: (msg) => logger.debug(msg.trim()) } }));
+
+// Structured access log (method/path/status/ms/ip/userId) for every request,
+// feeding the same Loki/Grafana pipeline as activity + client-error logs —
+// this is what makes "who accessed from which IP" queryable on the dashboard.
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    logger.info('access', {
+      type: 'access',
+      method: req.method,
+      path: req.originalUrl,
+      status: res.statusCode,
+      ms: Date.now() - start,
+      ip: req.ip,
+      userId: req.user?.id ?? null,
+    });
+  });
+  next();
+});
 
 // Static uploads (bill photos, avatars, logos)
 app.use('/uploads', express.static(path.resolve(env.upload.dir)));
@@ -85,6 +111,7 @@ v1.use('/businesses/:businessId/reminders', reminderRoutes);
 v1.use('/businesses/:businessId/reports', reportRoutes);
 v1.use('/businesses/:businessId/activity', activityRoutes);
 v1.use('/notifications', notificationRoutes);
+v1.use('/client-logs', clientLogsRoutes);
 app.use('/api/v1', v1);
 
 app.use(notFoundHandler);

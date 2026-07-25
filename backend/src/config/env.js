@@ -16,6 +16,7 @@ const env = {
     maxMb: Number(process.env.MAX_UPLOAD_MB || 5),
   },
   corsOrigins: (process.env.CORS_ORIGINS || '*').split(',').map((s) => s.trim()),
+  discordWebhookUrl: process.env.DISCORD_WEBHOOK_URL || '',
 };
 
 export default env;

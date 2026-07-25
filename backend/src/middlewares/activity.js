@@ -6,6 +6,19 @@ import logger from '../config/logger.js';
  * logActivity(req, 'TRANSACTION_CREATED', 'Transaction', tx.id, { amount })
  */
 export const logActivity = (req, action, entity, entityId, meta) => {
+  // Stdout (structured, for the Loki/Grafana log dashboard) is written
+  // synchronously and independently of the DB write below, so a failed
+  // insert never hides the event from the dashboard.
+  logger.info('activity', {
+    type: 'activity',
+    action,
+    entity,
+    entityId: entityId ?? null,
+    businessId: req.business?.id ?? null,
+    userId: req.user?.id ?? null,
+    ip: req.ip,
+    meta,
+  });
   prisma.activityLog
     .create({
       data: {

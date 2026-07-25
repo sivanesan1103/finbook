@@ -2,14 +2,17 @@ import app from './app.js';
 import env from './config/env.js';
 import logger from './config/logger.js';
 import prisma from './config/db.js';
+import { notifyServerStarted, notifyServerStopped } from './config/discordNotifier.js';
 
 const server = app.listen(env.port, () => {
   logger.info(`FinBook API listening on :${env.port} (${env.nodeEnv})`);
   logger.info(`Swagger docs at http://localhost:${env.port}/api/docs`);
+  notifyServerStarted(env.port, env.nodeEnv);
 });
 
 const shutdown = async (signal) => {
   logger.info(`${signal} received — shutting down`);
+  notifyServerStopped(signal);
   server.close(async () => {
     await prisma.$disconnect();
     process.exit(0);
