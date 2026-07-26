@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import '../core/theme.dart';
 import '../l10n/translations.dart';
@@ -22,6 +23,15 @@ class _LoginScreenState extends State<LoginScreen> {
   final signUpPassCtrl = TextEditingController();
 
   bool busy = false;
+  String _version = '';
+
+  @override
+  void initState() {
+    super.initState();
+    PackageInfo.fromPlatform().then((info) {
+      if (mounted) setState(() => _version = '${info.version} (${info.buildNumber})');
+    });
+  }
 
   Future<void> _loginPassword() async {
     setState(() => busy = true);
@@ -212,6 +222,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                       color: Colors.green,
                                       fontWeight: FontWeight.w600)),
                             ),
+                            if (_version.isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              Center(
+                                child: Text('FinBook v$_version',
+                                    style: const TextStyle(color: Colors.black38, fontSize: 11)),
+                              ),
+                            ],
                           ],
                         ),
                       ),
