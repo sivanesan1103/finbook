@@ -2,6 +2,7 @@ import env from './env.js';
 
 const COLORS = {
   error: 0xe74c3c, // red
+  dbError: 0x992d22, // dark red — visually distinct from a plain server error
   warning: 0xf39c12, // orange
   success: 0x2ecc71, // green
 };
@@ -30,8 +31,8 @@ function notifyDiscord({ emoji, title, description, color, fields = [] }) {
         title: `${emoji} ${title}`,
         description,
         color,
-        fields,
-        footer: { text: fmtTime() },
+        fields: [...fields.filter(Boolean), { name: '🌐 Environment', value: env.nodeEnv, inline: true }],
+        footer: { text: `🕐 ${fmtTime()}` },
       },
     ],
   };
@@ -47,56 +48,77 @@ function notifyDiscord({ emoji, title, description, color, fields = [] }) {
 
 const codeBlock = (s) => `\`\`\`${String(s).slice(0, 1500)}\`\`\``;
 
-export const notifyServerError = (message, { path, ip } = {}) =>
+export const notifyServerError = (message, { path, method, status, ip, userId, stack } = {}) =>
   notifyDiscord({
     emoji: '🔴',
     title: 'Backend Server Error',
     description: codeBlock(message),
     color: COLORS.error,
     fields: [
-      path && { name: 'Path', value: path, inline: true },
-      ip && { name: 'IP', value: ip, inline: true },
-    ].filter(Boolean),
+      method && path && { name: '📍 Route', value: `${method} ${path}`, inline: true },
+      status && { name: '🚦 Status', value: String(status), inline: true },
+      ip && { name: '📡 IP', value: ip, inline: true },
+      userId && { name: '👤 User', value: userId, inline: true },
+      stack && { name: '🧵 Stack (top)', value: codeBlock(String(stack).split('\n').slice(0, 4).join('\n')) },
+    ],
   });
 
-export const notifyDbError = (message) =>
+export const notifyDbError = (message, { code } = {}) =>
   notifyDiscord({
     emoji: '💥',
     title: 'Database Error',
     description: codeBlock(message),
-    color: COLORS.error,
+    color: COLORS.dbError,
+    fields: [code && { name: '🏷️ Code', value: code, inline: true }],
   });
 
-export const notifyClientCrash = ({ platform, message, device }) =>
+export const notifyClientCrash = ({ platform, message, device, appVersion, userId, stack }) =>
   notifyDiscord({
     emoji: platform === 'mobile' ? '📱' : '🌐',
     title: `${platform === 'mobile' ? 'Mobile' : 'Web'} App Crash`,
     description: codeBlock(message),
     color: COLORS.error,
-    fields: [device && { name: 'Device', value: device, inline: true }].filter(Boolean),
+    fields: [
+      device && { name: '📟 Device', value: device, inline: true },
+      appVersion && { name: '🔖 Version', value: appVersion, inline: true },
+      userId && { name: '👤 User', value: userId, inline: true },
+      stack && { name: '🧵 Stack (top)', value: codeBlock(String(stack).split('\n').slice(0, 4).join('\n')) },
+    ],
   });
 
-export const notifyLoginFailed = (email, ip) =>
+export const notifyLoginFailed = (email, ip, userAgent) =>
   notifyDiscord({
     emoji: '🔑',
     title: 'Failed Login Attempt',
-    description: `**${email}**`,
+    description: `🙍 **${email || 'unknown'}**`,
     color: COLORS.warning,
-    fields: [ip && { name: 'IP', value: ip, inline: true }].filter(Boolean),
+    fields: [
+      ip && { name: '📡 IP', value: ip, inline: true },
+      userAgent && { name: '🖥️ Device/Browser', value: userAgent.slice(0, 200), inline: false },
+    ],
   });
 
 export const notifyServerStarted = (port, nodeEnv) =>
   notifyDiscord({
-    emoji: '🟢',
+    emoji: '🚀',
     title: 'FinBook API Started',
-    description: `Listening on port **${port}** (${nodeEnv})`,
+    description: `✅ Listening on port **${port}**`,
     color: COLORS.success,
+    fields: [
+      { name: '🟢 Node', value: process.version, inline: true },
+      { name: '🆔 PID', value: String(process.pid), inline: true },
+      { name: '⚙️ Mode', value: nodeEnv, inline: true },
+    ],
   });
 
 export const notifyServerStopped = (signal) =>
   notifyDiscord({
-    emoji: '🟡',
+    emoji: '🛑',
     title: 'FinBook API Shutting Down',
-    description: `Received **${signal}**`,
+    description: `⚠️ Received **${signal}**`,
     color: COLORS.warning,
+    fields: [
+      { name: '⏱️ Uptime', value: `${Math.floor(process.uptime())}s`, inline: true },
+    ],
   });
+

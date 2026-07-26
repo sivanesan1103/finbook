@@ -15,6 +15,6 @@ const prisma = new PrismaClient({
 });
 
 prisma.$on('warn', (e) => logger.warn(e.message, { type: 'db' }));
-prisma.$on('error', (e) => { logger.error(e.message, { type: 'db' }); notifyDbError(e.message); });
+prisma.$on('error', (e) => { logger.error(e.message, { type: 'db' }); notifyDbError(e.message, { code: e.code }); });
 
 export default prisma;

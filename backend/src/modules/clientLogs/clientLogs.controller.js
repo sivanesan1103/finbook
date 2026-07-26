@@ -22,6 +22,6 @@ export const report = asyncHandler(async (req, res) => {
     ip: req.ip,
     userAgent: req.headers['user-agent'],
   });
-  notifyClientCrash({ platform, message, device });
+  notifyClientCrash({ platform, message, device, appVersion, userId, stack });
   res.status(201).json({ success: true });
 });

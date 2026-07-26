@@ -25,7 +25,7 @@ export const login = asyncHandler(async (req, res) => {
     ok(res, data);
   } catch (e) {
     logAuth(req, 'LOGIN_FAILED', { email: req.body?.email });
-    notifyLoginFailed(req.body?.email, req.ip);
+    notifyLoginFailed(req.body?.email, req.ip, req.headers['user-agent']);
     throw e;
   }
 });

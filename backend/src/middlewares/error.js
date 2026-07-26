@@ -15,7 +15,14 @@ export const errorHandler = (err, req, res, _next) => {
   const status = err.status || 500;
   if (status >= 500) {
     logger.error(err.message, { type: 'server_error', stack: err.stack, path: req.originalUrl, ip: req.ip });
-    notifyServerError(err.message, { path: req.originalUrl, ip: req.ip });
+    notifyServerError(err.message, {
+      path: req.originalUrl,
+      method: req.method,
+      status,
+      ip: req.ip,
+      userId: req.user?.id,
+      stack: err.stack,
+    });
   } else logger.debug(`${status} ${err.message}`);
 
   res.status(status).json({
