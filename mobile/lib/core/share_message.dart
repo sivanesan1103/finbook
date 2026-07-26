@@ -6,8 +6,14 @@ import 'package:url_launcher/url_launcher.dart';
 /// send themselves. No messaging API, no backend dispatch.
 
 /// Digits-only phone number with country code, defaulting to India (91).
+/// Numbers can reach here with a leading trunk "0" (11 digits) if they were
+/// typed/edited without going through contact-import cleaning — left as-is,
+/// that malformed number is what makes wa.me fall back to the "Send to"
+/// chat picker instead of opening the exact chat.
 String _toIntlPhone(String phone) {
-  final digits = phone.replaceAll(RegExp(r'[^\d]'), '');
+  var digits = phone.replaceAll(RegExp(r'[^\d]'), '');
+  if (digits.startsWith('91') && digits.length == 12) return digits;
+  if (digits.startsWith('0') && digits.length == 11) digits = digits.substring(1);
   return digits.length == 10 ? '91$digits' : digits;
 }
 
