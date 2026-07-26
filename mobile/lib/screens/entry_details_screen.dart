@@ -1,5 +1,11 @@
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../core/api_client.dart';
 import '../core/formatters.dart';
 import '../core/theme.dart';
@@ -19,6 +25,35 @@ class EntryDetailsScreen extends StatefulWidget {
 
 class _EntryDetailsScreenState extends State<EntryDetailsScreen> {
   bool deleting = false;
+  bool sharing = false;
+  final GlobalKey _cardKey = GlobalKey();
+
+  // Renders the entry card to a PNG and hands it to the OS share sheet —
+  // the user picks WhatsApp/SMS/whatever themselves, same as a screenshot
+  // but cropped to just the card and without the status bar.
+  Future<void> _share(BuildContext context) async {
+    if (sharing) return;
+    setState(() => sharing = true);
+    try {
+      final gave = entry.type == 'GAVE';
+      final label = gave ? context.tr('entryDetails.credit') : context.tr('entryDetails.payment');
+      final text = '${party.name} — $label ${inr(entry.amount)} • ${fmtDateTime(entry.entryDate)}\n'
+          '${context.tr('entryDetails.runningBalance')}: ${inr(entry.runningBalance)}';
+      final boundary = _cardKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      final image = await boundary.toImage(pixelRatio: 3);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final Uint8List bytes = byteData!.buffer.asUint8List();
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/entry_${entry.id}.png');
+      await file.writeAsBytes(bytes, flush: true);
+      if (!context.mounted) return;
+      await Share.shareXFiles([XFile(file.path)], text: text);
+    } catch (e) {
+      if (context.mounted) showSnack(context, 'Could not share: $e', error: true);
+    } finally {
+      if (mounted) setState(() => sharing = false);
+    }
+  }
 
   Future<void> _delete(BuildContext context) async {
     if (deleting) return;
@@ -61,19 +96,36 @@ class _EntryDetailsScreenState extends State<EntryDetailsScreen> {
       appBar: AppBar(title: Text(context.tr('entryDetails.title'))),
       bottomNavigationBar: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: OutlinedButton.icon(
-            onPressed: deleting ? null : () => _delete(context),
-            icon: const Icon(Icons.delete_outline, color: Colors.red),
-            label: Text(context.tr('entryDetails.delete'), style: const TextStyle(color: Colors.red)),
-            style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.red),
-                minimumSize: const Size.fromHeight(50)),
-          ),
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+          child: Row(children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: sharing ? null : () => _share(context),
+                icon: sharing
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.share_outlined),
+                label: Text(context.tr('entryDetails.share')),
+                style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: deleting ? null : () => _delete(context),
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                label: Text(context.tr('entryDetails.delete'), style: const TextStyle(color: Colors.red)),
+                style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.red),
+                    minimumSize: const Size.fromHeight(50)),
+              ),
+            ),
+          ]),
         ),
       ),
       body: ListView(padding: const EdgeInsets.all(14), children: [
-        Card(
+        RepaintBoundary(
+          key: _cardKey,
+          child: Card(
           child: Column(children: [
             ListTile(
               leading: InitialAvatar(party.name),
@@ -98,6 +150,7 @@ class _EntryDetailsScreenState extends State<EntryDetailsScreen> {
             const Divider(height: 1),
             ListTile(title: Text(context.tr('entryDetails.paymentMode')), trailing: Text(context.tr(modeLabelKeys[entry.paymentMode] ?? entry.paymentMode))),
           ]),
+          ),
         ),
         const SizedBox(height: 12),
         Card(

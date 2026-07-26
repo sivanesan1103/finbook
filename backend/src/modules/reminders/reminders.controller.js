@@ -2,7 +2,7 @@ import prisma from '../../config/db.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ApiError } from '../../utils/apiError.js';
 import { logActivity } from '../../middlewares/activity.js';
-import { smsGateway, buildReminderMessage } from '../../utils/sms.js';
+import { buildReminderMessage } from '../../utils/sms.js';
 import { computeBalances } from '../parties/parties.service.js';
 
 const ok = (res, data, status = 200) => res.status(status).json({ success: true, data });
@@ -33,7 +33,13 @@ export const create = asyncHandler(async (req, res) => {
   ok(res, reminder, 201);
 });
 
-/** Sends the reminder now via SMS. */
+/**
+ * Composes the reminder message and marks it sent. The actual delivery
+ * happens on-device — the client opens the phone's native share sheet (or a
+ * wa.me/sms: deep link) with this text and the party's number pre-filled,
+ * and the user picks WhatsApp/SMS/whatever themselves and taps send. No
+ * backend messaging API involved, so nothing here can fail to "deliver".
+ */
 export const sendNow = asyncHandler(async (req, res) => {
   const reminder = await prisma.reminder.findFirst({
     where: { id: req.params.reminderId, businessId: req.business.id, deletedAt: null },
@@ -51,16 +57,12 @@ export const sendNow = asyncHandler(async (req, res) => {
     dueDate: reminder.dueDate,
   });
 
-  const result = await smsGateway.send({ to: reminder.party.phone, message });
-  if (!result.ok) {
-    throw ApiError.badGateway(`Failed to send reminder: ${result.error || 'unknown error'}`);
-  }
   const updated = await prisma.reminder.update({
     where: { id: reminder.id },
     data: { status: 'SENT', sentAt: new Date() },
   });
-  logActivity(req, 'REMINDER_SENT', 'Reminder', reminder.id, { provider: result.provider });
-  ok(res, { ...updated, notification: result });
+  logActivity(req, 'REMINDER_SENT', 'Reminder', reminder.id, { provider: 'share-sheet' });
+  ok(res, { ...updated, message, phone: reminder.party.phone });
 });
 
 export const cancel = asyncHandler(async (req, res) => {

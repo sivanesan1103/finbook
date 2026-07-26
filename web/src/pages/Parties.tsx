@@ -5,6 +5,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { api, apiMessage, isForbidden } from '../api/client';
 import type { Party, PartyType, LedgerResponse, TxType } from '../types';
 import { Avatar, EmptyState, LockedState, Modal, Money, MODE_LABEL_KEYS, PAYMENT_MODES, Spinner, fmtDateTime, timeAgo, useConfirm, useToast } from '../components/ui';
+import { openWhatsApp } from '../share';
 
 const emptyParty = {
   name: '', phone: '', type: 'CUSTOMER' as PartyType, gstin: '',
@@ -122,13 +123,17 @@ export default function Parties({ type }: { type: PartyType }) {
     } catch (e) { toast(apiMessage(e), 'error'); }
   };
 
+  // Prepares the reminder message server-side (needs the party's live
+  // balance), then hands off straight to WhatsApp's deep link — web has no
+  // usable native SMS app to hand off to, so WhatsApp is the only channel
+  // offered here (mobile offers both, since phones actually have SMS).
   const remind = async () => {
     if (!selected) return;
+    if (!selected.phone) { toast(t('parties.noPhone'), 'error'); return; }
     try {
       const r = await api.post(`${base}/reminders`, { partyId: selected.id, dueDate: new Date().toISOString() });
       const sendRes = await api.post(`${base}/reminders/${r.data.data.id}/send`);
-      const provider = sendRes.data.data.notification?.provider;
-      toast(provider === 'dev-logger' ? t('parties.reminderSentDev') : t('parties.reminderSentSms'));
+      openWhatsApp(sendRes.data.data.phone, sendRes.data.data.message);
     } catch (e) { toast(apiMessage(e), 'error'); }
   };
 
