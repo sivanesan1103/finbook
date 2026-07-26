@@ -133,7 +133,6 @@ class _PartyProfileScreenState extends State<PartyProfileScreen> {
       final app = context.read<AppState>();
       final res = await ApiClient.instance.patch('${app.basePath}/parties/${party.id}', patch);
       final data = Map<String, dynamic>.from(res['data']);
-      data['balance'] = 0;
       if (mounted) setState(() => party = Party.fromJson(data));
     } catch (e) {
       if (mounted) showSnack(context, e.toString(), error: true);
