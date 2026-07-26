@@ -23,20 +23,23 @@ jobs:
       - uses: actions/checkout@v4
 
       # docker-compose.yml at DEPLOY_PATH holds production secrets and is
-      # never touched — only app source under web/ and backend/ is synced
-      # from the runner's checkout, then those two services are rebuilt.
+      # never touched — only app source under web/, backend/, and
+      # backup-tool/ is synced from the runner's checkout, then those
+      # services are rebuilt.
       - name: Sync source to deploy path
         run: |
           rsync -a --delete --exclude node_modules --exclude dist --exclude .env \
             web/ "$DEPLOY_PATH/web/"
           rsync -a --delete --exclude node_modules --exclude .env \
             backend/ "$DEPLOY_PATH/backend/"
+          rsync -a --delete --exclude node_modules --exclude .local-test-backups --exclude .env \
+            backup-tool/ "$DEPLOY_PATH/backup-tool/"
 
       - name: Rebuild and restart services
         run: |
           cd "$DEPLOY_PATH"
-          docker compose build api web
-          docker compose up -d api web
+          docker compose build api web backup-tool
+          docker compose up -d api web backup-tool
 
       - name: Health check
         run: |
@@ -44,8 +47,9 @@ jobs:
             sleep 3
             web_code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/ || echo 000)
             api_code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:4000/ || echo 000)
-            echo "attempt $i: web=$web_code api=$api_code"
-            [ "$web_code" = "200" ] && [ -n "$api_code" ] && [ "$api_code" != "000" ] && exit 0
+            backup_code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:4100/api/status || echo 000)
+            echo "attempt $i: web=$web_code api=$api_code backup_tool=$backup_code"
+            [ "$web_code" = "200" ] && [ -n "$api_code" ] && [ "$api_code" != "000" ] && [ "$backup_code" = "401" ] && exit 0
           done
           echo "services did not come up in time" >&2
           exit 1
