@@ -278,14 +278,14 @@ class _CashbookScreenState extends State<CashbookScreen> {
           dense: true,
           title: Text(context.tr('cashbookScreen.entriesLine', {'date': fmtDate(date), 'count': entries.length}),
               style: const TextStyle(fontWeight: FontWeight.w700)),
-          trailing: SizedBox(
-            width: 190,
-            child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-              Text(context.tr('cashbookScreen.outAmount', {'amount': inr(dayOut)}), style: const TextStyle(color: AppColors.gave, fontSize: 12, fontWeight: FontWeight.w700)),
-              const SizedBox(width: 12),
-              Text(context.tr('cashbookScreen.inAmount', {'amount': inr(dayIn)}), style: const TextStyle(color: AppColors.got, fontSize: 12, fontWeight: FontWeight.w700)),
-            ]),
-          ),
+          // A fixed-width box here overflowed once OUT/IN totals grew past a
+          // few digits (large cash flows are entirely plausible for a real
+          // business) — size to content instead so it can never clip.
+          trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+            Text(context.tr('cashbookScreen.outAmount', {'amount': inr(dayOut)}), style: const TextStyle(color: AppColors.gave, fontSize: 12, fontWeight: FontWeight.w700)),
+            const SizedBox(width: 12),
+            Text(context.tr('cashbookScreen.inAmount', {'amount': inr(dayIn)}), style: const TextStyle(color: AppColors.got, fontSize: 12, fontWeight: FontWeight.w700)),
+          ]),
         ),
         Expanded(
           child: loading

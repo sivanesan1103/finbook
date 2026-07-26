@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/api_client.dart';
 import '../core/formatters.dart';
+import '../core/share_message.dart';
 import '../core/theme.dart';
 import '../l10n/translations.dart';
 import '../models/models.dart';
@@ -97,8 +98,11 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
               ),
         actions: [
           IconButton(icon: const Icon(Icons.call), onPressed: () {
-            showSnack(context, party?.phone == null || party!.phone!.isEmpty
-                ? context.tr('partyLedger.noPhoneSaved') : context.tr('partyLedger.call', {'phone': party.phone}));
+            if (party?.phone == null || party!.phone!.isEmpty) {
+              showSnack(context, context.tr('partyLedger.noPhoneSaved'));
+            } else {
+              callParty(party.phone!);
+            }
           }),
         ],
       ),

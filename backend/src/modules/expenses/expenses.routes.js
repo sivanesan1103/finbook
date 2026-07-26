@@ -10,7 +10,7 @@ router.use(requireAuth, requireBusiness, requirePermission('expenses'));
 
 const expenseBody = z.object({
   category: z.string().max(60).optional(),
-  amount: z.coerce.number().positive(),
+  amount: z.coerce.number().positive().max(99_999_999),
   notes: z.string().max(500).optional(),
   paymentMode: z.enum(['CASH', 'ONLINE', 'CHEQUE', 'UPI', 'BANK']).optional(),
   entryDate: z.coerce.date().optional(),

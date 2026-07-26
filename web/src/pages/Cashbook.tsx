@@ -120,97 +120,106 @@ export default function Cashbook() {
   return (
     <div className="flex h-full">
       {/* ── Left: list ── */}
-      <div className="flex-1 min-w-0 p-6 overflow-y-auto">
-        <h1 className="text-xl font-bold mb-4">{t('cashbook.title')}</h1>
+      <div className="flex-1 min-w-0 flex flex-col h-full min-h-0">
+        <div className="p-6 pb-0 shrink-0">
+          <h1 className="text-xl font-bold mb-4">{t('cashbook.title')}</h1>
 
-        <div className="card p-4 flex items-center gap-10 mb-4">
-          <div className="flex items-baseline gap-2">
-            <p className="text-sm text-slate-500">{t('cashbook.totalBalance')}</p>
-            <Money value={summary.totalBalance} className="text-lg" />
-          </div>
-          <div className="flex items-baseline gap-2">
-            <p className="text-sm text-slate-500">{t('cashbook.todaysBalance')}</p>
-            <Money value={summary.todayBalance} className="text-lg" />
-          </div>
-          <button className="btn border border-link-500 text-link-600 hover:bg-link-50 ml-auto" onClick={downloadReport}>
-            {t('cashbook.viewReport')}
-          </button>
-        </div>
-
-        <div className="card p-4 flex gap-6 mb-4">
-          <div>
-            <label className="label">{t('cashbook.date')}</label>
-            <input type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
-          </div>
-          <div className="border-l border-slate-200 pl-6">
-            <label className="label">{t('cashbook.paymentMode')}</label>
-            <select className="input min-w-[180px]" value={mode} onChange={(e) => setMode(e.target.value)}>
-              <option value="ALL">{t('cashbook.all')}</option>
-              {MODES.map((m) => <option key={m} value={m}>{t(MODE_LABEL_KEYS[m])}</option>)}
-            </select>
-          </div>
-        </div>
-
-        <div className="card overflow-hidden">
-          <div className="grid grid-cols-[1fr_120px_120px] px-5 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide border-b border-slate-100">
-            <span>{t('cashbook.name')}</span><span className="text-right">{t('cashbook.out')}</span><span className="text-right">{t('cashbook.in')}</span>
-          </div>
-
-          {/* Day header with totals */}
-          <div className="grid grid-cols-[1fr_120px_120px] px-5 py-3 bg-slate-50/60 border-b border-slate-100 items-center">
-            <div>
-              <p className="font-bold text-slate-800">{fmtDayLabel(date)}{isToday(date) ? ` ${t('cashbook.today')}` : ''}</p>
-              <p className="text-xs text-slate-400">{t('cashbook.entriesCount', { count: entries.length })}</p>
+          <div className="card p-4 flex items-center gap-10 mb-4">
+            <div className="flex items-baseline gap-2">
+              <p className="text-sm text-slate-500">{t('cashbook.totalBalance')}</p>
+              <Money value={summary.totalBalance} className="text-lg" />
             </div>
-            <span className="text-right font-semibold text-get">
-              {totalOut > 0 ? <Money value={totalOut} colored={false} className="text-get" /> : '₹--'}
-            </span>
-            <span className="text-right font-semibold text-give">
-              {totalIn > 0 ? <Money value={totalIn} colored={false} className="text-give" /> : '₹--'}
-            </span>
+            <div className="flex items-baseline gap-2">
+              <p className="text-sm text-slate-500">{t('cashbook.todaysBalance')}</p>
+              <Money value={summary.todayBalance} className="text-lg" />
+            </div>
+            <button className="btn border border-link-500 text-link-600 hover:bg-link-50 ml-auto" onClick={downloadReport}>
+              {t('cashbook.viewReport')}
+            </button>
           </div>
 
-          {loading ? <Spinner /> : forbidden ? <LockedState /> : entries.length === 0 ? (
-            <EmptyState icon="📔" title={t('cashbook.addFirstTransaction')} subtitle={t('cashbook.emptySubtitle')} />
-          ) : (
-            entries.map((e) => (
-              <button
-                key={e.id}
-                className={`w-full grid grid-cols-[1fr_120px_120px] px-5 py-4 items-center text-left border-b border-slate-50 last:border-0 transition
-                  ${selectedId === e.id ? 'bg-link-50' : 'hover:bg-slate-50'}`}
-                onClick={() => setPane({ type: 'detail', entry: e })}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">🧾</span>
-                  <div className="min-w-0">
-                    <p className="text-xs text-slate-500 flex items-center gap-2">
-                      {fmtTime(e.entryDate)}
-                      <span className="px-1.5 py-0.5 rounded bg-link-50 text-link-600 text-[10px] font-bold tracking-wide">
-                        {e.paymentMode}
-                      </span>
-                    </p>
-                    <p className="font-medium text-slate-800 truncate">
-                      {e.description ? t('cashbook.descriptionPrefix', { desc: e.description }) : t('cashbook.noDescription')}
-                    </p>
-                  </div>
-                </div>
-                <span className="text-right">
-                  {e.direction === 'OUT' ? <Money value={e.amount} colored={false} className="text-get" /> : <span className="text-slate-300">-</span>}
-                </span>
-                <span className="text-right">
-                  {e.direction === 'IN' ? <Money value={e.amount} colored={false} className="text-give" /> : <span className="text-slate-300">-</span>}
-                </span>
-              </button>
-            ))
-          )}
+          <div className="card p-4 flex gap-6 mb-4">
+            <div>
+              <label className="label">{t('cashbook.date')}</label>
+              <input type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
+            </div>
+            <div className="border-l border-slate-200 pl-6">
+              <label className="label">{t('cashbook.paymentMode')}</label>
+              <select className="input min-w-[180px]" value={mode} onChange={(e) => setMode(e.target.value)}>
+                <option value="ALL">{t('cashbook.all')}</option>
+                {MODES.map((m) => <option key={m} value={m}>{t(MODE_LABEL_KEYS[m])}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Only this middle section scrolls — header and IN/OUT buttons stay put */}
+        <div className="flex-1 min-h-0 px-6 flex flex-col">
+          <div className="card overflow-hidden flex-1 min-h-0 flex flex-col">
+            <div className="grid grid-cols-[1fr_120px_120px] px-5 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide border-b border-slate-100 shrink-0">
+              <span>{t('cashbook.name')}</span><span className="text-right">{t('cashbook.out')}</span><span className="text-right">{t('cashbook.in')}</span>
+            </div>
+
+            {/* Day header with totals */}
+            <div className="grid grid-cols-[1fr_120px_120px] px-5 py-3 bg-slate-50/60 border-b border-slate-100 items-center shrink-0">
+              <div>
+                <p className="font-bold text-slate-800">{fmtDayLabel(date)}{isToday(date) ? ` ${t('cashbook.today')}` : ''}</p>
+                <p className="text-xs text-slate-400">{t('cashbook.entriesCount', { count: entries.length })}</p>
+              </div>
+              <span className="text-right font-semibold text-get">
+                {totalOut > 0 ? <Money value={totalOut} colored={false} className="text-get" /> : '₹--'}
+              </span>
+              <span className="text-right font-semibold text-give">
+                {totalIn > 0 ? <Money value={totalIn} colored={false} className="text-give" /> : '₹--'}
+              </span>
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              {loading ? <Spinner /> : forbidden ? <LockedState /> : entries.length === 0 ? (
+                <EmptyState icon="📔" title={t('cashbook.addFirstTransaction')} subtitle={t('cashbook.emptySubtitle')} />
+              ) : (
+                entries.map((e) => (
+                  <button
+                    key={e.id}
+                    className={`w-full grid grid-cols-[1fr_120px_120px] px-5 py-4 items-center text-left border-b border-slate-50 last:border-0 transition
+                      ${selectedId === e.id ? 'bg-link-50' : 'hover:bg-slate-50'}`}
+                    onClick={() => setPane({ type: 'detail', entry: e })}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">🧾</span>
+                      <div className="min-w-0">
+                        <p className="text-xs text-slate-500 flex items-center gap-2">
+                          {fmtTime(e.entryDate)}
+                          <span className="px-1.5 py-0.5 rounded bg-link-50 text-link-600 text-[10px] font-bold tracking-wide">
+                            {e.paymentMode}
+                          </span>
+                        </p>
+                        <p className="font-medium text-slate-800 truncate">
+                          {e.description ? t('cashbook.descriptionPrefix', { desc: e.description }) : t('cashbook.noDescription')}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-right">
+                      {e.direction === 'OUT' ? <Money value={e.amount} colored={false} className="text-get" /> : <span className="text-slate-300">-</span>}
+                    </span>
+                    <span className="text-right">
+                      {e.direction === 'IN' ? <Money value={e.amount} colored={false} className="text-give" /> : <span className="text-slate-300">-</span>}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
         </div>
 
         {!forbidden && (
-          <div className="card mt-4 p-4 flex gap-4">
-            <button className="flex-1 py-3 rounded-lg bg-red-100 text-red-700 font-bold tracking-wide hover:bg-red-200"
-              onClick={() => openForm('OUT')}>{t('cashbook.outButton')}</button>
-            <button className="flex-1 py-3 rounded-lg bg-green-100 text-green-700 font-bold tracking-wide hover:bg-green-200"
-              onClick={() => openForm('IN')}>{t('cashbook.inButton')}</button>
+          <div className="p-6 pt-4 shrink-0">
+            <div className="card p-4 flex gap-4">
+              <button className="flex-1 py-3 rounded-lg bg-red-100 text-red-700 font-bold tracking-wide hover:bg-red-200"
+                onClick={() => openForm('OUT')}>{t('cashbook.outButton')}</button>
+              <button className="flex-1 py-3 rounded-lg bg-green-100 text-green-700 font-bold tracking-wide hover:bg-green-200"
+                onClick={() => openForm('IN')}>{t('cashbook.inButton')}</button>
+            </div>
           </div>
         )}
       </div>

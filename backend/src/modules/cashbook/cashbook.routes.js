@@ -9,7 +9,7 @@ router.use(requireAuth, requireBusiness, requirePermission('cashbook'));
 
 const entryBody = z.object({
   direction: z.enum(['IN', 'OUT']),
-  amount: z.coerce.number().positive(),
+  amount: z.coerce.number().positive().max(99_999_999),
   paymentMode: z.enum(['CASH', 'ONLINE', 'CHEQUE', 'UPI', 'BANK']).optional(),
   description: z.string().max(500).optional(),
   entryDate: z.coerce.date().optional(),

@@ -12,11 +12,11 @@ const invoiceBody = z.object({
   items: z.array(z.object({
     itemId: z.string().optional(),
     name: z.string().min(1).max(120),
-    qty: z.coerce.number().positive(),
-    price: z.coerce.number().nonnegative(),
+    qty: z.coerce.number().positive().max(999_999),
+    price: z.coerce.number().nonnegative().max(99_999_999),
     taxRate: z.coerce.number().min(0).max(100).optional(),
   })).min(1),
-  discount: z.coerce.number().nonnegative().optional(),
+  discount: z.coerce.number().nonnegative().max(99_999_999).optional(),
   dueDate: z.coerce.date().optional(),
   notes: z.string().max(500).optional(),
   status: z.enum(['DRAFT', 'UNPAID']).optional(),
@@ -28,7 +28,7 @@ router.get('/:invoiceId/pdf', ctrl.pdf);
 router.post('/', validate({ body: invoiceBody }), ctrl.create);
 router.post('/:invoiceId/payments', validate({
   body: z.object({
-    amount: z.coerce.number().positive(),
+    amount: z.coerce.number().positive().max(99_999_999),
     mode: z.enum(['CASH', 'ONLINE', 'CHEQUE', 'UPI', 'BANK']).optional(),
     note: z.string().max(200).optional(),
     paidAt: z.coerce.date().optional(),

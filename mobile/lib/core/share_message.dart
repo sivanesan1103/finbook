@@ -20,3 +20,11 @@ Future<bool> shareViaSms(String phone, String text) {
   final uri = Uri(scheme: 'sms', path: _toIntlPhone(phone), queryParameters: {'body': text});
   return launchUrl(uri);
 }
+
+/// Opens the phone's own dialer pre-filled with the party's number — a
+/// plain `tel:` link, same as tapping a phone number in Contacts. The user
+/// still has to tap the actual call button themselves.
+Future<bool> callParty(String phone) {
+  final uri = Uri(scheme: 'tel', path: phone.trim());
+  return launchUrl(uri);
+}
