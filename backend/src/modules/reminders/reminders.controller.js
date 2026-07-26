@@ -55,6 +55,7 @@ export const sendNow = asyncHandler(async (req, res) => {
     partyName: reminder.party.name,
     balance,
     dueDate: reminder.dueDate,
+    lang: req.user.language,
   });
 
   const updated = await prisma.reminder.update({

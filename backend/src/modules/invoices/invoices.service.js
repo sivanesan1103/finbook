@@ -72,7 +72,7 @@ const createDocument = async (txn, businessId, { partyId, docType, status, dueDa
   return invoice;
 };
 
-export const createInvoice = async (businessId, { partyId, items, discount = 0, dueDate, notes, status }, docType = 'INVOICE') => {
+export const createInvoice = async (businessId, { partyId, items, discount = 0, dueDate, notes, status }, docType = 'INVOICE', lang) => {
   const party = await prisma.party.findFirst({ where: { id: partyId, businessId, deletedAt: null } });
   if (!party) throw ApiError.notFound('Party not found');
 
@@ -117,6 +117,7 @@ export const createInvoice = async (businessId, { partyId, items, discount = 0, 
         partyName: party.name,
         invoiceNo: invoice.invoiceNo,
         total: Number(invoice.total),
+        lang,
       }),
     });
   }

@@ -41,7 +41,7 @@ export const create = asyncHandler(async (req, res) => {
   if (party.smsEnabled && party.phone) {
     await smsGateway.send({
       to: party.phone,
-      message: buildPartyWelcomeMessage({ businessName: req.business.name, partyName: party.name }),
+      message: buildPartyWelcomeMessage({ businessName: req.business.name, partyName: party.name, lang: req.user.language }),
     });
   }
   ok(res, { ...party, balance: 0 }, 201);

@@ -58,7 +58,7 @@ export const getOne = asyncHandler(async (req, res) => {
 
 export const create = asyncHandler(async (req, res) => {
   const docType = docTypeOf(req);
-  const invoice = await service.createInvoice(req.business.id, req.body, docType);
+  const invoice = await service.createInvoice(req.business.id, req.body, docType, req.user.language);
   logActivity(req, docType === 'PROFORMA' ? 'PROFORMA_CREATED' : 'INVOICE_CREATED', 'Invoice', invoice.id, {
     invoiceNo: invoice.invoiceNo, total: Number(invoice.total),
   });

@@ -54,18 +54,45 @@ export const smsGateway = {
   },
 };
 
-export const buildTransactionSms = ({ businessName, partyName, type, amount, balance }) => {
+// Party-facing message templates, in the sender's (business user's) app
+// language — set via User.language, which the mobile/web language toggle
+// syncs to the backend on change. These go out over WhatsApp/SMS deep
+// links or (for the legacy auto-send paths) the SMS gateway, so the
+// backend is the only place that can pick the language: neither channel
+// carries a locale of its own.
+const isTamil = (lang) => lang === 'ta';
+
+export const buildTransactionSms = ({ businessName, partyName, type, amount, balance, lang }) => {
+  if (isTamil(lang)) {
+    const verb = type === 'GOT' ? 'செலுத்தினார்' : 'கடன் பெற்றார்';
+    return `${partyName} ${businessName}-இல் ₹${amount} ${verb}. தற்போதைய இருப்பு: ₹${balance}. — FinBook மூலம்`;
+  }
   const verb = type === 'GOT' ? 'made a payment of' : 'received credit of';
   return `${partyName} ${verb} ₹${amount} at ${businessName}. Current balance: ₹${balance}. — via FinBook`;
 };
 
-export const buildReminderMessage = ({ businessName, partyName, balance, dueDate }) =>
-  `Dear ${partyName}, this is a payment reminder of ₹${balance} due to ${businessName}` +
-  (dueDate ? ` by ${new Date(dueDate).toLocaleDateString('en-IN')}` : '') +
-  `. — via FinBook`;
+export const buildReminderMessage = ({ businessName, partyName, balance, dueDate, lang }) => {
+  const dueDateStr = dueDate ? new Date(dueDate).toLocaleDateString('en-IN') : null;
+  if (isTamil(lang)) {
+    return `அன்புள்ள ${partyName}, ${businessName}-க்கு செலுத்த வேண்டிய ₹${balance} தொகைக்கான நினைவூட்டல் இது` +
+      (dueDateStr ? `, ${dueDateStr}-க்குள் செலுத்தவும்` : '') +
+      `. — FinBook மூலம்`;
+  }
+  return `Dear ${partyName}, this is a payment reminder of ₹${balance} due to ${businessName}` +
+    (dueDateStr ? ` by ${dueDateStr}` : '') +
+    `. — via FinBook`;
+};
 
-export const buildPartyWelcomeMessage = ({ businessName, partyName }) =>
-  `Hi ${partyName}, ${businessName} has added you to their FinBook khata. You'll get updates here for entries and bills. — via FinBook`;
+export const buildPartyWelcomeMessage = ({ businessName, partyName, lang }) => {
+  if (isTamil(lang)) {
+    return `வணக்கம் ${partyName}, ${businessName} உங்களை தங்கள் FinBook கணக்கில் சேர்த்துள்ளனர். பதிவுகள் மற்றும் பில்களுக்கான புதுப்பிப்புகளை இங்கே பெறுவீர்கள். — FinBook மூலம்`;
+  }
+  return `Hi ${partyName}, ${businessName} has added you to their FinBook khata. You'll get updates here for entries and bills. — via FinBook`;
+};
 
-export const buildSaleConfirmationMessage = ({ businessName, partyName, invoiceNo, total }) =>
-  `Hi ${partyName}, ${businessName} has billed you ₹${total} on invoice ${invoiceNo}. — via FinBook`;
+export const buildSaleConfirmationMessage = ({ businessName, partyName, invoiceNo, total, lang }) => {
+  if (isTamil(lang)) {
+    return `வணக்கம் ${partyName}, ${businessName} உங்களுக்கு விலைப்பட்டியல் ${invoiceNo}-இல் ₹${total} கட்டணம் விதித்துள்ளனர். — FinBook மூலம்`;
+  }
+  return `Hi ${partyName}, ${businessName} has billed you ₹${total} on invoice ${invoiceNo}. — via FinBook`;
+};
