@@ -23,4 +23,9 @@ EXPOSE 4000
 # `migrate deploy || db push` fallback here never actually reached db push,
 # and schema drift (e.g. a column added to schema.prisma) silently never
 # landed in the database across container restarts. Push directly instead.
-CMD sh -c "npx prisma db push --accept-data-loss --skip-generate; npm run seed || true; node src/server.js"
+#
+# Seeding only runs when SEED_ON_BOOT=true (set by the local dev compose
+# file) — it must never run unattended in production, since it upserts a
+# demo login (owner@finbook.dev / demo123) with a password anyone reading
+# this repo already knows.
+CMD sh -c "npx prisma db push --accept-data-loss --skip-generate; [ \"$SEED_ON_BOOT\" = \"true\" ] && npm run seed; node src/server.js"
