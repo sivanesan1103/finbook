@@ -188,7 +188,7 @@ class _PartiesTabState extends State<PartiesTab>
                 _createBook();
               },
               icon: const Icon(Icons.add),
-              label: Text(context.tr('partiesTab.createNewKhatabook')),
+              label: Text(context.tr('partiesTab.createNewBook')),
             ),
           ),
         ],

@@ -347,7 +347,7 @@ const Map<String, String> ta = {
   'partiesTab.cancel': 'ரத்துசெய்',
   'partiesTab.businessNameHint': 'வணிகப் பெயர்',
   'partiesTab.partiesCount': '{count} நபர்கள்',
-  'partiesTab.createNewKhatabook': 'புதிய கணக்கு புத்தகத்தை உருவாக்கு',
+  'partiesTab.createNewBook': 'புதிய புத்தகத்தை உருவாக்கு',
   'partiesTab.addCustomer': 'வாடிக்கையாளரைச் சேர்',
   'partiesTab.addSupplier': 'சப்ளையரைச் சேர்',
   'partiesTab.myBusiness': 'எனது வணிகம்',

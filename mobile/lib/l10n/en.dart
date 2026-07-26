@@ -347,7 +347,7 @@ const Map<String, String> en = {
   'partiesTab.cancel': 'Cancel',
   'partiesTab.businessNameHint': 'Business name',
   'partiesTab.partiesCount': '{count} parties',
-  'partiesTab.createNewKhatabook': 'CREATE NEW KHATABOOK',
+  'partiesTab.createNewBook': 'CREATE NEW BOOK',
   'partiesTab.addCustomer': 'ADD CUSTOMER',
   'partiesTab.addSupplier': 'ADD SUPPLIER',
   'partiesTab.myBusiness': 'My Business',
