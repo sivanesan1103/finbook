@@ -25,6 +25,7 @@ import reportRoutes from './modules/reports/reports.routes.js';
 import notificationRoutes from './modules/notifications/notifications.routes.js';
 import activityRoutes from './modules/activity/activity.routes.js';
 import clientLogsRoutes from './modules/clientLogs/clientLogs.routes.js';
+import publicRoutes from './modules/public/public.routes.js';
 
 const app = express();
 
@@ -112,6 +113,7 @@ v1.use('/businesses/:businessId/reports', reportRoutes);
 v1.use('/businesses/:businessId/activity', activityRoutes);
 v1.use('/notifications', notificationRoutes);
 v1.use('/client-logs', clientLogsRoutes);
+v1.use('/public', publicRoutes);
 app.use('/api/v1', v1);
 
 app.use(notFoundHandler);

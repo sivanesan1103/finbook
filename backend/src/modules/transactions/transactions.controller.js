@@ -4,6 +4,9 @@ import { ApiError } from '../../utils/apiError.js';
 import { logActivity } from '../../middlewares/activity.js';
 import { fileUrl } from '../../middlewares/upload.js';
 import { streamPartyStatement } from '../../utils/pdf.js';
+import { buildEntryShareMessage } from '../../utils/sms.js';
+import { signEntryToken } from '../../utils/shareToken.js';
+import env from '../../config/env.js';
 import * as service from './transactions.service.js';
 
 const ok = (res, data, status = 200) => res.status(status).json({ success: true, data });
@@ -42,6 +45,20 @@ export const getOne = asyncHandler(async (req, res) => {
   });
   if (!tx) throw ApiError.notFound('Transaction not found');
   ok(res, tx);
+});
+
+export const shareLink = asyncHandler(async (req, res) => {
+  const tx = await service.entryWithBalance(req.business.id, req.params.txId);
+  const link = `${env.publicWebUrl}/t/${signEntryToken(tx.id)}`;
+  const message = buildEntryShareMessage({
+    businessName: req.business.name,
+    amount: tx.amount,
+    entryDate: tx.entryDate,
+    balance: Math.abs(tx.runningBalance ?? 0),
+    link,
+    lang: req.user.language,
+  });
+  ok(res, { message, link });
 });
 
 export const update = asyncHandler(async (req, res) => {

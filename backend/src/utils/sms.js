@@ -96,3 +96,19 @@ export const buildSaleConfirmationMessage = ({ businessName, partyName, invoiceN
   }
   return `Hi ${partyName}, ${businessName} has billed you ₹${total} on invoice ${invoiceNo}. — via FinBook`;
 };
+
+/** "New entry" share text with a public read-only link — the Khatabook-style
+ * message users forward over WhatsApp/SMS after recording a transaction. */
+export const buildEntryShareMessage = ({ businessName, amount, entryDate, balance, link, lang }) => {
+  const dateStr = new Date(entryDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  if (isTamil(lang)) {
+    return `${dateStr} இல் உள்ளீடுக்கான தொகை +₹${amount} சேர்க்கப்பட்டது.\n\n` +
+      `மொத்த நிலுவைத் தொகை: ₹${balance}\n\n` +
+      `பரிவர்த்தனை வரலாற்றைப் பார்க்க:\n${link}\n\n` +
+      `நன்றி,\n${businessName}`;
+  }
+  return `₹${amount} has been added to your account entry for ${dateStr}.\n\n` +
+    `Total outstanding balance: ₹${balance}\n\n` +
+    `You can view the transaction history here:\n${link}\n\n` +
+    `Thank you,\n${businessName}`;
+};

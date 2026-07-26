@@ -30,15 +30,28 @@ class _EntryDetailsScreenState extends State<EntryDetailsScreen> {
 
   // Renders the entry card to a PNG and hands it to the OS share sheet —
   // the user picks WhatsApp/SMS/whatever themselves, same as a screenshot
-  // but cropped to just the card and without the status bar.
+  // but cropped to just the card and without the status bar. The caption is
+  // composed server-side (Khatabook-style, with a public "view transaction
+  // history" link) so it comes back in the sender's own app language.
   Future<void> _share(BuildContext context) async {
     if (sharing) return;
     setState(() => sharing = true);
     try {
-      final gave = entry.type == 'GAVE';
-      final label = gave ? context.tr('entryDetails.credit') : context.tr('entryDetails.payment');
-      final text = '${party.name} — $label ${inr(entry.amount)} • ${fmtDateTime(entry.entryDate)}\n'
-          '${context.tr('entryDetails.runningBalance')}: ${inr(entry.runningBalance)}';
+      final app = context.read<AppState>();
+      String text;
+      try {
+        final res = await ApiClient.instance.get('${app.basePath}/transactions/${entry.id}/share');
+        text = res['data']['message'] as String;
+      } catch (_) {
+        // Falls back to a local caption if the share-link endpoint is
+        // unreachable — still shareable, just without the link.
+        if (!context.mounted) return;
+        final gave = entry.type == 'GAVE';
+        final label = gave ? context.tr('entryDetails.credit') : context.tr('entryDetails.payment');
+        text = '${party.name} — $label ${inr(entry.amount)} • ${fmtDateTime(entry.entryDate)}\n'
+            '${context.tr('entryDetails.runningBalance')}: ${inr(entry.runningBalance)}';
+      }
+      if (!context.mounted) return;
       final boundary = _cardKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
       final image = await boundary.toImage(pixelRatio: 3);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);

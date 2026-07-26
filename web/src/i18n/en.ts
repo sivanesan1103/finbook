@@ -397,6 +397,7 @@ export const en = {
   'parties.youGot': 'You Got',
   'parties.balance': 'Balance',
   'parties.deleteEntry': 'Delete entry',
+  'parties.shareEntry': 'Share entry (WhatsApp)',
   'parties.youGaveButton': 'YOU GAVE ₹',
   'parties.youGotButton': 'YOU GOT ₹',
   'parties.editLabel': 'Edit {label}',

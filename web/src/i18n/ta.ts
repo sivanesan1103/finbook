@@ -399,6 +399,7 @@ export const ta: Record<TranslationKey, string> = {
   'parties.youGot': 'நீங்கள் பெற்றது',
   'parties.balance': 'இருப்பு',
   'parties.deleteEntry': 'பதிவை நீக்கு',
+  'parties.shareEntry': 'பதிவைப் பகிர் (WhatsApp)',
   'parties.youGaveButton': 'நீங்கள் கொடுத்தது ₹',
   'parties.youGotButton': 'நீங்கள் பெற்றது ₹',
   'parties.editLabel': '{label}-ஐத் திருத்து',

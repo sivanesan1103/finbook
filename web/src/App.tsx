@@ -13,6 +13,7 @@ import Invoices from './pages/Invoices';
 import Staff from './pages/Staff';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import PublicEntry from './pages/PublicEntry';
 import { ConfirmProvider, Spinner, ToastProvider } from './components/ui';
 
 function Protected({ children }: { children: React.ReactNode }) {
@@ -39,6 +40,7 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
             <Route path="/register" element={<PublicOnly><Register /></PublicOnly>} />
+            <Route path="/t/:token" element={<PublicEntry />} />
             <Route element={<Protected><Layout /></Protected>}>
               <Route path="/" element={<Navigate to="/customers" replace />} />
               <Route path="/customers" element={<Parties key="c" type="CUSTOMER" />} />

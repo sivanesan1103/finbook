@@ -41,6 +41,16 @@ export const partyLedger = async (businessId, partyId, { from, to, type, search 
   return { party, entries: filtered, totals };
 };
 
+/** One transaction plus its all-time running balance (recomputed from the
+ * party's full ledger — running balance isn't stored on the row itself). */
+export const entryWithBalance = async (businessId, txId) => {
+  const tx = await prisma.transaction.findFirst({ where: { id: txId, businessId, deletedAt: null } });
+  if (!tx) throw ApiError.notFound('Transaction not found');
+  const { entries } = await partyLedger(businessId, tx.partyId, {});
+  const withBalance = entries.find((e) => e.id === txId);
+  return withBalance || { ...tx, amount: Number(tx.amount), runningBalance: null };
+};
+
 export const createEntry = async ({ business, party, user, data }) => {
   // Transaction + its mirrored cashbook entry are written atomically, and the
   // cashbook entry is linked back via transactionId so edits/deletes can keep

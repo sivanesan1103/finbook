@@ -17,6 +17,11 @@ const env = {
   },
   corsOrigins: (process.env.CORS_ORIGINS || '*').split(',').map((s) => s.trim()),
   discordWebhookUrl: process.env.DISCORD_WEBHOOK_URL || '',
+  // Base URL of the deployed web app — used to build public share links
+  // (e.g. https://finbook.sivaprj.online/t/<token>) that go out over
+  // WhatsApp/SMS, so it has to be the real internet-facing origin, not the
+  // API's own host.
+  publicWebUrl: process.env.PUBLIC_WEB_URL || 'https://finbook.sivaprj.online',
 };
 
 export default env;

@@ -31,6 +31,7 @@ router.post('/parties/:partyId/transactions', upload.single('billImage'),
 
 // Individual entries
 router.get('/transactions/:txId', ctrl.getOne);
+router.get('/transactions/:txId/share', ctrl.shareLink);
 router.patch('/transactions/:txId', upload.single('billImage'),
   validate({ body: txBody.partial() }), ctrl.update);
 router.delete('/transactions/:txId', requireRole('OWNER', 'PARTNER'), ctrl.softDelete);

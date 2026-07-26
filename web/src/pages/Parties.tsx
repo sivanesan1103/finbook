@@ -123,6 +123,17 @@ export default function Parties({ type }: { type: PartyType }) {
     } catch (e) { toast(apiMessage(e), 'error'); }
   };
 
+  // Composes the Khatabook-style "entry added" text server-side (needs the
+  // party's live running balance + a signed public link), then hands off to
+  // WhatsApp the same way the reminder button does.
+  const shareTx = async (txId: string) => {
+    if (!selected?.phone) { toast(t('parties.noPhone'), 'error'); return; }
+    try {
+      const res = await api.get(`${base}/transactions/${txId}/share`);
+      openWhatsApp(selected.phone, res.data.data.message);
+    } catch (e) { toast(apiMessage(e), 'error'); }
+  };
+
   // Prepares the reminder message server-side (needs the party's live
   // balance), then hands off straight to WhatsApp's deep link — web has no
   // usable native SMS app to hand off to, so WhatsApp is the only channel
@@ -301,7 +312,8 @@ export default function Parties({ type }: { type: PartyType }) {
                             <td className="text-right pr-2 text-slate-600">
                               <Money value={tx.runningBalance ?? 0} colored={false} className="text-slate-600" />
                             </td>
-                            <td className="text-right">
+                            <td className="text-right whitespace-nowrap">
+                              <button className="text-slate-300 hover:text-emerald-500 mr-2" title={t('parties.shareEntry')} onClick={() => shareTx(tx.id)}>🔗</button>
                               <button className="text-slate-300 hover:text-red-500" title={t('parties.deleteEntry')} onClick={() => deleteTx(tx.id)}>🗑</button>
                             </td>
                           </tr>
