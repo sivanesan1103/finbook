@@ -1,7 +1,69 @@
 import PDFDocument from 'pdfkit';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const INR = (n) => `Rs. ${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 const fmtDate = (d) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+/** HTTP header values must be ASCII (Latin-1, really) — a Tamil party name
+ * spliced straight into `filename="..."` produces an invalid header that
+ * some HTTP clients reject outright and others silently mangle. Ships an
+ * ASCII-safe fallback name plus the real name as an RFC 6266 filename*
+ * parameter, which every modern browser prefers and decodes correctly. */
+const contentDisposition = (rawName) => {
+  const ascii = rawName.replace(/[^\x20-\x7E]/g, '') || 'file';
+  return `attachment; filename="${ascii}.pdf"; filename*=UTF-8''${encodeURIComponent(rawName)}.pdf`;
+};
+
+// PDFKit's built-in Helvetica has no Tamil glyphs at all — a party/business
+// name typed in Tamil silently came out as garbage bytes on every report.
+// @fontsource ships the actual Tamil-script glyphs pre-subsetted from Noto
+// Sans Tamil as plain .woff files, which fontkit (pdfkit's font engine)
+// reads directly — no build step, no need to vendor a font file ourselves.
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const fontsDir = path.join(__dirname, '../../node_modules/@fontsource/noto-sans-tamil/files');
+const TAMIL_REGULAR = 'TamilRegular';
+const TAMIL_BOLD = 'TamilBold';
+const registerTamilFonts = (doc) => {
+  doc.registerFont(TAMIL_REGULAR, path.join(fontsDir, 'noto-sans-tamil-tamil-400-normal.woff'));
+  doc.registerFont(TAMIL_BOLD, path.join(fontsDir, 'noto-sans-tamil-tamil-700-normal.woff'));
+};
+
+// The Tamil-script subset above has zero Latin glyphs (and Helvetica has
+// zero Tamil glyphs), so a name mixing both scripts — "தமிழ் Traders" —
+// needs per-run font switching, not just picking one font for the string.
+const TAMIL_RANGE = /[஀-௿]/;
+const hasTamil = (s) => TAMIL_RANGE.test(String(s));
+const splitByScript = (s) => {
+  const runs = [];
+  let cur = '', curIsTamil = TAMIL_RANGE.test(s[0] || '');
+  for (const ch of String(s)) {
+    const chIsTamil = TAMIL_RANGE.test(ch);
+    if (chIsTamil !== curIsTamil && cur) { runs.push({ text: cur, tamil: curIsTamil }); cur = ''; }
+    cur += ch;
+    curIsTamil = chIsTamil;
+  }
+  if (cur) runs.push({ text: cur, tamil: curIsTamil });
+  return runs;
+};
+
+/** Drop-in replacement for doc.font(...).text(str, x, y, opts) that
+ * transparently switches to the Tamil font for Tamil-script runs within
+ * the same string, falling straight through to the plain call when the
+ * string is pure Latin/ASCII (the common case) so nothing else changes. */
+const smartText = (doc, str, x, y, opts = {}) => {
+  const { bold, ...rest } = opts;
+  const latinFont = bold ? 'Helvetica-Bold' : 'Helvetica';
+  if (!hasTamil(str)) return doc.font(latinFont).text(str, x, y, rest);
+  const tamilFont = bold ? TAMIL_BOLD : TAMIL_REGULAR;
+  const runs = splitByScript(str);
+  runs.forEach((run, i) => {
+    doc.font(run.tamil ? tamilFont : latinFont);
+    if (i === 0) doc.text(run.text, x, y, { ...rest, continued: i < runs.length - 1 });
+    else doc.text(run.text, { continued: i < runs.length - 1 });
+  });
+  return doc;
+};
 
 // ─────────────────────────────────────────────────────────────────────────
 // Shared visual toolkit for the four plain "list" report PDFs (party
@@ -15,9 +77,11 @@ const PAGE_L = 40, PAGE_R = 555, PAGE_BOTTOM = 780;
 
 /** Business name + report title/date-range header, used identically across all four report PDFs. */
 const reportHeader = (doc, { business, title, subtitle }) => {
-  doc.font('Helvetica-Bold').fontSize(17).fillColor(RC.brand).text(business.name, PAGE_L, 40);
-  doc.font('Helvetica').fontSize(10).fillColor(RC.muted).text(title, PAGE_L, doc.y + 2);
-  if (subtitle) doc.fontSize(9).fillColor(RC.muted).text(subtitle, PAGE_L, doc.y + 1);
+  doc.fontSize(17).fillColor(RC.brand);
+  smartText(doc, business.name, PAGE_L, 40, { bold: true });
+  doc.fontSize(10).fillColor(RC.muted);
+  smartText(doc, title, PAGE_L, doc.y + 2);
+  if (subtitle) { doc.fontSize(9).fillColor(RC.muted); smartText(doc, subtitle, PAGE_L, doc.y + 1); }
   doc.font('Helvetica').fontSize(8).fillColor(RC.muted)
     .text(`Generated ${fmtDate(new Date())} — FinBook`, PAGE_L, 40, { width: PAGE_R - PAGE_L, align: 'right' });
   const y = doc.y + 10;
@@ -60,8 +124,8 @@ const reportTable = (doc, { startY, columns, rows }) => {
     if (i % 2 === 1) doc.rect(PAGE_L, y, PAGE_R - PAGE_L, row.height).fillColor(RC.zebra).fill();
     row.cells.forEach((cell, ci) => {
       const c = columns[ci];
-      doc.font(cell.bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(8.5).fillColor(cell.color || RC.text)
-        .text(cell.text, c.x + 8, y + 7, { width: c.width - 12, align: c.align || 'left' });
+      doc.fontSize(8.5).fillColor(cell.color || RC.text);
+      smartText(doc, cell.text, c.x + 8, y + 7, { width: c.width - 12, align: c.align || 'left', bold: cell.bold });
     });
     y += row.height;
   });
@@ -89,8 +153,9 @@ const addFooters = (doc) => {
  */
 export const streamPartyStatement = (res, { business, party, entries, totals }) => {
   const doc = new PDFDocument({ margin: 40, size: 'A4', bufferPages: true });
+  registerTamilFonts(doc);
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `attachment; filename="statement-${party.name}.pdf"`);
+  res.setHeader('Content-Disposition', contentDisposition(`statement-${party.name}`));
   doc.pipe(res);
 
   let y = reportHeader(doc, { business, title: `Statement of ${party.name} (${party.type})` });
@@ -123,17 +188,22 @@ export const streamPartyStatement = (res, { business, party, entries, totals }) 
 };
 
 /** Streams a cashbook report PDF. */
-export const streamCashbookReport = (res, { business, entries, totals, from, to }) => {
+export const streamCashbookReport = (res, { business, entries, totals, allTimeBalance, from, to }) => {
   const doc = new PDFDocument({ margin: 40, size: 'A4', bufferPages: true });
+  registerTamilFonts(doc);
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', 'attachment; filename="cashbook-report.pdf"');
   doc.pipe(res);
 
   let y = reportHeader(doc, { business, title: 'Cashbook Report', subtitle: `${fmtDate(from)} – ${fmtDate(to)}` });
   y = reportStats(doc, y, [
-    { label: 'Total In', value: INR(totals.in), color: RC.get },
-    { label: 'Total Out', value: INR(totals.out), color: RC.give },
-    { label: 'Balance', value: INR(totals.balance) },
+    { label: 'In (this period)', value: INR(totals.in), color: RC.get },
+    { label: 'Out (this period)', value: INR(totals.out), color: RC.give },
+    { label: 'Net (this period)', value: INR(totals.balance) },
+    // Same figure the app's Cashbook screen calls "Total Balance" — shown
+    // alongside the period net so the two are never mistaken for the same
+    // number when the selected date range isn't the account's full history.
+    ...(allTimeBalance !== undefined ? [{ label: 'Total Balance (all-time)', value: INR(allTimeBalance) }] : []),
   ]);
 
   const columns = [
@@ -161,6 +231,7 @@ export const streamCashbookReport = (res, { business, entries, totals, from, to 
 /** Streams a transactions report PDF (all parties, date range). */
 export const streamTransactionsReport = (res, { business, entries, totals, from, to, partyType }) => {
   const doc = new PDFDocument({ margin: 40, size: 'A4', bufferPages: true });
+  registerTamilFonts(doc);
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', 'attachment; filename="transactions-report.pdf"');
   doc.pipe(res);
@@ -201,6 +272,7 @@ export const streamTransactionsReport = (res, { business, entries, totals, from,
 /** Streams a sales report PDF (invoices in a date range). */
 export const streamSalesReport = (res, { business, entries, totals, from, to }) => {
   const doc = new PDFDocument({ margin: 40, size: 'A4', bufferPages: true });
+  registerTamilFonts(doc);
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', 'attachment; filename="sales-report.pdf"');
   doc.pipe(res);
@@ -267,6 +339,7 @@ const partyAddress = (p) =>
 export const streamInvoicePdf = (res, { business, invoice }) => {
   const isProforma = invoice.docType === 'PROFORMA';
   const doc = new PDFDocument({ margin: 36, size: 'A4' });
+  registerTamilFonts(doc);
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="${isProforma ? 'proforma' : 'invoice'}-${invoice.invoiceNo}.pdf"`);
   doc.pipe(res);
@@ -293,7 +366,8 @@ export const streamInvoicePdf = (res, { business, invoice }) => {
   const bizH = 74;
   box(L, y, W, bizH);
   line(L + 300, y, L + 300, y + bizH);
-  doc.font(BOLD).fontSize(11).fillColor('#111').text(business.name, L + 10, y + 8, { width: 280 });
+  doc.fontSize(11).fillColor('#111');
+  smartText(doc, business.name, L + 10, y + 8, { width: 280, bold: true });
   doc.font(REG).fontSize(8).fillColor('#333');
   let by = doc.y + 2;
   if (business.address) { doc.text(business.address, L + 10, by, { width: 280 }); by = doc.y + 2; }
@@ -315,7 +389,8 @@ export const streamInvoicePdf = (res, { business, invoice }) => {
   line(L + W / 2, y, L + W / 2, y + addrH);
   const addrBlock = (x, title) => {
     doc.font(BOLD).fontSize(7.5).fillColor('#555').text(title, x, y + 7);
-    doc.font(BOLD).fontSize(9).fillColor('#111').text(invoice.party.name, x, y + 18, { width: W / 2 - 20 });
+    doc.fontSize(9).fillColor('#111');
+    smartText(doc, invoice.party.name, x, y + 18, { width: W / 2 - 20, bold: true });
     doc.font(REG).fontSize(8).fillColor('#333');
     if (addr) doc.text(addr, x, doc.y + 1, { width: W / 2 - 20, height: 20, ellipsis: true });
     if (invoice.party.phone) doc.text(`Contact no: ${invoice.party.phone}`, x, doc.y + 1);
@@ -464,7 +539,8 @@ export const streamInvoicePdf = (res, { business, invoice }) => {
     L + 210, y + 20, { width: 160, height: termH - 26, ellipsis: true },
   );
 
-  doc.font(REG).fontSize(7.5).fillColor('#333').text(`For ${business.name}`, L + 390, y + 10, { width: W - 400, align: 'right' });
+  doc.fontSize(7.5).fillColor('#333');
+  smartText(doc, `For ${business.name}`, L + 390, y + 10, { width: W - 400, align: 'right' });
   doc.font(BOLD).fontSize(8).fillColor('#111').text('Authorised Signature', L + 390, y + termH - 16, { width: W - 400, align: 'right' });
   y += termH + 8;
 

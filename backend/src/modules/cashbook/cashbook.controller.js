@@ -104,5 +104,9 @@ export const reportPdf = asyncHandler(async (req, res) => {
   const where = { businessId: req.business.id, deletedAt: null, entryDate: { gte: from, lte: to } };
   const entries = await prisma.cashbookEntry.findMany({ where, orderBy: { entryDate: 'asc' } });
   const totals = await sumByDirection(where);
-  streamCashbookReport(res, { business: req.business, entries, totals, from, to });
+  // The period's in/out net is not the same figure as the app's "Total
+  // Balance" (all-time, no date filter) — reported separately so the two
+  // never look like a mismatch when they're just two different numbers.
+  const allTime = await sumByDirection({ businessId: req.business.id, deletedAt: null });
+  streamCashbookReport(res, { business: req.business, entries, totals, allTimeBalance: allTime.balance, from, to });
 });
