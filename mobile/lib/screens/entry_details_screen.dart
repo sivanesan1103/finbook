@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../core/api_client.dart';
 import '../core/formatters.dart';
+import '../core/share_message.dart';
 import '../core/theme.dart';
 import '../l10n/translations.dart';
 import '../models/models.dart';
@@ -26,31 +27,38 @@ class EntryDetailsScreen extends StatefulWidget {
 class _EntryDetailsScreenState extends State<EntryDetailsScreen> {
   bool deleting = false;
   bool sharing = false;
+  bool sendingWhatsapp = false;
   final GlobalKey _cardKey = GlobalKey();
+
+  // Caption is composed server-side (Khatabook-style, with a public "view
+  // transaction history" link) so it comes back in the sender's own app
+  // language. Falls back to a local caption if the share-link endpoint is
+  // unreachable — still shareable, just without the link.
+  Future<String> _composeText(BuildContext context) async {
+    final app = context.read<AppState>();
+    try {
+      final res = await ApiClient.instance.get('${app.basePath}/transactions/${entry.id}/share');
+      return res['data']['message'] as String;
+    } catch (_) {
+      final gave = entry.type == 'GAVE';
+      final label = gave ? context.tr('entryDetails.credit') : context.tr('entryDetails.payment');
+      return '${party.name} — $label ${inr(entry.amount)} • ${fmtDateTime(entry.entryDate)}\n'
+          '${context.tr('entryDetails.runningBalance')}: ${inr(entry.runningBalance)}';
+    }
+  }
 
   // Renders the entry card to a PNG and hands it to the OS share sheet —
   // the user picks WhatsApp/SMS/whatever themselves, same as a screenshot
-  // but cropped to just the card and without the status bar. The caption is
-  // composed server-side (Khatabook-style, with a public "view transaction
-  // history" link) so it comes back in the sender's own app language.
+  // but cropped to just the card and without the status bar. Since WhatsApp
+  // has no way to open a specific chat with a file pre-attached, this always
+  // lands on WhatsApp's own chat picker when WhatsApp is chosen — that's a
+  // platform limitation, not something fixable here. Use "Send via
+  // WhatsApp" instead for a direct-to-chat share (text only, no image).
   Future<void> _share(BuildContext context) async {
     if (sharing) return;
     setState(() => sharing = true);
     try {
-      final app = context.read<AppState>();
-      String text;
-      try {
-        final res = await ApiClient.instance.get('${app.basePath}/transactions/${entry.id}/share');
-        text = res['data']['message'] as String;
-      } catch (_) {
-        // Falls back to a local caption if the share-link endpoint is
-        // unreachable — still shareable, just without the link.
-        if (!context.mounted) return;
-        final gave = entry.type == 'GAVE';
-        final label = gave ? context.tr('entryDetails.credit') : context.tr('entryDetails.payment');
-        text = '${party.name} — $label ${inr(entry.amount)} • ${fmtDateTime(entry.entryDate)}\n'
-            '${context.tr('entryDetails.runningBalance')}: ${inr(entry.runningBalance)}';
-      }
+      final text = await _composeText(context);
       if (!context.mounted) return;
       final boundary = _cardKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
       final image = await boundary.toImage(pixelRatio: 3);
@@ -65,6 +73,27 @@ class _EntryDetailsScreenState extends State<EntryDetailsScreen> {
       if (context.mounted) showSnack(context, 'Could not share: $e', error: true);
     } finally {
       if (mounted) setState(() => sharing = false);
+    }
+  }
+
+  // Opens the party's exact WhatsApp chat via the wa.me deep link — text
+  // only (no image), same mechanism as the reminder flow — instead of
+  // routing through the OS share sheet's chat picker.
+  Future<void> _sendViaWhatsapp(BuildContext context) async {
+    if (sendingWhatsapp) return;
+    if (party.phone == null || party.phone!.isEmpty) {
+      showSnack(context, context.tr('partyProfile.addMobileNumber'), error: true);
+      return;
+    }
+    setState(() => sendingWhatsapp = true);
+    try {
+      final text = await _composeText(context);
+      if (!context.mounted) return;
+      await shareViaWhatsApp(party.phone!, text);
+    } catch (e) {
+      if (context.mounted) showSnack(context, 'Could not share: $e', error: true);
+    } finally {
+      if (mounted) setState(() => sendingWhatsapp = false);
     }
   }
 
@@ -110,28 +139,45 @@ class _EntryDetailsScreenState extends State<EntryDetailsScreen> {
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-          child: Row(children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: sharing ? null : () => _share(context),
-                icon: sharing
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.share_outlined),
-                label: Text(context.tr('entryDetails.share')),
-                style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Row(children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: sharing ? null : () => _share(context),
+                  icon: sharing
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.share_outlined),
+                  label: Text(context.tr('entryDetails.share')),
+                  style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: deleting ? null : () => _delete(context),
-                icon: const Icon(Icons.delete_outline, color: Colors.red),
-                label: Text(context.tr('entryDetails.delete'), style: const TextStyle(color: Colors.red)),
-                style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.red),
-                    minimumSize: const Size.fromHeight(50)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: sendingWhatsapp ? null : () => _sendViaWhatsapp(context),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF25D366), minimumSize: const Size.fromHeight(50)),
+                  icon: sendingWhatsapp
+                      ? const SizedBox(
+                          width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.chat, color: Colors.white),
+                  label: Text(context.tr('entryDetails.sendViaWhatsapp'), style: const TextStyle(color: Colors.white)),
+                ),
               ),
-            ),
+            ]),
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: deleting ? null : () => _delete(context),
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  label: Text(context.tr('entryDetails.delete'), style: const TextStyle(color: Colors.red)),
+                  style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.red),
+                      minimumSize: const Size.fromHeight(50)),
+                ),
+              ),
+            ]),
           ]),
         ),
       ),

@@ -51,6 +51,7 @@ const Map<String, String> en = {
   'entryDetails.deleteConfirmBody': 'This entry will be removed from the ledger (recoverable from the database).',
   'entryDetails.delete': 'DELETE',
   'entryDetails.share': 'SHARE',
+  'entryDetails.sendViaWhatsapp': 'WHATSAPP',
   'entryDetails.credit': 'Credit',
   'entryDetails.payment': 'Payment',
   'entryDetails.runningBalance': 'Running Balance',

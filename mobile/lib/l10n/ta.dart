@@ -51,6 +51,7 @@ const Map<String, String> ta = {
   'entryDetails.deleteConfirmBody': 'இந்த பதிவு கணக்கிலிருந்து அகற்றப்படும் (தரவுத்தளத்திலிருந்து மீட்டெடுக்கக்கூடியது).',
   'entryDetails.delete': 'நீக்கு',
   'entryDetails.share': 'பகிர்',
+  'entryDetails.sendViaWhatsapp': 'வாட்ஸ்அப்',
   'entryDetails.credit': 'கடன்',
   'entryDetails.payment': 'பணம் செலுத்துதல்',
   'entryDetails.runningBalance': 'நடப்பு இருப்பு',
