@@ -101,12 +101,22 @@ class _CashbookScreenState extends State<CashbookScreen> {
         'amount': double.parse(amount.text),
         if (desc.text.trim().isNotEmpty) 'description': desc.text.trim(),
         'paymentMode': payMode,
-        'entryDate': date.toIso8601String(),
+        // .toUtc() first — a bare local-time string like "2026-07-26T22:47"
+        // has no offset, so the backend (running in UTC) parses it as if it
+        // were already UTC, silently shifting every entry by the device's
+        // UTC offset (5.5h for IST) instead of the instant actually meant.
+        'entryDate': date.toUtc().toIso8601String(),
       };
       if (editing != null) {
         await ApiClient.instance.patch('${app.basePath}/cashbook/${editing.id}', payload);
       } else {
         await ApiClient.instance.post('${app.basePath}/cashbook', payload);
+      }
+      // The list is filtered by payment mode — without this, saving a CASH
+      // entry while viewing e.g. the UPI filter creates it successfully but
+      // it never appears, which just looks like "adding did nothing".
+      if (mode != 'ALL' && mode != payMode) {
+        setState(() => mode = 'ALL');
       }
       _load();
     } catch (e) {

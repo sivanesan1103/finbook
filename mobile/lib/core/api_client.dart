@@ -94,6 +94,13 @@ class ApiClient {
   String? _access;
   String? _refresh;
 
+  /// Set by AppState at startup — called whenever a token refresh fails
+  /// (expired refresh token, or the account it belongs to no longer
+  /// exists) so the UI can drop back to the login screen immediately
+  /// instead of leaving the user stuck on a now-unauthenticated screen
+  /// until they manually restart the app.
+  void Function()? onSessionExpired;
+
   Future<void> loadTokens() async {
     final prefs = await SharedPreferences.getInstance();
     _access = prefs.getString('bk_access');
@@ -216,6 +223,7 @@ class ApiClient {
       await saveTokens(data['accessToken'], data['refreshToken']);
     } else {
       await clearTokens();
+      onSessionExpired?.call();
     }
   }
 

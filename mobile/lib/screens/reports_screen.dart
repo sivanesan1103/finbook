@@ -32,7 +32,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final app = context.read<AppState>();
     try {
       final res = await ApiClient.instance.get(
-          '${app.basePath}/reports/dashboard?from=${from.toIso8601String()}&to=${to.toIso8601String()}');
+          '${app.basePath}/reports/dashboard?from=${from.toUtc().toIso8601String()}&to=${to.toUtc().toIso8601String()}');
       if (mounted) setState(() { data = res['data']; loadFailed = false; });
     } catch (e) {
       if (mounted) {
@@ -202,7 +202,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     icon: Icons.swap_horiz,
                     label: context.tr('reports.downloadTransactionsReport'),
                     onTap: () => downloadAndShare(context,
-                        path: '${app.basePath}/reports/transactions.pdf?from=${from.toIso8601String()}&to=${to.toIso8601String()}',
+                        path: '${app.basePath}/reports/transactions.pdf?from=${from.toUtc().toIso8601String()}&to=${to.toUtc().toIso8601String()}',
                         filename: 'transactions-report.pdf', subject: 'Transactions report'),
                   ),
                   const Divider(height: 1),
@@ -210,7 +210,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     icon: Icons.receipt_long_outlined,
                     label: context.tr('reports.downloadSalesReport'),
                     onTap: () => downloadAndShare(context,
-                        path: '${app.basePath}/reports/sales.pdf?from=${from.toIso8601String()}&to=${to.toIso8601String()}',
+                        path: '${app.basePath}/reports/sales.pdf?from=${from.toUtc().toIso8601String()}&to=${to.toUtc().toIso8601String()}',
                         filename: 'sales-report.pdf', subject: 'Sales report'),
                   ),
                   const Divider(height: 1),
@@ -218,7 +218,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     icon: Icons.account_balance_wallet_outlined,
                     label: context.tr('reports.downloadCashbookReport'),
                     onTap: () => downloadAndShare(context,
-                        path: '${app.basePath}/cashbook/report.pdf?from=${from.toIso8601String()}&to=${to.toIso8601String()}',
+                        path: '${app.basePath}/cashbook/report.pdf?from=${from.toUtc().toIso8601String()}&to=${to.toUtc().toIso8601String()}',
                         filename: 'cashbook-report.pdf', subject: 'Cashbook report'),
                   ),
                 ]),

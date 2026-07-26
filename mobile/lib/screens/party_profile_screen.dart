@@ -37,7 +37,7 @@ class _PartyProfileScreenState extends State<PartyProfileScreen> {
       final app = context.read<AppState>();
       final created = await ApiClient.instance.post('${app.basePath}/reminders', {
         'partyId': party.id,
-        'dueDate': DateTime.now().toIso8601String(),
+        'dueDate': DateTime.now().toUtc().toIso8601String(),
       });
       final reminderId = created['data']['id'];
       final sent = await ApiClient.instance.post('${app.basePath}/reminders/$reminderId/send');

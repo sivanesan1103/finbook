@@ -33,8 +33,8 @@ class _PartyReportScreenState extends State<PartyReportScreen> {
   Future<void> _load() async {
     final app = context.read<AppState>();
     final params = <String>[];
-    if (from != null) params.add('from=${from!.toIso8601String()}');
-    if (to != null) params.add('to=${to!.toIso8601String()}');
+    if (from != null) params.add('from=${from!.toUtc().toIso8601String()}');
+    if (to != null) params.add('to=${to!.toUtc().toIso8601String()}');
     if (filter != 'ALL') params.add('type=$filter');
     if (searchCtrl.text.isNotEmpty) params.add('search=${Uri.encodeComponent(searchCtrl.text)}');
     final q = params.isEmpty ? '' : '?${params.join('&')}';

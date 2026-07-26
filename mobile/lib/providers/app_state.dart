@@ -12,6 +12,7 @@ class AppState extends ChangeNotifier {
   bool booting = true;
 
   Future<void> boot() async {
+    _api.onSessionExpired = logout;
     await _api.loadTokens();
     if (_api.hasSession) {
       try {

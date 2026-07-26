@@ -41,7 +41,10 @@ class _AddEntryScreenState extends State<AddEntryScreen> {
           'amount': double.parse(amount.text),
           if (details.text.trim().isNotEmpty) 'description': details.text.trim(),
           'paymentMode': paymentMode,
-          'entryDate': entryDate.toIso8601String(),
+          // .toUtc() first, same reasoning as cashbook_screen.dart — a bare
+          // local-time string gets misread as UTC server-side, shifting the
+          // recorded time by the device's UTC offset (5.5h for IST).
+          'entryDate': entryDate.toUtc().toIso8601String(),
         },
       );
       if (mounted) Navigator.pop(context, true);
