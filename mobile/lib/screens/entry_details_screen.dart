@@ -54,12 +54,12 @@ class _EntryDetailsScreenState extends State<EntryDetailsScreen> {
   // lands on WhatsApp's own chat picker when WhatsApp is chosen — that's a
   // platform limitation, not something fixable here. Use "Send via
   // WhatsApp" instead for a direct-to-chat share (text only, no image).
+  // Image only, no caption/link — kept intentionally so the shared media
+  // is just the card screenshot.
   Future<void> _share(BuildContext context) async {
     if (sharing) return;
     setState(() => sharing = true);
     try {
-      final text = await _composeText(context);
-      if (!context.mounted) return;
       final boundary = _cardKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
       final image = await boundary.toImage(pixelRatio: 3);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -68,7 +68,7 @@ class _EntryDetailsScreenState extends State<EntryDetailsScreen> {
       final file = File('${dir.path}/entry_${entry.id}.png');
       await file.writeAsBytes(bytes, flush: true);
       if (!context.mounted) return;
-      await Share.shareXFiles([XFile(file.path)], text: text);
+      await Share.shareXFiles([XFile(file.path)]);
     } catch (e) {
       if (context.mounted) showSnack(context, 'Could not share: $e', error: true);
     } finally {
