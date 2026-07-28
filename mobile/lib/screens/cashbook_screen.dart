@@ -101,11 +101,16 @@ class _CashbookScreenState extends State<CashbookScreen> {
         'amount': double.parse(amount.text),
         if (desc.text.trim().isNotEmpty) 'description': desc.text.trim(),
         'paymentMode': payMode,
+        // When editing, keep the entry's original timestamp — the sheet has
+        // no date/time field of its own, so falling back to the browsed
+        // `date` here would silently overwrite the entry's real time (or
+        // even its day) with whatever's currently being viewed. Only new
+        // entries should take the browsed date.
         // .toUtc() first — a bare local-time string like "2026-07-26T22:47"
         // has no offset, so the backend (running in UTC) parses it as if it
         // were already UTC, silently shifting every entry by the device's
         // UTC offset (5.5h for IST) instead of the instant actually meant.
-        'entryDate': date.toUtc().toIso8601String(),
+        'entryDate': (editing?.entryDate ?? date).toUtc().toIso8601String(),
       };
       if (editing != null) {
         await ApiClient.instance.patch('${app.basePath}/cashbook/${editing.id}', payload);
