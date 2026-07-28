@@ -14,6 +14,7 @@ import '../l10n/translations.dart';
 import '../models/models.dart';
 import '../providers/app_state.dart';
 import '../widgets/common.dart';
+import 'add_entry_screen.dart';
 
 class EntryDetailsScreen extends StatefulWidget {
   final Party party;
@@ -95,6 +96,18 @@ class _EntryDetailsScreenState extends State<EntryDetailsScreen> {
     } finally {
       if (mounted) setState(() => sendingWhatsapp = false);
     }
+  }
+
+  Future<void> _edit(BuildContext context) async {
+    final saved = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => AddEntryScreen(party: party, type: entry.type, entry: entry)),
+    );
+    // Editing can change the amount/date, which shifts every running balance
+    // after it — simplest correct fix is to pop back to the ledger (like
+    // delete already does) so it reloads with fresh totals, rather than
+    // patching this screen's now-stale entry in place.
+    if (saved == true && context.mounted) Navigator.pop(context, true);
   }
 
   Future<void> _delete(BuildContext context) async {
@@ -201,6 +214,19 @@ class _EntryDetailsScreenState extends State<EntryDetailsScreen> {
               title: Text(context.tr('entryDetails.runningBalance')),
               trailing: Text(inr(entry.runningBalance),
                   style: const TextStyle(color: AppColors.gave, fontSize: 16, fontWeight: FontWeight.w800)),
+            ),
+            const Divider(height: 1),
+            InkWell(
+              onTap: () => _edit(context),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  const Icon(Icons.edit_outlined, size: 18, color: AppColors.primary),
+                  const SizedBox(width: 8),
+                  Text(context.tr('entryDetails.editEntry'),
+                      style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                ]),
+              ),
             ),
             if (entry.description != null && entry.description!.isNotEmpty) ...[
               const Divider(height: 1),

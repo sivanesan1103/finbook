@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { api, apiMessage, isForbidden } from '../api/client';
-import type { Party, PartyType, LedgerResponse, TxType } from '../types';
+import type { Party, PartyType, LedgerResponse, Transaction, TxType } from '../types';
 import { Avatar, EmptyState, LockedState, Modal, Money, MODE_LABEL_KEYS, PAYMENT_MODES, Spinner, fmtDateTime, timeAgo, useConfirm, useToast } from '../components/ui';
 import { openWhatsApp } from '../share';
 
@@ -36,6 +36,7 @@ export default function Parties({ type }: { type: PartyType }) {
   const [form, setForm] = useState({ ...emptyParty, type });
   const [entryType, setEntryType] = useState<TxType | null>(null);
   const [entry, setEntry] = useState({ amount: '', description: '', paymentMode: 'CASH' });
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
 
   const base = `/businesses/${business?.id}`;
   const isCustomer = type === 'CUSTOMER';
@@ -92,16 +93,28 @@ export default function Parties({ type }: { type: PartyType }) {
     if (!selected || !entryType || submitting) return;
     setSubmitting(true);
     try {
-      await api.post(`${base}/parties/${selected.id}/transactions`, {
+      const body = {
         type: entryType,
         amount: Number(entry.amount),
         description: entry.description || undefined,
         paymentMode: entry.paymentMode,
-      });
+      };
+      if (editingTx) {
+        await api.patch(`${base}/transactions/${editingTx.id}`, body);
+      } else {
+        await api.post(`${base}/parties/${selected.id}/transactions`, body);
+      }
       setEntryType(null);
+      setEditingTx(null);
       setEntry({ amount: '', description: '', paymentMode: 'CASH' });
       await Promise.all([openLedger(selected), load()]);
     } catch (e) { toast(apiMessage(e), 'error'); } finally { setSubmitting(false); }
+  };
+
+  const editTx = (tx: Transaction) => {
+    setEditingTx(tx);
+    setEntry({ amount: String(tx.amount), description: tx.description || '', paymentMode: tx.paymentMode });
+    setEntryType(tx.type);
   };
 
   const deleteParty = async () => {
@@ -313,6 +326,7 @@ export default function Parties({ type }: { type: PartyType }) {
                               <Money value={tx.runningBalance ?? 0} colored={false} className="text-slate-600" />
                             </td>
                             <td className="text-right whitespace-nowrap">
+                              <button className="text-slate-300 hover:text-brand-500 mr-2" title={t('parties.editEntry')} onClick={() => editTx(tx)}>✏️</button>
                               <button className="text-slate-300 hover:text-emerald-500 mr-2" title={t('parties.shareEntry')} onClick={() => shareTx(tx.id)}>🔗</button>
                               <button className="text-slate-300 hover:text-red-500" title={t('parties.deleteEntry')} onClick={() => deleteTx(tx.id)}>🗑</button>
                             </td>
@@ -371,10 +385,10 @@ export default function Parties({ type }: { type: PartyType }) {
         </div>
       </Modal>
 
-      {/* ── Add entry modal ── */}
+      {/* ── Add/Edit entry modal ── */}
       <Modal open={entryType !== null}
-        title={entryType === 'GAVE' ? t('parties.youGaveToName', { name: selected?.name || '' }) : t('parties.youGotFromName', { name: selected?.name || '' })}
-        onClose={() => setEntryType(null)}>
+        title={editingTx ? t('parties.editEntry') : entryType === 'GAVE' ? t('parties.youGaveToName', { name: selected?.name || '' }) : t('parties.youGotFromName', { name: selected?.name || '' })}
+        onClose={() => { setEntryType(null); setEditingTx(null); setEntry({ amount: '', description: '', paymentMode: 'CASH' }); }}>
         <div className="space-y-3">
           <div>
             <label className="label">{t('parties.amountRequired')}</label>
@@ -395,7 +409,7 @@ export default function Parties({ type }: { type: PartyType }) {
           <button
             className={`w-full py-3 rounded-lg text-white font-bold ${entryType === 'GAVE' ? 'bg-red-700 hover:bg-red-800' : 'bg-green-700 hover:bg-green-800'}`}
             onClick={addEntry} disabled={submitting || !entry.amount || Number(entry.amount) <= 0}>
-            {t('parties.saveEntry')}
+            {editingTx ? t('parties.saveChanges') : t('parties.saveEntry')}
           </button>
         </div>
       </Modal>

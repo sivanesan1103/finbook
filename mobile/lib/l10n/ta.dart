@@ -39,14 +39,17 @@ const Map<String, String> ta = {
   // add entry screen
   'addEntry.youGaveTo': '{name}-க்கு நீங்கள் ₹ கொடுத்தது',
   'addEntry.youGotFrom': '{name}-இடமிருந்து நீங்கள் ₹ பெற்றது',
+  'addEntry.editTitle': 'பதிவைத் திருத்து',
   'addEntry.saving': 'சேமிக்கிறது…',
   'addEntry.save': 'சேமி',
+  'addEntry.saveChanges': 'மாற்றங்களைச் சேமி',
   'addEntry.enterAmount': 'தொகையை உள்ளிடவும்',
   'addEntry.enterDetails': 'விவரங்களை உள்ளிடவும் (பொருட்கள், பில் எண்…)',
   'addEntry.paymentMode': 'பணம் செலுத்தும் முறை',
 
   // entry details screen
   'entryDetails.title': 'பதிவு விவரங்கள்',
+  'entryDetails.editEntry': 'பதிவைத் திருத்து',
   'entryDetails.deleteConfirmTitle': 'பதிவை நீக்கவா?',
   'entryDetails.deleteConfirmBody': 'இந்த பதிவு கணக்கிலிருந்து அகற்றப்படும் (தரவுத்தளத்திலிருந்து மீட்டெடுக்கக்கூடியது).',
   'entryDetails.delete': 'நீக்கு',

@@ -39,14 +39,17 @@ const Map<String, String> en = {
   // add entry screen
   'addEntry.youGaveTo': 'You gave ₹ to {name}',
   'addEntry.youGotFrom': 'You got ₹ from {name}',
+  'addEntry.editTitle': 'Edit Entry',
   'addEntry.saving': 'SAVING…',
   'addEntry.save': 'SAVE',
+  'addEntry.saveChanges': 'SAVE CHANGES',
   'addEntry.enterAmount': 'Enter amount',
   'addEntry.enterDetails': 'Enter details (items, bill number…)',
   'addEntry.paymentMode': 'Payment mode',
 
   // entry details screen
   'entryDetails.title': 'Entry Details',
+  'entryDetails.editEntry': 'Edit Entry',
   'entryDetails.deleteConfirmTitle': 'Delete entry?',
   'entryDetails.deleteConfirmBody': 'This entry will be removed from the ledger (recoverable from the database).',
   'entryDetails.delete': 'DELETE',
