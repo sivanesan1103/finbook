@@ -38,6 +38,17 @@ ThemeData buildTheme() {
         textStyle: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: 1),
       ),
     ),
+    // Tamil nav labels are noticeably longer than English, so the default
+    // NavigationBar label size made them wrap to two lines and clip
+    // ("செலவுக / ள்"). A smaller label style plus a taller bar keeps every
+    // label on one readable line across phone widths; labels stay always-on.
+    navigationBarTheme: NavigationBarThemeData(
+      height: 70,
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      labelTextStyle: const WidgetStatePropertyAll(
+        TextStyle(fontSize: 11, fontWeight: FontWeight.w600, height: 1.1),
+      ),
+    ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: Colors.white,

@@ -158,20 +158,27 @@ class _BillsTabState extends State<BillsTab> {
               Container(
                 color: Colors.white,
                 padding: const EdgeInsets.all(14),
-                child: Row(children: [
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Expanded(child: Column(children: [
-                    Text(context.tr('bills.billed'), style: const TextStyle(color: Colors.black54, fontSize: 12)),
-                    Text(inr(billed), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                    Text(context.tr('bills.billed'), textAlign: TextAlign.center, maxLines: 2,
+                        style: const TextStyle(color: Colors.black54, fontSize: 12)),
+                    const SizedBox(height: 2),
+                    FittedBox(fit: BoxFit.scaleDown, child: Text(inr(billed),
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16))),
                   ])),
                   Expanded(child: Column(children: [
-                    Text(context.tr('bills.collected'), style: const TextStyle(color: Colors.black54, fontSize: 12)),
-                    Text(inr(collected),
-                        style: const TextStyle(color: AppColors.got, fontWeight: FontWeight.w800, fontSize: 16)),
+                    Text(context.tr('bills.collected'), textAlign: TextAlign.center, maxLines: 2,
+                        style: const TextStyle(color: Colors.black54, fontSize: 12)),
+                    const SizedBox(height: 2),
+                    FittedBox(fit: BoxFit.scaleDown, child: Text(inr(collected),
+                        style: const TextStyle(color: AppColors.got, fontWeight: FontWeight.w800, fontSize: 16))),
                   ])),
                   Expanded(child: Column(children: [
-                    Text(context.tr('bills.due'), style: const TextStyle(color: Colors.black54, fontSize: 12)),
-                    Text(inr(billed - collected),
-                        style: const TextStyle(color: AppColors.gave, fontWeight: FontWeight.w800, fontSize: 16)),
+                    Text(context.tr('bills.due'), textAlign: TextAlign.center, maxLines: 2,
+                        style: const TextStyle(color: Colors.black54, fontSize: 12)),
+                    const SizedBox(height: 2),
+                    FittedBox(fit: BoxFit.scaleDown, child: Text(inr(billed - collected),
+                        style: const TextStyle(color: AppColors.gave, fontWeight: FontWeight.w800, fontSize: 16))),
                   ])),
                 ]),
               ),

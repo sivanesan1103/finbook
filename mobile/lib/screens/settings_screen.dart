@@ -187,7 +187,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(title: Text(context.tr('settings.title'))),
-      body: ListView(padding: const EdgeInsets.only(bottom: 24), children: [
+      // Include the device's bottom inset so the last card (language toggle)
+      // isn't clipped by the gesture bar on tall/gesture-nav phones.
+      body: ListView(padding: EdgeInsets.only(bottom: 24 + MediaQuery.of(context).padding.bottom), children: [
         _card(context.tr('settings.bookSettingsTitle'), [
           _field(name, context.tr('settings.businessName')),
           _field(phone, context.tr('settings.phone'), type: TextInputType.phone),

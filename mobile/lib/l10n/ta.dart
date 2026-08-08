@@ -185,8 +185,8 @@ const Map<String, String> ta = {
   // bills tab
   'bills.salesTitle': 'விற்பனை',
   'bills.newBill': 'புதிய பில்',
-  'bills.billed': 'பில் செய்யப்பட்டது',
-  'bills.collected': 'வசூலிக்கப்பட்டது',
+  'bills.billed': 'பில் தொகை',
+  'bills.collected': 'வசூல்',
   'bills.due': 'நிலுவை',
   'bills.noBillsYet': 'இதுவரை பில்கள் இல்லை',
   'bills.noBillsSubtitle': 'உங்கள் வாடிக்கையாளர்களுக்கு GST-தயார் பில்களை உருவாக்கவும்',
@@ -386,7 +386,7 @@ const Map<String, String> ta = {
   // bottom nav
   'nav.parties': 'நபர்கள்',
   'nav.sales': 'விற்பனை',
-  'nav.cashbook': 'ரொக்கப் புத்தகம்',
+  'nav.cashbook': 'ரொக்கம்',
   'nav.expenses': 'செலவுகள்',
   'nav.more': 'மேலும்',
 

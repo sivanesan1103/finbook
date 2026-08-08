@@ -180,8 +180,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: Colors.white,
                             fontSize: 30,
                             fontWeight: FontWeight.w800)),
-                    Text(context.tr('login.subtitle'),
-                        style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Text(context.tr('login.subtitle'),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                    ),
                     const SizedBox(height: 40),
                     Container(
                       width: double.infinity,
@@ -200,9 +204,15 @@ class _LoginScreenState extends State<LoginScreen> {
                               labelColor: AppColors.primary,
                               unselectedLabelColor: Colors.black54,
                               indicatorColor: AppColors.primary,
+                              labelPadding: const EdgeInsets.symmetric(horizontal: 8),
+                              // Each tab takes half the card width; the longer
+                              // Tamil label ("கணக்கை உருவாக்கு") was clipping,
+                              // so scale it down to fit rather than cut it off.
                               tabs: [
-                                Tab(text: context.tr('login.signInTab')),
-                                Tab(text: context.tr('login.createAccountTab'))
+                                Tab(child: FittedBox(fit: BoxFit.scaleDown,
+                                    child: Text(context.tr('login.signInTab')))),
+                                Tab(child: FittedBox(fit: BoxFit.scaleDown,
+                                    child: Text(context.tr('login.createAccountTab')))),
                               ],
                             ),
                             const SizedBox(height: 16),
