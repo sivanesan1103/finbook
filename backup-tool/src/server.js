@@ -12,7 +12,7 @@ import { config } from './config.js';
 import { isBusy } from './db.js';
 import { getLastRun, restoreFromSupabase, runBackupNow, runRestore } from './jobs.js';
 import { startScheduler } from './scheduler.js';
-import { ensureBucket, listSupabaseBackups, supabaseEnabled } from './supabase.js';
+import { ensureBucket, fetchSupabaseObject, listSupabaseBackups, supabaseEnabled } from './supabase.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -74,6 +74,22 @@ app.get('/api/backups/remote', async (_req, res) => {
     res.json({ enabled: true, items: await listSupabaseBackups() });
   } catch (err) {
     res.status(502).json({ ok: false, message: err.message });
+  }
+});
+
+app.get('/api/backups/:name/download-remote', async (req, res) => {
+  const { name } = req.params;
+  if (!isSafeName(name)) return res.status(400).send('Invalid name');
+  try {
+    const upstream = await fetchSupabaseObject(name);
+    res.setHeader('Content-Disposition', `attachment; filename="${name}"`);
+    if (upstream.headers.get('content-length')) {
+      res.setHeader('Content-Length', upstream.headers.get('content-length'));
+    }
+    const { Readable } = await import('node:stream');
+    Readable.fromWeb(upstream.body).pipe(res);
+  } catch (err) {
+    res.status(502).send(err.message);
   }
 });
 

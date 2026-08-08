@@ -34,9 +34,11 @@ export async function ensureBucket() {
   }
 }
 
-/** Streams a local backup file up to Supabase Storage. Upserts so a re-run
- * on the same day (which suffixes the local filename anyway, see jobs.js)
- * never silently overwrites a different backup. */
+/** Streams a local backup file up to Supabase Storage. Never upserts — two
+ * different backups must never silently overwrite each other under the
+ * same name. jobs.js is responsible for picking a name that's actually
+ * free; if Supabase still reports it taken (isDuplicate on the thrown
+ * error), the caller retries once under a fresh, timestamp-suffixed name. */
 export async function uploadToSupabase(localPath, remoteName) {
   const st = await stat(localPath);
   const res = await fetch(objectUrl(remoteName), {
@@ -50,7 +52,10 @@ export async function uploadToSupabase(localPath, remoteName) {
     duplex: 'half',
   });
   if (!res.ok) {
-    throw new Error(`Supabase upload failed: ${res.status} ${await res.text()}`);
+    const body = await res.text();
+    const err = new Error(`Supabase upload failed: ${res.status} ${body}`);
+    err.isDuplicate = res.status === 400 && /KeyAlreadyExists|Duplicate/i.test(body);
+    throw err;
   }
 }
 
@@ -62,6 +67,18 @@ export async function downloadFromSupabase(remoteName, localPath) {
   const { writeFile } = await import('node:fs/promises');
   const buf = Buffer.from(await res.arrayBuffer());
   await writeFile(localPath, buf);
+}
+
+/** Raw fetch Response for streaming straight through to an HTTP client —
+ * used by the download route so a browser can pull a Supabase-only backup
+ * (one whose local copy was already cleaned up) without staging it to disk
+ * on this already disk-constrained box first. */
+export async function fetchSupabaseObject(remoteName) {
+  const res = await fetch(objectUrl(remoteName), { headers: headers() });
+  if (!res.ok) {
+    throw new Error(`Supabase download failed: ${res.status} ${await res.text()}`);
+  }
+  return res;
 }
 
 export async function listSupabaseBackups() {

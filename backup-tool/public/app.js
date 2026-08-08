@@ -78,7 +78,10 @@ async function loadRemoteBackups() {
   const rows = $('#remoteRows');
   rows.innerHTML = items.length
     ? items.map((i) => `<tr><td>${i.name}</td><td>${fmtDate(i.createdAt)}</td><td>${fmtBytes(i.sizeBytes)}</td>
-        <td><div class="actions"><button class="btn-primary" data-remote-restore="${i.name}">Restore</button></div></td></tr>`).join('')
+        <td><div class="actions">
+          <button class="btn-outline" data-remote-download="${i.name}">Download</button>
+          <button class="btn-primary" data-remote-restore="${i.name}">Restore</button>
+        </div></td></tr>`).join('')
     : '<tr><td colspan="4" class="empty">No offsite backups yet.</td></tr>';
 }
 
@@ -172,6 +175,8 @@ document.addEventListener('click', async (e) => {
   const t = e.target;
   if (t.dataset.download) {
     window.location.href = `/api/backups/${encodeURIComponent(t.dataset.download)}/download`;
+  } else if (t.dataset.remoteDownload) {
+    window.location.href = `/api/backups/${encodeURIComponent(t.dataset.remoteDownload)}/download-remote`;
   } else if (t.dataset.restore) {
     confirmRestore(t.dataset.restore);
   } else if (t.dataset.remoteRestore) {
