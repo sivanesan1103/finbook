@@ -29,6 +29,10 @@ services:
       - "127.0.0.1:3306:3306"
     volumes:
       - db_data:/var/lib/mysql
+      # Memory tuning for the t3.micro's 908MB ceiling — see the file for
+      # what/why. Delete this mount (and the file) if you move to a bigger
+      # instance and want MySQL's normal defaults back.
+      - ./mysql-conf.d:/etc/mysql/conf.d:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 5s
@@ -100,11 +104,12 @@ services:
         condition: service_healthy
 
   # ── Cloudflare Tunnel: the only ingress. Create a tunnel in the Cloudflare
-  #    dashboard, route finbook.online → http://web:80, apifinbook... /
-  #    api.finbook.online → http://api:4000, grafana... → http://grafana:3000,
-  #    then paste the tunnel token into .env as CLOUDFLARE_TUNNEL_TOKEN.
-  #    Remove this service if you run cloudflared as a host systemd service
-  #    instead. ──
+  #    dashboard, route finbook.online → http://web:80, api.finbook.online →
+  #    http://api:4000, then paste the tunnel token into .env as
+  #    CLOUDFLARE_TUNNEL_TOKEN. Grafana has no public route — it isn't
+  #    reachable through the tunnel at all; it's viewed locally over
+  #    Tailscale (see the loki service below). Remove this service if you
+  #    run cloudflared as a host systemd service instead. ──
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: finbook-cloudflared
@@ -114,17 +119,35 @@ services:
       - web
       - api
 
+  # Bound to the box's Tailscale IP only (not 127.0.0.1, not 0.0.0.0) so it's
+  # reachable from Grafana running on a dev machine over the tailnet, but
+  # never from the public internet regardless of the AWS security group.
+  # Grafana itself doesn't run on this box — see DEPLOY-AWS.md step 8 for
+  # running it on the operator's own machine instead. Rationale: t3.micro
+  # (908MB RAM) is already tight
+  # running the app + Loki + Promtail; Grafana was the single heaviest
+  # optional piece, so it moved off-box entirely.
   loki:
     image: grafana/loki:2.9.8
     container_name: finbook-loki
     restart: unless-stopped
     command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "${TAILSCALE_IP}:3100:3100"
     volumes:
       - ./observability/loki-config.yml:/etc/loki/local-config.yaml:ro
       - loki_data:/loki
 
+  # NOTE: must stay >= 3.0 — 2.9.x's bundled Docker client only speaks API
+  # 1.42 and silently fails to discover any containers ("client version 1.42
+  # is too old") against modern Docker daemons (this box negotiates a
+  # minimum of 1.44), which means container log scraping never actually
+  # worked with 2.9.x. Setting DOCKER_API_VERSION as an env var does NOT fix
+  # this on 2.9.x — the docker_sd discovery code ignores it. 3.1.0's client
+  # negotiates correctly out of the box. Loki's push API is stable across
+  # this version gap, so loki itself doesn't need to move in lockstep.
   promtail:
-    image: grafana/promtail:2.9.8
+    image: grafana/promtail:3.1.0
     container_name: finbook-promtail
     restart: unless-stopped
     user: "0:0"
@@ -138,28 +161,8 @@ services:
     depends_on:
       - loki
 
-  grafana:
-    image: grafana/grafana:10.4.3
-    container_name: finbook-grafana
-    restart: unless-stopped
-    environment:
-      GF_SECURITY_ADMIN_USER: ${GF_SECURITY_ADMIN_USER}
-      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD}
-      GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_AUTH_ANONYMOUS_ENABLED: "false"
-      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL}
-    ports:
-      - "127.0.0.1:3000:3000"
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
-    depends_on:
-      - loki
-
 volumes:
   db_data:
   api_uploads:
   loki_data:
-  grafana_data:
   promtail_positions:

@@ -1,0 +1,13 @@
+[mysqld]
+# Tuned for a memory-constrained host (t3.micro, 908MB total). Trades some
+# throughput/perf-visibility for actually fitting alongside the rest of the
+# stack. Stock MySQL 8.4 defaults (128MB buffer pool + performance_schema on)
+# used ~422MB RSS on this box — over 46% of total RAM for one container.
+# Revisit/remove this file if the instance is ever upgraded.
+performance_schema = OFF
+innodb_buffer_pool_size = 48M
+innodb_log_buffer_size = 4M
+max_connections = 30
+table_open_cache = 64
+thread_cache_size = 4
+key_buffer_size = 8M

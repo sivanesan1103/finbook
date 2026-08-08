@@ -40,6 +40,7 @@ cd "$DEPLOY_PATH"
 # Use the production compose as the box's compose file:
 cp deploy/docker-compose.prod.yml docker-compose.yml
 cp deploy/.env.production.example .env
+cp -r deploy/mysql-conf.d mysql-conf.d
 mkdir -p backups
 ```
 > The clone provides `observability/`, `backend/`, `web/`, `backup-tool/`.
@@ -68,9 +69,10 @@ In the Cloudflare dashboard (Zero Trust → Networks → Tunnels):
    |---|---|
    | `finbook.online` | `http://web:80` |
    | `api.finbook.online` | `http://api:4000` |
-   | `grafana.finbook.online` | `http://grafana:3000` |
 3. Cloudflare auto-creates the DNS records for the tunnel. Confirm
-   `PUBLIC_WEB_URL` / `CORS_ORIGINS` / `GRAFANA_ROOT_URL` in `.env` match.
+   `PUBLIC_WEB_URL` / `CORS_ORIGINS` in `.env` match.
+
+   Grafana has **no** tunnel route — it isn't public at all. See step 8.
 
 > The `cloudflared` service in the compose runs the tunnel from the token —
 > nothing else needs a public port.
@@ -131,6 +133,56 @@ Already covered, listed here so it's auditable:
 
 Optional real-world test: `sudo reboot`, wait ~1 min, then confirm
 `https://finbook.online` loads with no manual intervention.
+
+## 8. Viewing logs — Grafana runs on your Mac, not the box
+
+The production box is a `t3.micro` (908MB RAM total) — too tight to also run
+Grafana alongside db+api+web+backup-tool+loki+promtail. Grafana instead runs
+**locally**, wherever you're doing ops from, and queries Loki on the box
+remotely over Tailscale (Loki's port is bound to `${TAILSCALE_IP}` only —
+unreachable from the public internet regardless of the AWS security group).
+
+```bash
+mkdir -p ~/.finbook-grafana/provisioning/datasources ~/.finbook-grafana/data
+cat > ~/.finbook-grafana/provisioning/datasources/loki.yml <<'EOF'
+apiVersion: 1
+datasources:
+  - name: Loki (FinBook AWS)
+    type: loki
+    access: proxy
+    url: http://100.99.22.48:3100   # the box's Tailscale IP
+    isDefault: true
+    editable: true
+EOF
+cat > ~/.finbook-grafana/docker-compose.yml <<'EOF'
+name: finbook-grafana-local
+services:
+  grafana:
+    image: grafana/grafana:10.4.3
+    container_name: finbook-grafana-local
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "127.0.0.1:3001:3000"   # 3000 was already taken locally; adjust if free
+    volumes:
+      - ./data:/var/lib/grafana
+      - ./provisioning:/etc/grafana/provisioning:ro
+EOF
+cd ~/.finbook-grafana && docker compose up -d
+```
+Open `http://localhost:3001` (default admin/admin, change it). Your Mac
+needs Tailscale running and joined to the same tailnet as the box — no other
+setup needed, the datasource is pre-provisioned.
+
+> **Promtail must be `>= 3.0`.** Version `2.9.x`'s bundled Docker client only
+> speaks API 1.42 and silently fails to discover any containers against a
+> modern Docker daemon ("client version 1.42 is too old") — container logs
+> never actually reach Loki with 2.9.x, only host journal/syslog does.
+> Setting `DOCKER_API_VERSION` as an env var does **not** fix this on 2.9.x;
+> the fix is the image version (already `3.1.0` in the compose file).
 
 ## Cutover checklist (Pi → AWS)
 - [ ] Box up on Tailscale as 100.99.22.48, Docker installed + enabled on boot
