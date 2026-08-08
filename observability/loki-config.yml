@@ -35,6 +35,14 @@ limits_config:
   # state, so a generous bump here is low-risk.
   ingestion_rate_mb: 16
   ingestion_burst_size_mb: 32
+  # Small box (t3.micro) means query processing is slow enough that a
+  # dashboard's handful of panels can queue up faster than they drain on
+  # the stock default (100 outstanding) -- bumped as a safety margin, not
+  # because we expect heavy real concurrency.
+  max_query_parallelism: 16
+
+frontend:
+  max_outstanding_per_tenant: 400
 
 compactor:
   working_directory: /loki/compactor

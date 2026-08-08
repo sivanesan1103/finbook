@@ -25,7 +25,7 @@ class ApiClient {
   /// flutter run --dart-define=API_URL=http://localhost:4000 (iOS simulator)
   static const baseUrl = String.fromEnvironment(
     'API_URL',
-    defaultValue: 'https://apifinbook.sivaprj.online',
+    defaultValue: 'https://api.finbook.online',
   );
 
   /// Some mobile networks fail to resolve [baseUrl]'s domain via system DNS

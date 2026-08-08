@@ -177,6 +177,55 @@ Open `http://localhost:3001` (default admin/admin, change it). Your Mac
 needs Tailscale running and joined to the same tailnet as the box — no other
 setup needed, the datasource is pre-provisioned.
 
+A pre-built dashboard ("FinBook — Production Ops") is provisioned automatically
+from `~/.finbook-grafana/provisioning/dashboards/json/finbook-ops.json` —
+log volume, HTTP status codes, auth events (login/failed-login/register),
+error/crash panels, and Linux system metrics (see below). It's a plain JSON
+file, so version it yourself (e.g. a personal dotfiles repo) if you want it
+backed up — it isn't part of this git repo since it lives on your own machine.
+
+### System metrics (CPU/mem/disk/network)
+
+`node-exporter` runs **on the box** (tiny, ~5-15MB, already in the compose
+file, bound to `${TAILSCALE_IP}:9100` only) but Prometheus — the heavier
+piece that actually stores the time series — runs locally next to Grafana,
+same reasoning as moving Grafana off-box:
+
+```bash
+cat > ~/.finbook-grafana/prometheus.yml <<'EOF'
+global:
+  scrape_interval: 30s
+scrape_configs:
+  - job_name: finbook-aws-node
+    static_configs:
+      - targets: ['100.99.22.48:9100']
+        labels:
+          instance: finbook-aws
+EOF
+mkdir -p ~/.finbook-grafana/prom-data
+cat > ~/.finbook-grafana/provisioning/datasources/prometheus.yml <<'EOF'
+apiVersion: 1
+datasources:
+  - name: Prometheus (FinBook AWS node)
+    uid: prom-aws
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    editable: true
+EOF
+```
+Add a `prometheus` service to `~/.finbook-grafana/docker-compose.yml`
+(image `prom/prometheus:v2.54.1`, mount `./prometheus.yml` and `./prom-data`,
+`127.0.0.1:9090:9090`) and add `depends_on: [prometheus]` to the `grafana`
+service, then `docker compose up -d`.
+
+> `node-exporter` uses `network_mode: host` (needed for `pid: host` +
+> host-rootfs metrics), which means Docker's normal `ports:`/IP-binding
+> doesn't apply — it binds directly to a host interface. The compose file
+> passes `--web.listen-address=${TAILSCALE_IP}:9100` explicitly so it's
+> still Tailscale-only, same security posture as Loki, just enforced a
+> different way.
+
 > **Promtail must be `>= 3.0`.** Version `2.9.x`'s bundled Docker client only
 > speaks API 1.42 and silently fails to discover any containers against a
 > modern Docker daemon ("client version 1.42 is too old") — container logs

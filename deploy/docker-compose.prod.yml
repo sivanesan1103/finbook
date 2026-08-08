@@ -119,6 +119,26 @@ services:
       - web
       - api
 
+  # Tiny (~15MB) host-metrics exporter — CPU/mem/disk/network. network_mode
+  # host means it binds directly to a host interface with NO docker port
+  # mapping to control it, so --web.listen-address explicitly restricts it
+  # to the Tailscale IP the same way the ${TAILSCALE_IP}-bound ports do
+  # elsewhere in this file — never the public interface, regardless of the
+  # AWS security group. Scraped remotely by Prometheus on a dev machine;
+  # see DEPLOY-AWS.md step 8.
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: finbook-node-exporter
+    restart: unless-stopped
+    command:
+      - '--path.rootfs=/host'
+      - '--collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/containerd/.+)($$|/)'
+      - '--web.listen-address=${TAILSCALE_IP}:9100'
+    network_mode: host
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+
   # Bound to the box's Tailscale IP only (not 127.0.0.1, not 0.0.0.0) so it's
   # reachable from Grafana running on a dev machine over the tailnet, but
   # never from the public internet regardless of the AWS security group.
