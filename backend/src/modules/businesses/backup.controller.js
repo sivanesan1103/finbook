@@ -50,6 +50,9 @@ export const exportData = asyncHandler(async (req, res) => {
 
   const b = req.business;
   res.setHeader('Content-Disposition', `attachment; filename="finbook-backup-${new Date().toISOString().slice(0, 10)}.json"`);
+  // Do not sign /uploads paths in a backup file — a signed URL would expire
+  // and break re-import. Export raw paths that round-trip.
+  res.locals.skipUrlSigning = true;
   res.json({
     app: 'FinBook',
     version: EXPORT_VERSION,

@@ -13,20 +13,29 @@ const permissionFlags = z.object({
   items: z.boolean().optional(),
   cashbook: z.boolean().optional(),
   expenses: z.boolean().optional(),
+  // `reports` is no longer a standalone access flag — report access is
+  // derived from the data-type permissions (see reports.routes.js). Still
+  // accepted here so older clients that send it don't error.
   reports: z.boolean().optional(),
 }).optional();
 
 router.get('/', ctrl.list);
-// Adding a member sets their password, so it's OWNER-only — PARTNERs can
-// still view/edit permissions/remove (router-level requireRole above), just
-// not mint new credentials.
+// Lets the add-staff UI decide whether to ask for a password: an email that
+// already has an account is added with its existing login (no password),
+// a brand-new email needs one created.
+router.get('/lookup', ctrl.lookup);
+// Adding a member is OWNER-only (it can mint credentials). name/password are
+// required only when the email is NEW — for an existing account they're
+// ignored, since that person already signs in with their own password. That
+// conditional rule is enforced in the controller (validation can't see the
+// DB), so both are optional here.
 router.post('/', requireRole('OWNER'), validate({
   body: z.object({
     email: z.string().email(),
-    name: z.string().min(2).max(80),
+    name: z.string().min(2).max(80).optional(),
     role: z.enum(['PARTNER', 'STAFF']).default('STAFF'),
     permissions: permissionFlags,
-    password: z.string().min(6).max(100),
+    password: z.string().min(6).max(100).optional(),
   }),
 }), ctrl.add);
 router.patch('/:memberId', validate({

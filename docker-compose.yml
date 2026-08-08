@@ -35,8 +35,13 @@ services:
       NODE_ENV: production
       PORT: 4000
       DATABASE_URL: mysql://finbook:finbook_pw@db:3306/finbook
-      JWT_ACCESS_SECRET: change-me-access-secret
-      JWT_REFRESH_SECRET: change-me-refresh-secret
+      # Real random secrets — the API refuses to boot in production with a
+      # placeholder (see backend/src/config/env.js). The production compose at
+      # DEPLOY_PATH must set its OWN distinct values; never reuse these.
+      JWT_ACCESS_SECRET: s82ntcjGYbqURfV6OE1h800ozWNh6is6opz3YJ2rAKC34d4ys6YfXfzrDAHWqFPr
+      JWT_REFRESH_SECRET: 8Qp3erDdVmi_3HZKxlaa5spPAqMsW6TvUrdnpJjsLuFFhNXJDDLWp4bW8K4GLl7m
+      SHARE_TOKEN_SECRET: rGHe4FsDc27w8s0fm8uq04eXH_NW8AXc-09ekqmF8tbPmJ3Vvp_Htfa0yNqV2oNn
+      FILE_URL_SECRET: ZKftiFBxRmMQ0FxphcqAMmwwOZhtiEqD7pa-yQq-pORq_zoIyWV4D93FpCwqavpm
       CORS_ORIGINS: "*"
       # Local-dev-only: seeds the owner@finbook.dev demo login on boot. The
       # production compose file at DEPLOY_PATH omits this entirely — see

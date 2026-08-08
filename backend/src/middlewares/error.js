@@ -12,6 +12,17 @@ export const errorHandler = (err, req, res, _next) => {
   if (err.code === 'P2002') err = ApiError.conflict('A record with that value already exists');
   if (err.code === 'P2025') err = ApiError.notFound('Record not found');
 
+  // Multer upload errors are client mistakes (file too big, wrong field), not
+  // server faults — they were surfacing as a 500 with the generic message.
+  if (err.name === 'MulterError') {
+    const msg = err.code === 'LIMIT_FILE_SIZE'
+      ? `File is too large (max ${env.upload.maxMb} MB)`
+      : err.code === 'LIMIT_UNEXPECTED_FILE'
+        ? 'Unexpected file field'
+        : `Upload failed: ${err.message}`;
+    err = ApiError.badRequest(msg);
+  }
+
   const status = err.status || 500;
   if (status >= 500) {
     logger.error(err.message, { type: 'server_error', stack: err.stack, path: req.originalUrl, ip: req.ip });

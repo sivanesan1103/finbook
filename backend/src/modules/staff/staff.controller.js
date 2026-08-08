@@ -16,10 +16,28 @@ export const list = asyncHandler(async (req, res) => {
 });
 
 /**
- * Adds staff/partner by email (owner-only — enforced at the route). Name and
- * password are required, so this always sets sign-in credentials directly —
- * it only takes effect for a brand-new or still-passwordless account, an
- * existing member's real password is never touched here.
+ * Tells the add-staff UI whether an email already has an account, so it can
+ * skip the name/password fields for an existing user (who signs in with the
+ * password they already have) and only ask for them when creating a new one.
+ */
+export const lookup = asyncHandler(async (req, res) => {
+  const email = String(req.query.email || '').trim().toLowerCase();
+  if (!/^\S+@\S+\.\S+$/.test(email)) throw ApiError.badRequest('Valid email required');
+  const user = await prisma.user.findFirst({
+    where: { email, deletedAt: null },
+    select: { name: true, avatarUrl: true },
+  });
+  ok(res, { exists: !!user, name: user?.name ?? null, avatarUrl: user?.avatarUrl ?? null });
+});
+
+/**
+ * Adds staff/partner by email (owner-only — enforced at the route).
+ *
+ * - Existing account → just added to the business; they sign in with the
+ *   password they already have, so name/password in the request are ignored.
+ * - New email → a login is created, which requires a name AND a password.
+ *   A member is never created without a way to sign in, so we reject rather
+ *   than mint a passwordless placeholder account.
  */
 export const add = asyncHandler(async (req, res) => {
   const { email, name, role, permissions, password } = req.body;
@@ -27,17 +45,16 @@ export const add = asyncHandler(async (req, res) => {
   let user = await prisma.user.findFirst({ where: { email, deletedAt: null } });
   let passwordSet = false;
   if (!user) {
+    if (!name || name.trim().length < 2) throw ApiError.badRequest('Name is required for a new user');
+    if (!password || password.length < 6) throw ApiError.badRequest('Password (min 6 characters) is required for a new user');
     user = await prisma.user.create({
       data: {
-        name: name || email.split('@')[0],
+        name: name.trim(),
         email,
         role: 'STAFF',
-        passwordHash: password ? await bcrypt.hash(password, 10) : undefined,
+        passwordHash: await bcrypt.hash(password, 10),
       },
     });
-    passwordSet = !!password;
-  } else if (password && !user.passwordHash) {
-    user = await prisma.user.update({ where: { id: user.id }, data: { passwordHash: await bcrypt.hash(password, 10) } });
     passwordSet = true;
   }
 

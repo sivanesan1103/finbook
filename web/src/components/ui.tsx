@@ -19,6 +19,19 @@ export const inr = (n: number | string) =>
   `₹${Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 
 /**
+ * Neutralises spreadsheet formula injection for a value that will be written
+ * to an .xlsx/.csv cell. A cell beginning with = + - @ (or tab/CR) is
+ * interpreted as a formula by Excel/Sheets, so a party named
+ * `=cmd|'/c calc'!A1` would execute on whoever opens the export. Prefixing a
+ * single quote forces it to be treated as literal text. Non-strings pass
+ * through untouched so numbers stay numeric in the sheet.
+ */
+export const csvSafe = <T,>(v: T): T | string => {
+  if (typeof v !== 'string') return v;
+  return /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
+};
+
+/**
  * Indian-format money.
  *
  * Colour convention across the app (the `give`/`get` token names are

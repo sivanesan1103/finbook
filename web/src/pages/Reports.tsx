@@ -5,7 +5,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { api, apiMessage, isForbidden } from '../api/client';
 import type { Transaction, CashbookEntry, PartyType } from '../types';
 import type { TranslationKey } from '../i18n';
-import { EmptyState, LockedState, Money, Spinner, StatusBadge, STATUS_LABEL_KEYS, fmtDate, useToast } from '../components/ui';
+import { EmptyState, LockedState, Money, Spinner, StatusBadge, STATUS_LABEL_KEYS, csvSafe, fmtDate, useToast } from '../components/ui';
 
 type ReportKind = 'transactions' | 'cashbook' | 'sales';
 type SalesRow = {
@@ -174,9 +174,9 @@ export default function Reports() {
       if (!txData) return;
       const rows = txData.entries.map((t) => ({
         Date: fmtDate(t.entryDate),
-        Party: t.party?.name || '',
-        Details: t.description || '',
-        'Payment Mode': t.paymentMode as string,
+        Party: csvSafe(t.party?.name || ''),
+        Details: csvSafe(t.description || ''),
+        'Payment Mode': csvSafe(t.paymentMode as string),
         'You Gave': t.type === 'GAVE' ? Number(t.amount) : '',
         'You Got': t.type === 'GOT' ? Number(t.amount) : '',
       }));
@@ -187,8 +187,8 @@ export default function Reports() {
       if (!cashEntries) return;
       const rows = cashEntries.map((e) => ({
         Date: fmtDate(e.entryDate),
-        Details: e.description || '',
-        'Payment Mode': e.paymentMode as string,
+        Details: csvSafe(e.description || ''),
+        'Payment Mode': csvSafe(e.paymentMode as string),
         'Cash Out': e.direction === 'OUT' ? Number(e.amount) : '',
         'Cash In': e.direction === 'IN' ? Number(e.amount) : '',
       }));
@@ -199,9 +199,9 @@ export default function Reports() {
       if (!salesData) return;
       const rows = salesData.entries.map((s) => ({
         Date: fmtDate(s.date),
-        Invoice: s.invoiceNo,
-        Party: s.partyName,
-        Status: s.status,
+        Invoice: csvSafe(s.invoiceNo),
+        Party: csvSafe(s.partyName),
+        Status: csvSafe(s.status),
         Total: s.total,
         Paid: s.paid,
         Balance: s.balance,

@@ -9,6 +9,7 @@ import YAML from 'yamljs';
 import env from './config/env.js';
 import logger from './config/logger.js';
 import { notFoundHandler, errorHandler } from './middlewares/error.js';
+import { signUploadsDeep, verifyUploadSig } from './utils/signedUrl.js';
 
 import authRoutes from './modules/auth/auth.routes.js';
 import businessRoutes from './modules/businesses/businesses.routes.js';
@@ -45,6 +46,18 @@ app.use(cors({
 app.use(express.json({ limit: '25mb' })); // large enough for backup-file imports
 app.use(express.urlencoded({ extended: true }));
 
+// Sign every "/uploads/..." path in outgoing JSON so the static route below
+// only serves files to callers who received a fresh signed URL from an
+// authenticated response. Wrapping res.json in one place covers every read
+// endpoint and needs no app changes — the apps render whatever URL they get.
+// The backup export opts out (res.locals.skipUrlSigning) so its paths, if any
+// are ever added, round-trip on import instead of expiring.
+app.use((req, res, next) => {
+  const originalJson = res.json.bind(res);
+  res.json = (body) => (res.locals.skipUrlSigning ? originalJson(body) : originalJson(signUploadsDeep(body)));
+  next();
+});
+
 // Structured access log (method/path/status/ms/ip/userId) for every request,
 // feeding the same Loki/Grafana pipeline as activity + client-error logs —
 // this is what makes "who accessed from which IP" queryable on the dashboard.
@@ -64,8 +77,28 @@ app.use((req, res, next) => {
   next();
 });
 
-// Static uploads (bill photos, avatars, logos)
-app.use('/uploads', express.static(path.resolve(env.upload.dir)));
+// Static uploads (bill photos, avatars, logos) — gated behind a signed URL.
+// The signature + expiry must match one the API minted in an authenticated
+// response (see signedUrl.js); otherwise the file is not served. dotfiles are
+// denied and Content-Disposition forces download so a crafted file can never
+// render inline in the browser.
+app.get('/uploads/:name', (req, res, next) => {
+  const { name } = req.params;
+  if (name.includes('..') || name.includes('/')) return res.status(400).json({ success: false, message: 'Bad request' });
+  if (!verifyUploadSig(name, req.query.exp, req.query.sig)) {
+    return res.status(403).json({ success: false, message: 'This file link is invalid or has expired' });
+  }
+  return next();
+});
+app.use('/uploads', express.static(path.resolve(env.upload.dir), {
+  dotfiles: 'deny',
+  index: false,
+  setHeaders: (res) => {
+    res.setHeader('Content-Disposition', 'attachment');
+    res.setHeader('Cache-Control', 'private, max-age=0, no-store');
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+  },
+}));
 
 // Swagger docs
 try {
