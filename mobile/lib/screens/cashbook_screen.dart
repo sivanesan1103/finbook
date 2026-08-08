@@ -244,12 +244,14 @@ class _CashbookScreenState extends State<CashbookScreen> {
           padding: const EdgeInsets.all(14),
           child: Row(children: [
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(context.tr('cashbookScreen.totalBalance'), style: const TextStyle(color: Colors.black54, fontSize: 12)),
-              Text(inr(totalBalance), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+              Text(context.tr('cashbookScreen.totalBalance'), maxLines: 2, style: const TextStyle(color: Colors.black54, fontSize: 12)),
+              FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
+                  child: Text(inr(totalBalance), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800))),
             ])),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(context.tr('cashbookScreen.todaysBalance'), style: const TextStyle(color: Colors.black54, fontSize: 12)),
-              Text(inr(todayBalance), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+              Text(context.tr('cashbookScreen.todaysBalance'), maxLines: 2, style: const TextStyle(color: Colors.black54, fontSize: 12)),
+              FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
+                  child: Text(inr(todayBalance), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800))),
             ])),
           ]),
         ),

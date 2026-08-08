@@ -289,8 +289,10 @@ class _ItemsTabState extends State<ItemsTab> with SingleTickerProviderStateMixin
           unselectedLabelColor: Colors.white60,
           labelStyle: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: 1),
           tabs: [
-            Tab(text: context.tr('itemsTab.productsTab', {'count': products.length})),
-            Tab(text: context.tr('itemsTab.servicesTab', {'count': services.length})),
+            Tab(child: FittedBox(fit: BoxFit.scaleDown,
+                child: Text(context.tr('itemsTab.productsTab', {'count': products.length})))),
+            Tab(child: FittedBox(fit: BoxFit.scaleDown,
+                child: Text(context.tr('itemsTab.servicesTab', {'count': services.length})))),
           ],
         ),
       ),
@@ -308,11 +310,11 @@ class _ItemsTabState extends State<ItemsTab> with SingleTickerProviderStateMixin
           padding: const EdgeInsets.all(14),
           child: Row(children: [
             Expanded(child: Column(children: [
-              Text(context.tr('itemsTab.stockValue'), style: const TextStyle(color: Colors.black54, fontSize: 12)),
-              Text(inr(stockValue), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+              Text(context.tr('itemsTab.stockValue'), textAlign: TextAlign.center, maxLines: 2, style: const TextStyle(color: Colors.black54, fontSize: 12)),
+              FittedBox(fit: BoxFit.scaleDown, child: Text(inr(stockValue), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16))),
             ])),
             Expanded(child: Column(children: [
-              Text(context.tr('itemsTab.lowStock'), style: const TextStyle(color: Colors.black54, fontSize: 12)),
+              Text(context.tr('itemsTab.lowStock'), textAlign: TextAlign.center, maxLines: 2, style: const TextStyle(color: Colors.black54, fontSize: 12)),
               Text('$lowCount', style: TextStyle(
                   fontWeight: FontWeight.w800, fontSize: 16, color: lowCount > 0 ? AppColors.gave : Colors.black87)),
             ])),

@@ -261,7 +261,14 @@ class _PartiesTabState extends State<PartiesTab>
               unselectedLabelColor: Colors.white60,
               labelStyle: const TextStyle(
                   fontWeight: FontWeight.w800, letterSpacing: 1),
-              tabs: [Tab(text: context.tr('partiesTab.customersTab')), Tab(text: context.tr('partiesTab.suppliersTab'))],
+              // Long Tamil labels ("வாடிக்கையாளர்கள்") clipped at narrow
+              // widths / large fonts — scale them down to fit each half.
+              tabs: [
+                Tab(child: FittedBox(fit: BoxFit.scaleDown,
+                    child: Text(context.tr('partiesTab.customersTab')))),
+                Tab(child: FittedBox(fit: BoxFit.scaleDown,
+                    child: Text(context.tr('partiesTab.suppliersTab')))),
+              ],
             ),
             Padding(
               padding: const EdgeInsets.only(top: 10, bottom: 16),

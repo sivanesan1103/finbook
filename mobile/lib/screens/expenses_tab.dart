@@ -269,15 +269,15 @@ class _ExpensesTabState extends State<ExpensesTab> {
                 padding: const EdgeInsets.all(14),
                 child: Row(children: [
                   Expanded(child: Column(children: [
-                    Text(context.tr('expensesTab.total'), style: const TextStyle(color: Colors.black54, fontSize: 12)),
-                    Text(inr(total), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                    Text(context.tr('expensesTab.total'), textAlign: TextAlign.center, maxLines: 2, style: const TextStyle(color: Colors.black54, fontSize: 12)),
+                    FittedBox(fit: BoxFit.scaleDown, child: Text(inr(total), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16))),
                   ])),
                   Expanded(child: Column(children: [
-                    Text(context.tr('expensesTab.thisMonth'), style: const TextStyle(color: Colors.black54, fontSize: 12)),
-                    Text(inr(_thisMonth), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                    Text(context.tr('expensesTab.thisMonth'), textAlign: TextAlign.center, maxLines: 2, style: const TextStyle(color: Colors.black54, fontSize: 12)),
+                    FittedBox(fit: BoxFit.scaleDown, child: Text(inr(_thisMonth), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16))),
                   ])),
                   Expanded(child: Column(children: [
-                    Text(context.tr('expensesTab.entries'), style: const TextStyle(color: Colors.black54, fontSize: 12)),
+                    Text(context.tr('expensesTab.entries'), textAlign: TextAlign.center, maxLines: 2, style: const TextStyle(color: Colors.black54, fontSize: 12)),
                     Text('${rows.length}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
                   ])),
                 ]),
