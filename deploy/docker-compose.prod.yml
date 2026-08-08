@@ -1,0 +1,165 @@
+# ─────────────────────────────────────────────────────────────────────────
+# FinBook — PRODUCTION compose for the AWS server (Tailscale 100.99.22.48).
+#
+# This is the file that lives at DEPLOY_PATH on the server. The GitHub Actions
+# deploy rsyncs web/, backend/, backup-tool/ source onto the box and runs
+# `docker compose build/up` against THIS file — it is never overwritten by the
+# deploy, so all real secrets live here (in the sibling .env), not in git.
+#
+# Every secret is read from .env (see deploy/.env.production.example). Nothing
+# is published to 0.0.0.0: the app is reachable only through the Cloudflare
+# Tunnel (cloudflared below), which dials OUT to Cloudflare — no inbound ports,
+# no security-group holes. App ports are bound to 127.0.0.1 only so the
+# self-hosted runner's health check can still curl them locally.
+# ─────────────────────────────────────────────────────────────────────────
+name: finbook
+
+services:
+  db:
+    image: mysql:8.4
+    container_name: finbook-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    # Localhost only — never expose the database off the box.
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: ./backend
+    container_name: finbook-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      SHARE_TOKEN_SECRET: ${SHARE_TOKEN_SECRET}
+      FILE_URL_SECRET: ${FILE_URL_SECRET}
+      PUBLIC_WEB_URL: ${PUBLIC_WEB_URL}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      # SEED_ON_BOOT is deliberately absent — the demo owner login must never
+      # be seeded in production.
+    ports:
+      - "127.0.0.1:4000:4000"
+    volumes:
+      - api_uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build: ./web
+    container_name: finbook-web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      - api
+
+  # Service name MUST be "backup-tool" — the GitHub Actions deploy runs
+  # `docker compose build/up ... backup-tool`.
+  backup-tool:
+    build: ./backup-tool
+    container_name: finbook-backup
+    restart: unless-stopped
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: ${MYSQL_DATABASE}
+      DB_USER: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      BACKUP_DIR: /backups
+      UPLOADS_DIR: /app/uploads
+      CRON_SCHEDULE: "0 2 * * *"
+      RETENTION_DAYS: "7"
+      TRASH_RETENTION_DAYS: "14"
+      UPLOADS_RETENTION_DAYS: "7"
+      BACKUP_TOOL_USER: ${BACKUP_TOOL_USER}
+      BACKUP_TOOL_PASS: ${BACKUP_TOOL_PASS}
+    ports:
+      - "127.0.0.1:4100:4100"
+    volumes:
+      # Host bind-mount so backups survive `docker compose down -v` and are
+      # easy to copy off the box / sync to cloud storage.
+      - ./backups:/backups
+      - api_uploads:/app/uploads:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ── Cloudflare Tunnel: the only ingress. Create a tunnel in the Cloudflare
+  #    dashboard, route finbook.online → http://web:80, apifinbook... /
+  #    api.finbook.online → http://api:4000, grafana... → http://grafana:3000,
+  #    then paste the tunnel token into .env as CLOUDFLARE_TUNNEL_TOKEN.
+  #    Remove this service if you run cloudflared as a host systemd service
+  #    instead. ──
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: finbook-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - web
+      - api
+
+  loki:
+    image: grafana/loki:2.9.8
+    container_name: finbook-loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./observability/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+
+  promtail:
+    image: grafana/promtail:2.9.8
+    container_name: finbook-promtail
+    restart: unless-stopped
+    user: "0:0"
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./observability/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/log/journal:/var/log/journal:ro
+      - /etc/machine-id:/etc/machine-id:ro
+      - promtail_positions:/positions
+    depends_on:
+      - loki
+
+  grafana:
+    image: grafana/grafana:10.4.3
+    container_name: finbook-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GF_SECURITY_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL}
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - loki
+
+volumes:
+  db_data:
+  api_uploads:
+  loki_data:
+  grafana_data:
+  promtail_positions:
