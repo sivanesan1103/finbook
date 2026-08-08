@@ -73,7 +73,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
   /// module-by-module breakdown.
   Widget _heroCard(double net) {
     final positive = net >= 0;
-    final color = positive ? AppColors.gave : AppColors.got;
+    // Positive net = money owed to you = green; negative = you owe = red.
+    // (Was inverted, matching the same bug fixed on the web and on the
+    // give/get summary card.)
+    final color = positive ? AppColors.got : AppColors.gave;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
@@ -168,8 +171,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
               _sectionTitle(Icons.menu_book_outlined, context.tr('reports.ledger')),
               _table([
-                _tableRow(context.tr('reports.youWillGet'), inr((d['ledger']['youWillGet'] as num).toDouble()), color: AppColors.gave),
-                _tableRow(context.tr('reports.youWillGive'), inr((d['ledger']['youWillGive'] as num).toDouble()), color: AppColors.got, last: true),
+                _tableRow(context.tr('reports.youWillGet'), inr((d['ledger']['youWillGet'] as num).toDouble()), color: AppColors.got),
+                _tableRow(context.tr('reports.youWillGive'), inr((d['ledger']['youWillGive'] as num).toDouble()), color: AppColors.gave, last: true),
               ]),
               _sectionTitle(Icons.account_balance_wallet_outlined, context.tr('reports.cashbook')),
               _table([
