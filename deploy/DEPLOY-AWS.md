@@ -10,6 +10,10 @@ Do steps 0–6 once to stand the box up. After that, every `git push` to `main`
 deploys automatically, and every container survives crashes **and** a full
 server reboot (see step 7).
 
+> Already set up and just need day-to-day info (all keys explained, how to
+> trigger/check backups, current infra map)? See
+> [OPERATIONS.md](./OPERATIONS.md) instead.
+
 ---
 
 ## 0. Prerequisites on the box (Ubuntu)
