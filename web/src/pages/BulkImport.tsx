@@ -130,7 +130,7 @@ export default function BulkImport({ type = 'CUSTOMER' as PartyType }: { type?: 
     <div className="p-6 max-w-6xl">
       <div className="flex items-center gap-3 mb-6">
         <button className="text-2xl text-slate-500 hover:text-slate-800" onClick={() => navigate(-1)} title={t('bulkImport.back')}>←</button>
-        <h1 className="text-2xl font-bold text-slate-800">{t('bulkImport.title')}</h1>
+        <h1 className="text-2xl font-bold text-slate-800">📥 {t('bulkImport.title')}</h1>
       </div>
 
       {/* ── 3 simple steps ── */}

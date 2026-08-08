@@ -12,6 +12,44 @@ body {
   to { transform: translateX(0); }
 }
 
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pop-in {
+  0% { opacity: 0; transform: scale(0.6) rotate(-8deg); }
+  70% { opacity: 1; transform: scale(1.05) rotate(2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(12px, -18px) scale(1.08); }
+}
+
+@keyframes float-slower {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-16px, 14px) scale(1.05); }
+}
+
+@keyframes bar-grow {
+  0%, 100% { transform: scaleY(0.8); }
+  50% { transform: scaleY(1.05); }
+}
+
+@keyframes coin-spin {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-6px) rotate(8deg); }
+}
+
+.animate-fade-in-up { animation: fade-in-up .5s ease-out both; }
+.animate-pop-in { animation: pop-in .6s cubic-bezier(.34,1.56,.64,1) both; }
+.animate-float-slow { animation: float-slow 7s ease-in-out infinite; }
+.animate-float-slower { animation: float-slower 9s ease-in-out infinite; }
+.animate-bar-grow { transform-origin: bottom; animation: bar-grow 2.2s ease-in-out infinite; }
+.animate-coin-spin { animation: coin-spin 3.5s ease-in-out infinite; }
+
 @layer components {
   .btn { @apply inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed; }
   .btn-primary { @apply btn bg-brand-500 text-white hover:bg-brand-600; }

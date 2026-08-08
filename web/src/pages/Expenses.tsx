@@ -319,14 +319,17 @@ export default function Expenses() {
           const detailItems = parseItems(pane.expense.notes);
           return (
             <div>
-              <div className="p-5 border-b border-slate-100">
-                <span className="inline-block px-3 py-1 rounded-lg border border-slate-200 text-sm font-semibold text-slate-600 mb-3">{t('expenses.expenseLabel')}</span>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-bold text-lg text-slate-800">{pane.expense.category}</p>
-                    <p className="text-sm text-slate-500 mt-1">{fmtDate(pane.expense.entryDate)} · {t(MODE_LABEL_KEYS[pane.expense.paymentMode])}</p>
+              <div className="p-5 border-b border-slate-100 bg-gradient-to-br from-brand-50/60 to-white">
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white border border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">{t('expenses.expenseLabel')}</span>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="w-11 h-11 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center text-xl shrink-0">🧾</span>
+                    <div className="min-w-0">
+                      <p className="font-bold text-lg text-slate-800 truncate">{pane.expense.category}</p>
+                      <p className="text-sm text-slate-500 mt-0.5">{fmtDate(pane.expense.entryDate)} · {t(MODE_LABEL_KEYS[pane.expense.paymentMode])}</p>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 shrink-0">
                     <button className="btn border border-link-500 text-link-600 hover:bg-link-50"
                       onClick={() => startEdit(pane.expense)}>{t('expenses.edit')}</button>
                     <button className="btn-danger" onClick={() => remove(pane.expense)}>{t('expenses.delete')}</button>
@@ -335,28 +338,31 @@ export default function Expenses() {
               </div>
 
               <div className="p-5">
-                <div className="rounded-lg border border-slate-200 overflow-hidden">
+                <div className="rounded-xl border border-slate-200 overflow-hidden shadow-sm">
                   <p className="px-4 py-2.5 bg-slate-50 text-xs font-bold tracking-widest text-slate-500 uppercase">{t('invoices.items')}</p>
                   {detailItems.length > 0 ? detailItems.map((it, idx) => (
-                    <div key={idx} className="px-4 py-3 flex justify-between border-t border-slate-100">
-                      <div>
-                        <p className="font-medium text-slate-800">{it.name}</p>
-                        <p className="text-xs text-slate-400">{t('expenses.qtyPrefix', { qty: it.qty })}</p>
+                    <div key={idx} className="px-4 py-3 flex justify-between items-center border-t border-slate-100 hover:bg-slate-50/60 transition">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-brand-400 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="font-medium text-slate-800 truncate">{it.name}</p>
+                          <p className="text-xs text-slate-400">{t('expenses.qtyPrefix', { qty: it.qty })}</p>
+                        </div>
                       </div>
-                      {it.amount != null && <Money value={it.amount} colored={false} className="text-slate-700" />}
+                      {it.amount != null && <Money value={it.amount} colored={false} className="text-slate-700 shrink-0" />}
                     </div>
                   )) : (
                     <p className="px-4 py-3 text-sm text-slate-500 border-t border-slate-100 whitespace-pre-wrap">
                       {pane.expense.notes || t('expenses.noItemDetails')}
                     </p>
                   )}
-                  <div className="px-4 py-3 flex justify-between border-t border-slate-100">
-                    <p className="font-semibold text-slate-700">{t('expenses.netAmount')}</p>
+                  <div className="px-4 py-3 flex justify-between border-t border-dashed border-slate-200 bg-slate-50/50">
+                    <p className="font-semibold text-slate-600">{t('expenses.netAmount')}</p>
                     <Money value={pane.expense.amount} colored={false} className="text-slate-800" />
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center mt-4 px-1">
+                <div className="flex justify-between items-center mt-4 px-4 py-3 rounded-xl bg-brand-50/70 border border-brand-100">
                   <p className="font-bold text-slate-800">{t('invoices.grossTotal')}</p>
                   <Money value={pane.expense.amount} colored={false} className="text-lg text-slate-900" />
                 </div>
@@ -429,6 +435,7 @@ export default function Expenses() {
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
                 <input className="input pl-7" type="number" placeholder={t('expenses.enterAmount')}
                   value={createForm.amountPaid}
+                  onFocus={(e) => e.target.select()}
                   onChange={(e) => setCreateForm({ ...createForm, amountPaid: e.target.value })} />
               </div>
               {gross > 0 && Number(createForm.amountPaid || 0) !== gross && (
@@ -485,7 +492,7 @@ export default function Expenses() {
                   </label>
                   <label className="block text-xs text-slate-500">{t('expenses.price')}
                     <input className="input mt-1" type="number" placeholder={t('expenses.pricePlaceholder')}
-                      value={newItem.price} onChange={(e) => setNewItem({ ...newItem, price: e.target.value })} />
+                      value={newItem.price} onFocus={(e) => e.target.select()} onChange={(e) => setNewItem({ ...newItem, price: e.target.value })} />
                   </label>
                   <div className="flex gap-2 pt-1">
                     <button className="btn border border-link-500 text-link-600 hover:bg-link-50 flex-1 justify-center"
@@ -583,6 +590,7 @@ export default function Expenses() {
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
                   <input className="input pl-7" type="number" value={editForm.amount}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })} />
                 </div>
               </div>

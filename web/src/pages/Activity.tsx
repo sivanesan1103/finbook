@@ -42,7 +42,7 @@ export default function Activity() {
 
   return (
     <div className="p-6 max-w-3xl">
-      <h1 className="text-xl font-bold mb-4">{t('activity.title')}</h1>
+      <h1 className="text-xl font-bold mb-4">🕘 {t('activity.title')}</h1>
       <div className="card">
         {loading ? <Spinner /> : rows.length === 0 ? (
           <EmptyState icon="🕘" title={t('activity.noActivityTitle')} subtitle={t('activity.noActivitySubtitle')} />

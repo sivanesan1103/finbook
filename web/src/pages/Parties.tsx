@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { api, apiMessage, isForbidden } from '../api/client';
 import type { Party, PartyType, LedgerResponse, Transaction, TxType } from '../types';
-import { Avatar, EmptyState, LockedState, Modal, Money, MODE_LABEL_KEYS, PAYMENT_MODES, Spinner, fmtDateTime, timeAgo, useConfirm, useToast } from '../components/ui';
+import { Avatar, EmptyState, LockedState, Modal, Money, MODE_LABEL_KEYS, PAYMENT_MODES, PeopleIllustration, Spinner, fmtDateTime, timeAgo, useConfirm, useToast } from '../components/ui';
 import { openWhatsApp } from '../share';
 
 const emptyParty = {
@@ -195,8 +195,9 @@ export default function Parties({ type }: { type: PartyType }) {
         </div>
 
         <div className="px-5 py-3 flex items-center justify-between gap-3 border-b border-slate-100 text-sm">
-          <div>{t('parties.youllGive')} <Money value={-summary.youWillGive || 0} colored={summary.youWillGive > 0} className="text-give" /></div>
-          <div>{t('parties.youllGet')} <Money value={summary.youWillGet || 0} colored={summary.youWillGet > 0} className="text-get" /></div>
+          {/* You'll Give = you owe = red; You'll Get = owed to you = green (matches Dashboard). */}
+          <div>{t('parties.youllGive')} <Money value={summary.youWillGive || 0} colored={false} className="text-get" /></div>
+          <div>{t('parties.youllGet')} <Money value={summary.youWillGet || 0} colored={false} className="text-give" /></div>
           <button className="btn-outline text-xs whitespace-nowrap" onClick={() => navigate('/reports')}>
             {t('parties.viewReport')}
           </button>
@@ -227,7 +228,7 @@ export default function Parties({ type }: { type: PartyType }) {
               <EmptyState icon="🔍" title={t('parties.noFilterResultsTitle')}
                 subtitle={t('parties.noFilterResultsSubtitle')} />
             ) : (
-              <EmptyState icon="🧑‍🤝‍🧑" title={t('parties.noPartiesYet', { label: labelPlural })}
+              <EmptyState illustration={<PeopleIllustration size={100} />} title={t('parties.noPartiesYet', { label: labelPlural })}
                 subtitle={t('parties.addFirstPartySubtitle')} />
             )
           ) : (
@@ -258,7 +259,7 @@ export default function Parties({ type }: { type: PartyType }) {
       {/* ── Detail / ledger panel ── */}
       <section className="flex-1 flex flex-col bg-slate-50 min-w-0">
         {!selected ? (
-          <EmptyState icon="👥" title={t('parties.noPartySelected', { label: labelSingular })}
+          <EmptyState illustration={<PeopleIllustration />} title={t('parties.noPartySelected', { label: labelSingular })}
             subtitle={t('parties.selectPartySubtitle')} />
         ) : (
           <>
@@ -393,7 +394,7 @@ export default function Parties({ type }: { type: PartyType }) {
           <div>
             <label className="label">{t('parties.amountRequired')}</label>
             <input className="input text-lg font-bold" type="number" min="0" autoFocus value={entry.amount}
-              onChange={(e) => setEntry({ ...entry, amount: e.target.value })} />
+              onFocus={(e) => e.target.select()} onChange={(e) => setEntry({ ...entry, amount: e.target.value })} />
           </div>
           <div>
             <label className="label">{t('parties.details')}</label>

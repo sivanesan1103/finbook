@@ -31,8 +31,12 @@ class MoneyText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Positive balance = owed to you = green; negative = you owe = red.
+    // This was inverted, so a customer who owed you money showed red while
+    // money you owed showed green — the opposite of the ledger rows and of
+    // the web app's dashboard.
     final c = color ??
-        (value > 0 ? AppColors.gave : value < 0 ? AppColors.got : Colors.grey);
+        (value > 0 ? AppColors.got : value < 0 ? AppColors.gave : Colors.grey);
     return Text(inr(value),
         style: TextStyle(color: c, fontSize: size, fontWeight: FontWeight.w800));
   }
@@ -83,9 +87,10 @@ class GiveGetCard extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 14),
           child: Row(children: [
-            _cell(context.tr('common.youWillGive'), give, AppColors.got),
+            // You'll Give = you owe = red; You'll Get = owed to you = green.
+            _cell(context.tr('common.youWillGive'), give, AppColors.gave),
             Container(width: 1, height: 40, color: Colors.grey.shade200),
-            _cell(context.tr('common.youWillGet'), get, AppColors.gave),
+            _cell(context.tr('common.youWillGet'), get, AppColors.got),
           ]),
         ),
         if (onReport != null)

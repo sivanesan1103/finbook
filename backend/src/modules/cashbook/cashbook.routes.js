@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { validate } from '../../middlewares/validate.js';
+import { moneyAmount } from '../../utils/money.js';
 import { requireAuth, requireBusiness, requirePermission } from '../../middlewares/auth.js';
 import * as ctrl from './cashbook.controller.js';
 
@@ -9,7 +10,7 @@ router.use(requireAuth, requireBusiness, requirePermission('cashbook'));
 
 const entryBody = z.object({
   direction: z.enum(['IN', 'OUT']),
-  amount: z.coerce.number().positive().max(99_999_999),
+  amount: moneyAmount,
   paymentMode: z.enum(['CASH', 'ONLINE', 'CHEQUE', 'UPI', 'BANK']).optional(),
   description: z.string().max(500).optional(),
   entryDate: z.coerce.date().optional(),

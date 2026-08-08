@@ -155,12 +155,17 @@ class _PartiesTabState extends State<PartiesTab>
   }
 
   void _chooseBook() {
-    final app = context.read<AppState>();
+    // AppState caches the book list from app start / login, so a book created
+    // on another device (the web app, or a second phone) never showed up here
+    // until the app was restarted. Refetch every time the sheet opens; the
+    // Consumer below rebuilds it when the response lands.
+    context.read<AppState>().loadBusinesses().catchError((_) {});
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => ListView(
+      builder: (ctx) => Consumer<AppState>(
+        builder: (ctx, app, _) => ListView(
         shrinkWrap: true,
         padding: const EdgeInsets.symmetric(vertical: 16),
         children: [
@@ -192,6 +197,7 @@ class _PartiesTabState extends State<PartiesTab>
             ),
           ),
         ],
+        ),
       ),
     );
   }
@@ -289,7 +295,12 @@ class _PartiesTabState extends State<PartiesTab>
           child: loading
               ? const Center(child: CircularProgressIndicator())
               : RefreshIndicator(
-                  onRefresh: _load,
+                  // Pull-to-refresh also re-syncs the book list, so a book
+                  // added on another device shows up without restarting.
+                  onRefresh: () async {
+                    await context.read<AppState>().loadBusinesses().catchError((_) {});
+                    await _load();
+                  },
                   child: parties.isEmpty
                       ? ListView(
                           physics: const AlwaysScrollableScrollPhysics(),

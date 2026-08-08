@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { createBackup, restoreBackup, runExclusive, verifyBackupFile } from './db.js';
 import { dateStamp, isSafeName, liveDir, pruneOldBackups, timeStamp } from './backups.js';
+import { createUploadsArchive, pruneOldUploadsArchives } from './uploads.js';
 
 let lastRun = null; // { at, ok, message }
 
@@ -27,9 +28,29 @@ export async function runBackupNow() {
     const dest = path.join(liveDir, name);
     try {
       const { warnings } = await createBackup(dest);
+
+      // Uploads are archived right after the dump so the two form a matched
+      // pair. A failure here must not fail the run — the database is the
+      // irreplaceable part, and losing the tarball is recorded as a warning
+      // rather than throwing away a good SQL backup.
+      let uploads = null;
+      let uploadsError = null;
+      try {
+        uploads = await createUploadsArchive();
+      } catch (err) {
+        uploadsError = err.message;
+      }
+
       await pruneOldBackups();
-      recordRun(true, `Created ${name}${warnings ? ` (with warnings: ${warnings.slice(0, 300)})` : ''}`);
-      return { name };
+      await pruneOldUploadsArchives().catch(() => {});
+
+      const notes = [
+        warnings ? `with warnings: ${warnings.slice(0, 300)}` : null,
+        uploads ? `uploads: ${uploads.name}` : null,
+        uploadsError ? `UPLOADS FAILED: ${uploadsError.slice(0, 200)}` : null,
+      ].filter(Boolean);
+      recordRun(true, `Created ${name}${notes.length ? ` (${notes.join('; ')})` : ''}`);
+      return { name, uploads: uploads?.name ?? null };
     } catch (err) {
       recordRun(false, err.message);
       throw err;

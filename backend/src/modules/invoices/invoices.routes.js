@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { validate } from '../../middlewares/validate.js';
+import { moneyAmount } from '../../utils/money.js';
 import { requireAuth, requireBusiness, requirePermission, requireRole } from '../../middlewares/auth.js';
 import * as ctrl from './invoices.controller.js';
 
@@ -28,7 +29,7 @@ router.get('/:invoiceId/pdf', ctrl.pdf);
 router.post('/', validate({ body: invoiceBody }), ctrl.create);
 router.post('/:invoiceId/payments', validate({
   body: z.object({
-    amount: z.coerce.number().positive().max(99_999_999),
+    amount: moneyAmount,
     mode: z.enum(['CASH', 'ONLINE', 'CHEQUE', 'UPI', 'BANK']).optional(),
     note: z.string().max(200).optional(),
     paidAt: z.coerce.date().optional(),

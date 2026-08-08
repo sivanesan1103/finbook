@@ -144,6 +144,7 @@ export default function Layout() {
       {/* ── Sidebar ── */}
       <aside className="w-64 bg-navy-900 flex flex-col shrink-0">
         <div className="px-5 py-4 flex items-center gap-2">
+          <img src="/icon.png" alt="FinBook" className="w-8 h-8 rounded-lg shadow-sm shrink-0" />
           <span className="text-white font-extrabold text-xl tracking-tight">FinBook</span>
         </div>
 

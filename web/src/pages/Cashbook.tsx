@@ -122,7 +122,7 @@ export default function Cashbook() {
       {/* ── Left: list ── */}
       <div className="flex-1 min-w-0 flex flex-col h-full min-h-0">
         <div className="p-6 pb-0 shrink-0">
-          <h1 className="text-xl font-bold mb-4">{t('cashbook.title')}</h1>
+          <h1 className="text-xl font-bold mb-4">📔 {t('cashbook.title')}</h1>
 
           <div className="card p-4 flex items-center gap-10 mb-4">
             <div className="flex items-baseline gap-2">
@@ -246,7 +246,7 @@ export default function Cashbook() {
             <div className="relative mb-4">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
               <input className="input pl-7 text-lg font-semibold" type="number" placeholder={t('cashbook.enterAmount')} autoFocus
-                value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+                value={form.amount} onFocus={(e) => e.target.select()} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
             </div>
 
             <label className="label">{t('cashbook.description')}</label>
@@ -281,23 +281,24 @@ export default function Cashbook() {
 
         {pane.type === 'detail' && (
           <div>
-            <div className="p-5 flex items-center justify-between border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <span className={`w-11 h-11 rounded-full flex items-center justify-center text-white text-2xl font-bold
+            <div className={`p-5 flex items-center justify-between border-b border-slate-100 bg-gradient-to-br ${
+              pane.entry.direction === 'IN' ? 'from-give/10' : 'from-get/10'} to-white`}>
+              <div className="flex items-center gap-3 min-w-0">
+                <span className={`w-11 h-11 rounded-full flex items-center justify-center text-white text-2xl font-bold shrink-0 shadow-sm
                   ${pane.entry.direction === 'IN' ? 'bg-give' : 'bg-get'}`}>
                   {pane.entry.direction === 'IN' ? '+' : '−'}
                 </span>
-                <div>
+                <div className="min-w-0">
                   <p className="font-bold text-slate-800">{pane.entry.direction}</p>
                   <p className="text-xs text-slate-500">{fmtTime(pane.entry.entryDate)} {new Date(pane.entry.entryDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                 </div>
               </div>
               {pane.entry.transactionId || pane.entry.expenseId ? (
-                <span className="text-xs text-slate-400 bg-slate-50 border border-slate-200 rounded-full px-3 py-1.5">
+                <span className="text-xs text-slate-400 bg-white border border-slate-200 rounded-full px-3 py-1.5 shrink-0">
                   {pane.entry.expenseId ? t('cashbook.linkedToExpense') : t('cashbook.linkedToLedger')}
                 </span>
               ) : (
-                <div className="flex gap-2">
+                <div className="flex gap-2 shrink-0">
                   <button className="btn border border-link-500 text-link-600 hover:bg-link-50"
                     onClick={() => openForm(pane.entry.direction, pane.entry)}>{t('cashbook.edit')}</button>
                   <button className="btn-danger" onClick={() => remove(pane.entry)}>{t('cashbook.delete')}</button>
@@ -305,17 +306,21 @@ export default function Cashbook() {
               )}
             </div>
 
-            <div className="p-5 text-right border-b border-slate-100">
+            <div className="p-5 flex items-center justify-between border-b border-slate-100">
+              <span className="text-xs font-bold uppercase tracking-wide text-link-600 bg-link-50 rounded-full px-3 py-1.5">
+                {pane.entry.paymentMode}
+              </span>
               <Money value={pane.entry.amount} colored={false}
                 className={`text-2xl ${pane.entry.direction === 'IN' ? 'text-give' : 'text-get'}`} />
-              <p className="text-sm font-semibold text-link-600 mt-1">{pane.entry.paymentMode}</p>
             </div>
 
-            <div className="p-5 flex gap-3">
-              <span className="text-slate-400 text-lg">📝</span>
-              <div>
-                <p className="font-semibold text-slate-700 mb-1">{t('cashbook.description')}</p>
-                <p className="text-slate-600 whitespace-pre-wrap">{pane.entry.description || '—'}</p>
+            <div className="p-5">
+              <div className="rounded-xl border border-slate-200 p-4 flex gap-3 shadow-sm">
+                <span className="text-slate-400 text-lg shrink-0">📝</span>
+                <div className="min-w-0">
+                  <p className="font-semibold text-slate-700 mb-1">{t('cashbook.description')}</p>
+                  <p className="text-slate-600 whitespace-pre-wrap">{pane.entry.description || '—'}</p>
+                </div>
               </div>
             </div>
           </div>

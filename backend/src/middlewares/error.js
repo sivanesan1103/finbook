@@ -25,9 +25,18 @@ export const errorHandler = (err, req, res, _next) => {
     });
   } else logger.debug(`${status} ${err.message}`);
 
+  // 5xx messages are never echoed back in production: an unhandled driver
+  // error carries internals (e.g. Prisma's "Invalid `prisma.item.create()`
+  // invocation … Out of range value for column 'stockQty'"), which leaks the
+  // schema to any caller and reads as gibberish to a shop owner. The real
+  // message is still logged above and pushed to Discord.
+  const clientMessage = status >= 500 && env.nodeEnv !== 'development'
+    ? 'Something went wrong on our side. Please try again.'
+    : err.message || 'Internal server error';
+
   res.status(status).json({
     success: false,
-    message: err.message || 'Internal server error',
+    message: clientMessage,
     details: err.details,
     ...(env.nodeEnv === 'development' && status >= 500 ? { stack: err.stack } : {}),
   });

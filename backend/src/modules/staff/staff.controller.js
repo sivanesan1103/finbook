@@ -16,11 +16,10 @@ export const list = asyncHandler(async (req, res) => {
 });
 
 /**
- * Adds staff/partner by email. If the email has no account yet, a placeholder
- * user is created. Passing `password` sets sign-in credentials directly (only
- * takes effect for a brand-new or still-passwordless account — an existing
- * member's real password is never touched here); otherwise they claim the
- * account later by registering with the same email.
+ * Adds staff/partner by email (owner-only — enforced at the route). Name and
+ * password are required, so this always sets sign-in credentials directly —
+ * it only takes effect for a brand-new or still-passwordless account, an
+ * existing member's real password is never touched here.
  */
 export const add = asyncHandler(async (req, res) => {
   const { email, name, role, permissions, password } = req.body;

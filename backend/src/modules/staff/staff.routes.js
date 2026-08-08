@@ -23,10 +23,10 @@ router.get('/', ctrl.list);
 router.post('/', requireRole('OWNER'), validate({
   body: z.object({
     email: z.string().email(),
-    name: z.string().min(2).max(80).optional(),
+    name: z.string().min(2).max(80),
     role: z.enum(['PARTNER', 'STAFF']).default('STAFF'),
     permissions: permissionFlags,
-    password: z.string().min(6).max(100).optional(),
+    password: z.string().min(6).max(100),
   }),
 }), ctrl.add);
 router.patch('/:memberId', validate({

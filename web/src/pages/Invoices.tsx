@@ -369,6 +369,7 @@ export default function Invoices() {
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
                         <input className="input pl-7 font-semibold" type="number" autoFocus value={payment.amount}
+                          onFocus={(e) => e.target.select()}
                           onChange={(e) => setPayment({ ...payment, amount: e.target.value })} />
                       </div>
                       <select className="input" value={payment.mode} onChange={(e) => setPayment({ ...payment, mode: e.target.value })}>
@@ -415,7 +416,7 @@ export default function Invoices() {
               </div>
               <div>
                 <label className="label">{t('invoices.discountRupee')}</label>
-                <input className="input" type="number" min="0" value={discount} onChange={(e) => setDiscount(e.target.value)} />
+                <input className="input" type="number" min="0" value={discount} onFocus={(e) => e.target.select()} onChange={(e) => setDiscount(e.target.value)} />
               </div>
             </div>
 
@@ -435,13 +436,14 @@ export default function Invoices() {
                     <input className="input" placeholder={t('invoices.itemNamePlaceholder')} value={l.name} onChange={(e) => setLine(idx, { name: e.target.value })} />
                     <div className="grid grid-cols-3 gap-2">
                       <label className="block text-[11px] text-slate-500">{t('invoices.qty')}
-                        <input className="input mt-0.5" type="number" min="0" value={l.qty} onChange={(e) => setLine(idx, { qty: Number(e.target.value) })} />
+                        <input className="input mt-0.5" type="number" min="0" value={l.qty} onFocus={(e) => e.target.select()} onChange={(e) => setLine(idx, { qty: Number(e.target.value) })} />
                       </label>
                       <label className="block text-[11px] text-slate-500">{t('invoices.rate')}
-                        <input className="input mt-0.5" type="number" min="0" value={l.price} onChange={(e) => setLine(idx, { price: Number(e.target.value) })} />
+                        <input className="input mt-0.5" type="number" min="0" value={l.price} onFocus={(e) => e.target.select()} onChange={(e) => setLine(idx, { price: Number(e.target.value) })} />
                       </label>
                       <label className="block text-[11px] text-slate-500">{t('invoices.gstPercent')}
-                        <input className="input mt-0.5" type="number" min="0" value={l.taxRate} onChange={(e) => setLine(idx, { taxRate: Number(e.target.value) })} />
+                        <input className="input mt-0.5" type="number" min="0" max="100" value={l.taxRate} onFocus={(e) => e.target.select()}
+                          onChange={(e) => setLine(idx, { taxRate: Math.min(100, Math.max(0, Number(e.target.value))) })} />
                       </label>
                     </div>
                     <p className="text-right text-xs text-slate-500">

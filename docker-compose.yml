@@ -59,6 +59,43 @@ services:
     depends_on:
       - api
 
+  # ── Backups: nightly mysqldump + uploads tarball, with a restore UI ──
+  # The database is the only irreplaceable thing here (see backup-tool/README);
+  # everything else rebuilds from source. Backups land on a HOST bind mount,
+  # not a named volume, so `docker compose down -v` — or losing the Docker
+  # volumes entirely — cannot take the backups with it.
+  backup:
+    build: ./backup-tool
+    container_name: finbook-backup
+    restart: unless-stopped
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: finbook
+      DB_USER: root
+      DB_PASSWORD: root_pw
+      BACKUP_DIR: /backups
+      UPLOADS_DIR: /app/uploads
+      CRON_SCHEDULE: "0 2 * * *"
+      RETENTION_DAYS: "7"
+      TRASH_RETENTION_DAYS: "14"
+      UPLOADS_RETENTION_DAYS: "7"
+      BACKUP_TOOL_USER: admin
+      # CHANGE THIS before exposing port 4100 beyond localhost — this UI can
+      # restore (i.e. overwrite) the production database.
+      BACKUP_TOOL_PASS: change-me-backup-pw
+    ports:
+      # Bound to localhost only: reach it via an SSH tunnel in production
+      # rather than publishing a restore console to the internet.
+      - "127.0.0.1:4100:4100"
+    volumes:
+      - ./backups:/backups
+      # Read-only: the backup job only ever reads the bill photos it archives.
+      - api_uploads:/app/uploads:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
   # ── Logging dashboard: Loki (store) + Promtail (collector) + Grafana (UI) ──
   # Promtail tails every container's stdout (including finbook-api's
   # structured JSON — activity/access/client-error events) plus the host's

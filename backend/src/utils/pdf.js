@@ -167,10 +167,14 @@ export const streamPartyStatement = (res, { business, party, entries, totals }) 
 
   const columns = [
     { label: 'Date', x: PAGE_L, width: 85 },
-    { label: 'Details', x: PAGE_L + 85, width: 210 },
-    { label: 'You Gave', x: PAGE_L + 295, width: 90, align: 'right' },
-    { label: 'You Got', x: PAGE_L + 385, width: 65, align: 'right' },
-    { label: 'Balance', x: PAGE_L + 450, width: 65, align: 'right' },
+    { label: 'Details', x: PAGE_L + 85, width: 195 },
+    { label: 'You Gave', x: PAGE_L + 280, width: 90, align: 'right' },
+    { label: 'You Got', x: PAGE_L + 370, width: 65, align: 'right' },
+    // Bold + "Rs. XX,XXX.00" needs more room than the other right-aligned
+    // columns — at 65pt it wraps to two lines and overlaps the row below
+    // (row height is fixed at single-line). 80pt matches the Sales Report's
+    // Balance column, which has the same bold styling and doesn't wrap.
+    { label: 'Balance', x: PAGE_L + 435, width: 80, align: 'right' },
   ];
   const rows = entries.map((e) => ({
     height: 20,

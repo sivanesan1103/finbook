@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { validate } from '../../middlewares/validate.js';
+import { moneyAmount } from '../../utils/money.js';
 import { requireAuth, requireBusiness, requirePermission } from '../../middlewares/auth.js';
 import { upload } from '../../middlewares/upload.js';
 import * as ctrl from './expenses.controller.js';
@@ -10,7 +11,7 @@ router.use(requireAuth, requireBusiness, requirePermission('expenses'));
 
 const expenseBody = z.object({
   category: z.string().max(60).optional(),
-  amount: z.coerce.number().positive().max(99_999_999),
+  amount: moneyAmount,
   notes: z.string().max(500).optional(),
   paymentMode: z.enum(['CASH', 'ONLINE', 'CHEQUE', 'UPI', 'BANK']).optional(),
   entryDate: z.coerce.date().optional(),

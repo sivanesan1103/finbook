@@ -18,10 +18,21 @@ export const MODE_LABEL_KEYS: Record<string, TranslationKey> = {
 export const inr = (n: number | string) =>
   `₹${Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 
-/** Indian-format money with give/get coloring. */
+/**
+ * Indian-format money.
+ *
+ * Colour convention across the app (the `give`/`get` token names are
+ * historical and read backwards — go by the colour, not the name):
+ *   text-give = green = money coming in / owed to you  (positive)
+ *   text-get  = red   = money going out / you owe      (negative)
+ *
+ * With `colored`, a positive amount is therefore green and a negative one
+ * red. This used to be inverted, which showed a customer who owed you money
+ * in red and money you owed in green on every balance in the app.
+ */
 export function Money({ value, colored = true, className = '' }: { value: number | string; colored?: boolean; className?: string }) {
   const n = Number(value);
-  const color = !colored ? '' : n > 0 ? 'text-get' : n < 0 ? 'text-give' : 'text-slate-500';
+  const color = !colored ? '' : n > 0 ? 'text-give' : n < 0 ? 'text-get' : 'text-slate-500';
   return (
     <span className={`font-semibold tabular-nums ${color} ${className}`}>
       ₹{Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
@@ -44,14 +55,31 @@ export function Avatar({ name, url, size = 40 }: { name: string; url?: string | 
   );
 }
 
-export function EmptyState({ icon = '📒', title, subtitle, action }: { icon?: string; title: string; subtitle?: string; action?: ReactNode }) {
+export function EmptyState({ icon = '📒', illustration, title, subtitle, action }: { icon?: string; illustration?: ReactNode; title: string; subtitle?: string; action?: ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="text-5xl mb-3">{icon}</div>
-      <p className="font-semibold text-slate-700">{title}</p>
+      {illustration ?? <div className="text-5xl mb-3">{icon}</div>}
+      <p className="font-semibold text-slate-700 mt-4">{title}</p>
       {subtitle && <p className="text-sm text-slate-500 mt-1 max-w-sm">{subtitle}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
+  );
+}
+
+/** Larger on-brand illustration for empty states that need more visual weight than an emoji icon. */
+export function PeopleIllustration({ size = 140 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="200" height="200" rx="44" fill="#FDECED" />
+      <g fill="#C92F34" opacity="0.55">
+        <circle cx="82" cy="78" r="30" />
+        <path d="M40 158c0-32 18.8-49 42-49s42 17 42 49" />
+      </g>
+      <g fill="#A92428">
+        <circle cx="124" cy="82" r="32" />
+        <path d="M78 160c0-34 20.6-52 46-52s46 18 46 52" />
+      </g>
+    </svg>
   );
 }
 

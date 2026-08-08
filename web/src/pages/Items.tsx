@@ -335,6 +335,7 @@ export default function Items() {
                       <option value="ADJUST">{t('items.setAbsolute')}</option>
                     </select>
                     <input className="input" type="number" min="0" placeholder={t('items.quantity')} autoFocus value={stock.qty}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => setStock({ ...stock, qty: e.target.value })} />
                     <input className="input" placeholder={t('items.noteOptional')} value={stock.note}
                       onChange={(e) => setStock({ ...stock, note: e.target.value })} />
@@ -382,17 +383,18 @@ export default function Items() {
                 </div>
                 <div>
                   <label className="label">{t('items.gstPercentLabel')}</label>
-                  <input className="input" type="number" min="0" value={form.taxRate} onChange={(e) => setForm({ ...form, taxRate: e.target.value })} />
+                  <input className="input" type="number" min="0" max="100" value={form.taxRate} onFocus={(e) => e.target.select()}
+                    onChange={(e) => setForm({ ...form, taxRate: e.target.value === '' ? '' : String(Math.min(100, Math.max(0, Number(e.target.value)))) })} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="label">{t('items.salePriceRequired')}</label>
-                  <input className="input" type="number" min="0" value={form.salePrice} onChange={(e) => setForm({ ...form, salePrice: e.target.value })} />
+                  <input className="input" type="number" min="0" value={form.salePrice} onFocus={(e) => e.target.select()} onChange={(e) => setForm({ ...form, salePrice: e.target.value })} />
                 </div>
                 <div>
                   <label className="label">{t('items.purchasePriceLabel')}</label>
-                  <input className="input" type="number" min="0" value={form.purchasePrice} onChange={(e) => setForm({ ...form, purchasePrice: e.target.value })} />
+                  <input className="input" type="number" min="0" value={form.purchasePrice} onFocus={(e) => e.target.select()} onChange={(e) => setForm({ ...form, purchasePrice: e.target.value })} />
                 </div>
               </div>
 
@@ -407,12 +409,14 @@ export default function Items() {
                   <div>
                     <label className="label">{pane.editing ? t('items.stockQty') : t('items.openingStock')}</label>
                     <input className="input" type="number" min="0" value={form.stockQty}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => setForm({ ...form, stockQty: e.target.value })}
                       disabled={!!pane.editing} title={pane.editing ? t('items.useAdjustStockTitle') : undefined} />
                   </div>
                   <div>
                     <label className="label">{t('items.lowStockAlert')}</label>
                     <input className="input" type="number" min="0" value={form.lowStockAlert}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => setForm({ ...form, lowStockAlert: e.target.value })} />
                   </div>
                 </div>

@@ -13,3 +13,6 @@ mobile/build/
 mobile/.flutter-plugins*
 mobile/.packages
 coverage/
+
+# Local database + uploads backups (never commit these — they contain customer data)
+backups/

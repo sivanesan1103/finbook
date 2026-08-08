@@ -47,12 +47,7 @@ export default function Staff() {
 
   const add = async () => {
     try {
-      const res = await api.post(base, {
-        ...form,
-        name: form.name || undefined,
-        password: form.password || undefined,
-        permissions: perms,
-      });
+      const res = await api.post(base, { ...form, permissions: perms });
       setOpen(false);
       if (res.data.data.passwordSet) {
         setAddedCredentials({ email: form.email, password: form.password });
@@ -86,7 +81,7 @@ export default function Staff() {
   return (
     <div className="p-6 max-w-4xl">
       <div className="flex items-center justify-between mb-2">
-        <h1 className="text-xl font-bold">{t('staff.title')}</h1>
+        <h1 className="text-xl font-bold">🧑‍💼 {t('staff.title')}</h1>
         {isOwner && <button className="btn-primary" onClick={() => setOpen(true)}>{t('staff.addNew')}</button>}
       </div>
       <ul className="text-sm text-slate-500 mb-4 list-disc pl-5 space-y-0.5">
@@ -168,7 +163,8 @@ export default function Staff() {
               ))}
             </div>
           )}
-          <button className="btn-primary w-full justify-center" onClick={add} disabled={!/^\S+@\S+\.\S+$/.test(form.email)}>
+          <button className="btn-primary w-full justify-center" onClick={add}
+            disabled={!/^\S+@\S+\.\S+$/.test(form.email) || form.name.trim().length < 2 || form.password.length < 6}>
             {t('staff.addMember')}
           </button>
         </div>
