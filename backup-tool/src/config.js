@@ -17,6 +17,15 @@ export const config = {
 
   cronSchedule: process.env.CRON_SCHEDULE || '0 2 * * *',
 
+  // Offsite copy of each backup, in addition to the local one. All optional
+  // — supabase.js checks supabaseEnabled() and every call site treats a
+  // failure here as a warning, never a reason to fail the underlying local
+  // backup (the local .sql.gz is the one thing that must never be lost).
+  supabaseUrl: process.env.SUPABASE_URL || '',
+  supabaseServiceKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+  supabaseBucket: process.env.SUPABASE_BACKUP_BUCKET || 'finbook-backups',
+  supabaseRetentionDays: Number(process.env.SUPABASE_RETENTION_DAYS || process.env.RETENTION_DAYS || 7),
+
   authUser: process.env.BACKUP_TOOL_USER || 'admin',
   authPassword: process.env.BACKUP_TOOL_PASS || '',
 

@@ -27,6 +27,7 @@ async function loadStatus() {
     <div><b>${s.lastRun ? (s.lastRun.ok ? '✅ OK' : '❌ Failed') : '—'}</b>Last run ${s.lastRun ? fmtDate(s.lastRun.at) : ''}</div>
     <div><b>${s.cronSchedule}</b>Daily schedule (cron, UTC)</div>
     <div><b>${s.retentionDays}d / ${s.trashRetentionDays}d</b>Retention (live / trash)</div>
+    <div><b>${s.supabaseEnabled ? '☁️ On' : '— Off'}</b>Supabase offsite sync</div>
   `;
   $('#runNowBtn').disabled = !!s.busy;
 }
@@ -62,8 +63,68 @@ async function loadBackups() {
     : '<tr><td colspan="4" class="empty">Trash is empty.</td></tr>';
 }
 
+function fmtBytes(n) {
+  if (n == null) return '—';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let v = n; let i = 0;
+  while (v >= 1024 && i < units.length - 1) { v /= 1024; i += 1; }
+  return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+}
+
+async function loadRemoteBackups() {
+  const { enabled, items } = await api('/api/backups/remote');
+  $('#remoteCard').style.display = enabled ? '' : 'none';
+  if (!enabled) return;
+  const rows = $('#remoteRows');
+  rows.innerHTML = items.length
+    ? items.map((i) => `<tr><td>${i.name}</td><td>${fmtDate(i.createdAt)}</td><td>${fmtBytes(i.sizeBytes)}</td>
+        <td><div class="actions"><button class="btn-primary" data-remote-restore="${i.name}">Restore</button></div></td></tr>`).join('')
+    : '<tr><td colspan="4" class="empty">No offsite backups yet.</td></tr>';
+}
+
 async function refresh() {
-  await Promise.all([loadStatus(), loadBackups()]);
+  await Promise.all([loadStatus(), loadBackups(), loadRemoteBackups().catch(() => {})]);
+}
+
+function confirmRemoteRestore(name) {
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  backdrop.innerHTML = `
+    <div class="modal">
+      <h3>Restore ${name} from Supabase?</h3>
+      <div class="warn">⚠️ Downloads this backup from Supabase, then replaces the entire live
+        database with it. A fresh safety backup of the current data is taken automatically first.
+        Type <b>RESTORE</b> to confirm.</div>
+      <input type="text" id="confirmInput" placeholder="Type RESTORE" autocomplete="off" />
+      <div class="row" style="justify-content:flex-end">
+        <button class="btn-outline" id="cancelBtn">Cancel</button>
+        <button class="btn-danger" id="confirmBtn" disabled>Restore</button>
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+
+  const input = backdrop.querySelector('#confirmInput');
+  const confirmBtn = backdrop.querySelector('#confirmBtn');
+  input.addEventListener('input', () => { confirmBtn.disabled = input.value !== 'RESTORE'; });
+  backdrop.querySelector('#cancelBtn').addEventListener('click', () => backdrop.remove());
+  confirmBtn.addEventListener('click', async () => {
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Downloading + restoring…';
+    try {
+      const result = await api(`/api/backups/${encodeURIComponent(name)}/restore-from-remote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: 'RESTORE' }),
+      });
+      toast(`Restored ${name} from Supabase. Safety backup: ${result.safetyBackup}`);
+      backdrop.remove();
+      refresh();
+    } catch (err) {
+      toast(`Restore failed: ${err.message}`);
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Restore';
+    }
+  });
 }
 
 function confirmRestore(name) {
@@ -113,6 +174,8 @@ document.addEventListener('click', async (e) => {
     window.location.href = `/api/backups/${encodeURIComponent(t.dataset.download)}/download`;
   } else if (t.dataset.restore) {
     confirmRestore(t.dataset.restore);
+  } else if (t.dataset.remoteRestore) {
+    confirmRemoteRestore(t.dataset.remoteRestore);
   } else if (t.dataset.trash) {
     if (!confirm(`Move ${t.dataset.trash} to trash?`)) return;
     try { await api(`/api/backups/${encodeURIComponent(t.dataset.trash)}/trash`, { method: 'POST' }); refresh(); }

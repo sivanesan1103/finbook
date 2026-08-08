@@ -3,6 +3,7 @@ import path from 'node:path';
 import { createBackup, restoreBackup, runExclusive, verifyBackupFile } from './db.js';
 import { dateStamp, isSafeName, liveDir, pruneOldBackups, timeStamp } from './backups.js';
 import { createUploadsArchive, pruneOldUploadsArchives } from './uploads.js';
+import { downloadFromSupabase, pruneOldSupabaseBackups, supabaseEnabled, uploadToSupabase } from './supabase.js';
 
 let lastRun = null; // { at, ok, message }
 
@@ -44,10 +45,26 @@ export async function runBackupNow() {
       await pruneOldBackups();
       await pruneOldUploadsArchives().catch(() => {});
 
+      // Offsite copy to Supabase Storage, best-effort — same reasoning as
+      // the uploads archive above: the local .sql.gz is already safe on
+      // disk, so a Supabase failure is a warning, not a failed run.
+      let supabaseError = null;
+      if (supabaseEnabled()) {
+        try {
+          await uploadToSupabase(dest, name);
+          if (uploads) await uploadToSupabase(path.join(liveDir, uploads.name), uploads.name);
+          await pruneOldSupabaseBackups().catch(() => {});
+        } catch (err) {
+          supabaseError = err.message;
+        }
+      }
+
       const notes = [
         warnings ? `with warnings: ${warnings.slice(0, 300)}` : null,
         uploads ? `uploads: ${uploads.name}` : null,
         uploadsError ? `UPLOADS FAILED: ${uploadsError.slice(0, 200)}` : null,
+        supabaseEnabled() && !supabaseError ? 'synced to Supabase' : null,
+        supabaseError ? `SUPABASE SYNC FAILED: ${supabaseError.slice(0, 200)}` : null,
       ].filter(Boolean);
       recordRun(true, `Created ${name}${notes.length ? ` (${notes.join('; ')})` : ''}`);
       return { name, uploads: uploads?.name ?? null };
@@ -56,6 +73,19 @@ export async function runBackupNow() {
       throw err;
     }
   });
+}
+
+/** Pulls a backup down from Supabase into the live local directory (so it
+ * shows up in the normal backup list, downloadable/inspectable like any
+ * other), then hands off to the same runRestore() path as a local file —
+ * one restore code path, one safety-backup guarantee, regardless of source. */
+export async function restoreFromSupabase(name) {
+  if (!isSafeName(name)) throw new Error('Invalid backup name');
+  const dest = path.join(liveDir, name);
+  if (!existsSync(dest)) {
+    await downloadFromSupabase(name, dest);
+  }
+  return runRestore(name);
 }
 
 export async function runPreRestoreSafetyBackup() {

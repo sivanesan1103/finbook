@@ -92,6 +92,13 @@ services:
       UPLOADS_RETENTION_DAYS: "7"
       BACKUP_TOOL_USER: ${BACKUP_TOOL_USER}
       BACKUP_TOOL_PASS: ${BACKUP_TOOL_PASS}
+      # Offsite copy of every backup, in addition to the local one below.
+      # Optional — leave SUPABASE_URL blank to disable. Never used for live
+      # app data, only as a second home for the same .sql.gz/.tgz files
+      # already written locally.
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      SUPABASE_BACKUP_BUCKET: ${SUPABASE_BACKUP_BUCKET}
     ports:
       - "127.0.0.1:4100:4100"
     volumes:

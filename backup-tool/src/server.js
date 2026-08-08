@@ -10,8 +10,9 @@ import {
 } from './backups.js';
 import { config } from './config.js';
 import { isBusy } from './db.js';
-import { getLastRun, runBackupNow, runRestore } from './jobs.js';
+import { getLastRun, restoreFromSupabase, runBackupNow, runRestore } from './jobs.js';
 import { startScheduler } from './scheduler.js';
+import { ensureBucket, listSupabaseBackups, supabaseEnabled } from './supabase.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -25,6 +26,13 @@ if (!config.dbPassword) {
 }
 
 await ensureDirs();
+if (supabaseEnabled()) {
+  try {
+    await ensureBucket();
+  } catch (err) {
+    console.error(`Supabase bucket setup failed (backups will still work locally): ${err.message}`);
+  }
+}
 
 const app = express();
 app.use(express.json());
@@ -56,7 +64,30 @@ app.get('/api/status', async (_req, res) => {
     retentionDays: config.retentionDays,
     trashRetentionDays: config.trashRetentionDays,
     dbName: config.dbName,
+    supabaseEnabled: supabaseEnabled(),
   });
+});
+
+app.get('/api/backups/remote', async (_req, res) => {
+  if (!supabaseEnabled()) return res.json({ enabled: false, items: [] });
+  try {
+    res.json({ enabled: true, items: await listSupabaseBackups() });
+  } catch (err) {
+    res.status(502).json({ ok: false, message: err.message });
+  }
+});
+
+app.post('/api/backups/:name/restore-from-remote', async (req, res) => {
+  const { confirm } = req.body || {};
+  if (confirm !== 'RESTORE') {
+    return res.status(400).json({ ok: false, message: 'Type RESTORE to confirm — this replaces the live database.' });
+  }
+  try {
+    const result = await restoreFromSupabase(req.params.name);
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    res.status(err.status || 500).json({ ok: false, message: err.message });
+  }
 });
 
 app.get('/api/backups', async (_req, res) => {
