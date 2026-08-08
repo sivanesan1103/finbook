@@ -2,11 +2,13 @@
 
 Permanent production runs on the AWS box, reachable over Tailscale
 (`100.99.22.48`) and served to the internet through a **Cloudflare Tunnel**
-(no inbound ports / security-group holes). Same deploy model as the Pi:
-push to `main` → the box's self-hosted GitHub runner rebuilds and restarts.
+(no inbound ports / security-group holes). Push to `main` → the box's
+self-hosted GitHub Actions runner (label **`aws_fin`**) rebuilds and restarts
+the app automatically.
 
-Do these once to stand the box up. After that, every `git push` to `main`
-deploys automatically.
+Do steps 0–6 once to stand the box up. After that, every `git push` to `main`
+deploys automatically, and every container survives crashes **and** a full
+server reboot (see step 7).
 
 ---
 
@@ -16,6 +18,10 @@ deploys automatically.
 # Docker + compose plugin
 curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker "$USER" && newgrp docker
+
+# Docker must start on boot — get.docker.com enables this by default, verify:
+sudo systemctl enable --now docker
+systemctl is-enabled docker   # must print "enabled"
 
 # Tailscale (so the box is 100.99.22.48)
 curl -fsSL https://tailscale.com/install.sh | sh && sudo tailscale up
@@ -42,17 +48,13 @@ mkdir -p backups
 
 ## 2. Fill in real secrets
 
+Paste the generated block from the delivery message (or your own, via
+`openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | cut -c1-56`) into `.env`:
+
 ```bash
 cd "$DEPLOY_PATH"
-# generate 4 strong app secrets
-for k in JWT_ACCESS_SECRET JWT_REFRESH_SECRET SHARE_TOKEN_SECRET FILE_URL_SECRET; do
-  echo "$k=$(openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | cut -c1-56)"
-done
-# ...paste those into .env, then also set MYSQL_*, BACKUP_TOOL_PASS,
-# GF_SECURITY_ADMIN_PASSWORD, PUBLIC_WEB_URL, CORS_ORIGINS, and the
-# CLOUDFLARE_TUNNEL_TOKEN from step 3.
-nano .env
-chmod 600 .env
+nano .env        # paste every KEY=value from the "Full key/value block" below
+chmod 600 .env    # secrets file is owner-read-only
 ```
 The API **refuses to boot** if the 4 JWT/share/file secrets are missing or a
 `change-me` placeholder — that's the guard working, not a bug.
@@ -65,14 +67,13 @@ In the Cloudflare dashboard (Zero Trust → Networks → Tunnels):
    | Hostname | Service |
    |---|---|
    | `finbook.online` | `http://web:80` |
-   | `api.finbook.online` (or `apifinbook.finbook.online`) | `http://api:4000` |
+   | `api.finbook.online` | `http://api:4000` |
    | `grafana.finbook.online` | `http://grafana:3000` |
-3. Cloudflare auto-creates the DNS records for the tunnel. Set
-   `PUBLIC_WEB_URL`/`CORS_ORIGINS`/`GRAFANA_ROOT_URL` in `.env` to match.
+3. Cloudflare auto-creates the DNS records for the tunnel. Confirm
+   `PUBLIC_WEB_URL` / `CORS_ORIGINS` / `GRAFANA_ROOT_URL` in `.env` match.
 
 > The `cloudflared` service in the compose runs the tunnel from the token —
-> nothing else needs a public port. (Delete that service if you'd rather run
-> cloudflared as a host `systemd` service.)
+> nothing else needs a public port.
 
 ## 4. First bring-up (everything)
 
@@ -90,33 +91,56 @@ Then open `https://finbook.online` — it should load through the tunnel.
 
 ## 5. Wire up auto-deploy (GitHub Actions self-hosted runner)
 
-The workflow targets `runs-on: [self-hosted, rpi]`. Register the AWS runner
-**with the `rpi` label** so no workflow change is needed (Repo → Settings →
-Actions → Runners → New self-hosted runner):
+The workflow targets `runs-on: [self-hosted, aws_fin]`. Register the AWS
+runner **with the `aws_fin` label** (GitHub repo → Settings → Actions →
+Runners → New self-hosted runner, follow its download commands, then):
+
 ```bash
-# follow GitHub's shown commands; when it asks for labels, include: rpi
-./config.sh --url https://github.com/sivanesan1103/finbook --token <TOKEN> --labels rpi
-sudo ./svc.sh install && sudo ./svc.sh start
+./config.sh --url https://github.com/sivanesan1103/finbook \
+            --token <TOKEN_SHOWN_ON_GITHUB> \
+            --labels aws_fin \
+            --name aws-fin-prod --unattended
+
+# Install as a systemd service so it survives reboots and crashes:
+sudo ./svc.sh install
+sudo ./svc.sh start
+sudo ./svc.sh status          # should show "active (running)"
 ```
-Set the repo secret **`DEPLOY_PATH`** = the path from step 1 (e.g. `/opt/finbook`).
+Set the repo secret **`DEPLOY_PATH`** = the path from step 1 (e.g. `/opt/finbook`)
+at GitHub → repo → Settings → Secrets and variables → Actions.
 
-> Prefer a cleaner label than `rpi`? Tell me and I'll change `runs-on` in
-> `.github/workflows/deploy.yml` to e.g. `aws` and you label the runner `aws`.
+## 6. Verify the pipeline end-to-end
 
-## 6. From now on
+```bash
+# from your Mac:
+git commit --allow-empty -m "chore: verify aws_fin deploy" && git push origin main
+gh run watch --exit-status   # should show the aws_fin runner picking it up
+```
 
-`git push origin main` → the runner rsyncs source, `docker compose build api
-web backup-tool`, `up -d`, health-checks. First-run services (db, cloudflared,
-grafana, loki, promtail) keep running across deploys.
+## 7. Make everything restart-proof (crash AND reboot)
+
+Already covered, listed here so it's auditable:
+
+| Layer | Mechanism | Verify |
+|---|---|---|
+| Container crash/OOM | `restart: unless-stopped` on every service in the compose | `docker inspect finbook-api --format '{{.HostConfig.RestartPolicy.Name}}'` → `unless-stopped` |
+| Docker daemon itself starts after reboot | `systemctl enable docker` (step 0) | `systemctl is-enabled docker` → `enabled` |
+| Containers come back after a reboot | Docker restarts anything not manually `stop`ped, per the policy above | reboot the box, then `docker compose ps` — all should be `Up` |
+| GitHub runner survives reboot | Installed as a systemd service (`svc.sh install`) | `systemctl is-enabled actions.runner.*` → `enabled` |
+| Tunnel survives reboot | `cloudflared` is itself a `restart: unless-stopped` container | same `docker inspect` check |
+
+Optional real-world test: `sudo reboot`, wait ~1 min, then confirm
+`https://finbook.online` loads with no manual intervention.
 
 ## Cutover checklist (Pi → AWS)
-- [ ] Box up on Tailscale as 100.99.22.48, Docker installed
+- [ ] Box up on Tailscale as 100.99.22.48, Docker installed + enabled on boot
 - [ ] `.env` filled with real secrets (`chmod 600`)
 - [ ] Cloudflare tunnel token in `.env`, hostnames routed
 - [ ] `docker compose up -d` green, `finbook.online` loads
 - [ ] **Migrate data**: restore the latest Pi DB dump via the backup tool UI
-      (`http://localhost:4100` over SSH tunnel) or `mysql < dump.sql`, and copy
-      the Pi's `api_uploads` volume contents to the AWS one
-- [ ] Runner registered (label `rpi`), `DEPLOY_PATH` secret set
-- [ ] Stop the Pi runner so only one box deploys
-- [ ] Point `finbook.online` DNS at the new tunnel; retire the old subdomains
+      (`http://localhost:4100` over an SSH/Tailscale tunnel) or `mysql < dump.sql`,
+      and copy the Pi's `api_uploads` volume contents to the AWS one
+- [ ] Runner registered (label `aws_fin`), installed as a service, `DEPLOY_PATH` secret set
+- [ ] Stop/remove the Pi's runner so only one box ever deploys
+- [ ] Reboot test passed (section 7)
+- [ ] Point `finbook.online` DNS at the new tunnel; retire the old `*.sivaprj.online` subdomains

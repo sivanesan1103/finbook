@@ -1,10 +1,11 @@
 name: Deploy to production
 
 # Runs on a self-hosted runner installed directly on the production host —
-# the Pi sits behind Tailscale, so a GitHub-hosted cloud runner has no route
-# to it. Moving to a new server later means installing a runner there (see
-# README "Maintenance directions") and swapping DEPLOY_PATH; the deploy
-# steps themselves don't change.
+# the box sits behind Tailscale, so a GitHub-hosted cloud runner has no route
+# to it. Production is the AWS server (100.99.22.48), runner label "aws_fin"
+# (see deploy/DEPLOY-AWS.md). Moving servers again later just means
+# registering a runner with this same label on the new box and swapping
+# DEPLOY_PATH; the deploy steps themselves don't change.
 on:
   push:
     branches: [main]
@@ -16,7 +17,7 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: [self-hosted, rpi]
+    runs-on: [self-hosted, aws_fin]
     env:
       DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
     steps:
