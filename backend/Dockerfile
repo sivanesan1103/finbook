@@ -28,4 +28,13 @@ EXPOSE 4000
 # file) — it must never run unattended in production, since it upserts a
 # demo login (owner@finbook.dev / demo123) with a password anyone reading
 # this repo already knows.
-CMD sh -c "npx prisma db push --accept-data-loss --skip-generate; [ \"$SEED_ON_BOOT\" = \"true\" ] && npm run seed; node src/server.js"
+#
+# db push is retried rather than chained with `;` — on a cold start, `db`
+# passing its own healthcheck (mysqladmin ping) doesn't guarantee MySQL is
+# ready for a Prisma connection a moment later. A `;` chain swallowed that
+# transient failure silently and the server still started, just against a
+# database with no tables at all (every query then failing with "table
+# `users` does not exist" instead of anything that looked like a boot
+# error). Retrying until it succeeds means the server never starts against
+# an unmigrated schema.
+CMD sh -c "until npx prisma db push --accept-data-loss --skip-generate; do echo 'prisma db push failed, retrying in 2s...' >&2; sleep 2; done; [ \"$SEED_ON_BOOT\" = \"true\" ] && npm run seed; node src/server.js"
