@@ -20,6 +20,12 @@ class _CashbookScreenState extends State<CashbookScreen> {
   DateTime date = DateTime.now();
   String mode = 'ALL';
   bool loading = true;
+  // The cashbook API is gated server-side by the `cashbook` staff permission
+  // (cashbook.routes.js requirePermission('cashbook')) — a staff member
+  // without it gets a 403 on every call here. Surface that as a clear locked
+  // state (matching the web app) instead of leaving an empty list with the
+  // IN/OUT buttons still active, which just fails again on every tap.
+  bool forbidden = false;
 
   @override
   void initState() {
@@ -28,7 +34,7 @@ class _CashbookScreenState extends State<CashbookScreen> {
   }
 
   Future<void> _load() async {
-    setState(() => loading = true);
+    setState(() { loading = true; forbidden = false; });
     final app = context.read<AppState>();
     final api = ApiClient.instance;
     final d = date.toIso8601String().substring(0, 10);
@@ -42,7 +48,12 @@ class _CashbookScreenState extends State<CashbookScreen> {
         todayBalance = (sum['data']['todayBalance'] as num).toDouble();
       });
     } catch (e) {
-      if (mounted) showSnack(context, e.toString(), error: true);
+      if (!mounted) return;
+      if (e is ApiException && e.status == 403) {
+        setState(() => forbidden = true);
+      } else {
+        showSnack(context, e.toString(), error: true);
+      }
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -208,6 +219,27 @@ class _CashbookScreenState extends State<CashbookScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (forbidden) {
+      return Scaffold(
+        backgroundColor: AppColors.surface,
+        appBar: AppBar(title: Text(context.tr('cashbookScreen.title'))),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              const Icon(Icons.lock_outline, size: 64, color: Colors.black12),
+              const SizedBox(height: 8),
+              Text(context.tr('common.noAccessTitle'),
+                  textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              Text(context.tr('common.noAccessSubtitle'),
+                  textAlign: TextAlign.center, style: const TextStyle(color: Colors.black45, fontSize: 12)),
+            ]),
+          ),
+        ),
+      );
+    }
+
     final dayIn = entries.where((e) => e.direction == 'IN').fold(0.0, (s, e) => s + e.amount);
     final dayOut = entries.where((e) => e.direction == 'OUT').fold(0.0, (s, e) => s + e.amount);
 

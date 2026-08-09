@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/api_client.dart';
@@ -18,11 +19,23 @@ class _StaffScreenState extends State<StaffScreen> {
   bool loading = true;
   final removingIds = <String>{};
   bool get _isOwner => context.read<AppState>().business?.role == 'OWNER';
+  // Staff management is OWNER/PARTNER-only server-side (staff.routes.js
+  // requireRole('OWNER', 'PARTNER')) — check the role before ever calling the
+  // API so a plain STAFF member sees a clear "no access" message instead of
+  // an empty "no staff yet" list (which is what a bare 403 looked like).
+  bool get _canManage {
+    final role = context.read<AppState>().business?.role;
+    return role == 'OWNER' || role == 'PARTNER';
+  }
 
   @override
   void initState() {
     super.initState();
-    _load();
+    if (_canManage) {
+      _load();
+    } else {
+      loading = false;
+    }
   }
 
   Future<void> _load() async {
@@ -40,83 +53,129 @@ class _StaffScreenState extends State<StaffScreen> {
     }
   }
 
+  static final _emailPattern = RegExp(r'^\S+@\S+\.\S+$');
+
   Future<void> _add() async {
-    final isOwner = _isOwner;
+    final app = context.read<AppState>();
     final email = TextEditingController();
     final name = TextEditingController();
     final password = TextEditingController();
     String role = 'STAFF';
     final perms = {'parties': true, 'bills': true, 'items': false, 'cashbook': false, 'expenses': false, 'reports': false};
+    // Mirrors the web add-staff flow: debounce an email lookup so an address
+    // that already has a FinBook account skips the name/password fields
+    // (they sign in with what they already have) and only a brand-new
+    // address needs credentials minted for it.
+    String lookupStatus = 'idle'; // idle | checking | existing | new
+    String? lookupName;
+    Timer? debounce;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setD) => AlertDialog(
-          title: Text(context.tr('staff.addTitle')),
-          content: SingleChildScrollView(
-            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              TextField(controller: email, keyboardType: TextInputType.emailAddress,
-                  onChanged: (_) => setD(() {}),
-                  decoration: InputDecoration(labelText: context.tr('staff.emailAddress'))),
-              const SizedBox(height: 12),
-              // Setting a name/password directly mints login credentials, so
-              // that capability is owner-only — the same rule the backend
-              // enforces (POST /staff is OWNER-only) — partners can still
-              // invite by email and the invitee registers themselves. When
-              // the owner IS setting it up directly, the password is
-              // mandatory — there's no point in an owner-initiated flow
-              // that leaves the account passwordless.
-              if (isOwner) ...[
-                TextField(controller: name, decoration: InputDecoration(labelText: context.tr('staff.nameOptional'))),
+        builder: (ctx, setD) {
+          void scheduleLookup(String value) {
+            debounce?.cancel();
+            final trimmed = value.trim();
+            if (!_emailPattern.hasMatch(trimmed)) {
+              setD(() => lookupStatus = 'idle');
+              return;
+            }
+            setD(() => lookupStatus = 'checking');
+            debounce = Timer(const Duration(milliseconds: 400), () async {
+              try {
+                final res = await ApiClient.instance
+                    .get('${app.basePath}/staff/lookup?email=${Uri.encodeQueryComponent(trimmed)}');
+                if (!ctx.mounted) return;
+                final exists = res['data']?['exists'] == true;
+                setD(() {
+                  lookupStatus = exists ? 'existing' : 'new';
+                  lookupName = res['data']?['name'] as String?;
+                });
+              } catch (_) {
+                if (ctx.mounted) setD(() => lookupStatus = 'new');
+              }
+            });
+          }
+
+          final isExisting = lookupStatus == 'existing';
+          final isNew = lookupStatus == 'new';
+          final canSubmit = lookupStatus != 'idle' && lookupStatus != 'checking'
+              && (isExisting || (name.text.trim().length >= 2 && password.text.length >= 6));
+
+          return AlertDialog(
+            title: Text(context.tr('staff.addTitle')),
+            content: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                TextField(controller: email, keyboardType: TextInputType.emailAddress,
+                    onChanged: (v) { setD(() {}); scheduleLookup(v); },
+                    decoration: InputDecoration(
+                      labelText: context.tr('staff.emailAddress'),
+                      suffixText: lookupStatus == 'checking' ? '…' : null,
+                    )),
                 const SizedBox(height: 12),
-                TextField(controller: password, obscureText: true,
-                    onChanged: (_) => setD(() {}),
-                    decoration: InputDecoration(labelText: context.tr('staff.password'))),
-                const SizedBox(height: 6),
-                Text(context.tr('staff.passwordRequiredHint'),
-                    style: const TextStyle(fontSize: 11, color: Colors.black45)),
-                const SizedBox(height: 12),
-              ] else ...[
-                Text(context.tr('staff.partnerInviteHint'),
-                    style: const TextStyle(fontSize: 11, color: Colors.black45)),
-                const SizedBox(height: 12),
-              ],
-              DropdownButtonFormField<String>(
-                value: role,
-                decoration: InputDecoration(labelText: context.tr('staff.role')),
-                items: [
-                  DropdownMenuItem(value: 'STAFF', child: Text(context.tr('staff.roleStaff'))),
-                  DropdownMenuItem(value: 'PARTNER', child: Text(context.tr('staff.rolePartner'))),
+                if (isExisting) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(color: const Color(0xFFEFF7F0), borderRadius: BorderRadius.circular(8)),
+                    child: Text(
+                        context.tr('staff.existingAccount', {'name': lookupName ?? email.text.trim()}),
+                        style: const TextStyle(fontSize: 12, color: Colors.black87)),
+                  ),
+                  const SizedBox(height: 12),
+                ] else if (isNew) ...[
+                  TextField(controller: name, onChanged: (_) => setD(() {}),
+                      decoration: InputDecoration(labelText: context.tr('staff.namePlaceholder'))),
+                  const SizedBox(height: 12),
+                  TextField(controller: password, obscureText: true,
+                      onChanged: (_) => setD(() {}),
+                      decoration: InputDecoration(labelText: context.tr('staff.password'))),
+                  const SizedBox(height: 6),
+                  Text(context.tr('staff.passwordRequiredHint'),
+                      style: const TextStyle(fontSize: 11, color: Colors.black45)),
+                  const SizedBox(height: 12),
                 ],
-                onChanged: (v) => setD(() => role = v!),
-              ),
-              if (role == 'STAFF') ...[
-                const SizedBox(height: 16),
-                Text(context.tr('staff.permissions'),
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
-                const SizedBox(height: 8),
-                _PermissionGrid(perms: perms, onToggle: (f, v) => setD(() => perms[f] = v)),
-              ],
-            ]),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('common.cancel'))),
-            ElevatedButton(
-              onPressed: (email.text.trim().isNotEmpty && (!isOwner || password.text.trim().isNotEmpty))
-                  ? () => Navigator.pop(ctx, true)
-                  : null,
-              child: Text(context.tr('staff.add')),
+                DropdownButtonFormField<String>(
+                  value: role,
+                  decoration: InputDecoration(labelText: context.tr('staff.role')),
+                  items: [
+                    DropdownMenuItem(value: 'STAFF', child: Text(context.tr('staff.roleStaff'))),
+                    DropdownMenuItem(value: 'PARTNER', child: Text(context.tr('staff.rolePartner'))),
+                  ],
+                  onChanged: (v) => setD(() => role = v!),
+                ),
+                if (role == 'STAFF') ...[
+                  const SizedBox(height: 16),
+                  Text(context.tr('staff.permissions'),
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+                  const SizedBox(height: 8),
+                  _PermissionGrid(perms: perms, onToggle: (f, v) => setD(() => perms[f] = v)),
+                ] else
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(context.tr('staff.partnerFullAccessHint'),
+                        style: const TextStyle(fontSize: 11, color: Colors.black45)),
+                  ),
+              ]),
             ),
-          ],
-        ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('common.cancel'))),
+              ElevatedButton(
+                onPressed: canSubmit ? () => Navigator.pop(ctx, true) : null,
+                child: Text(context.tr('staff.add')),
+              ),
+            ],
+          );
+        },
       ),
     );
+    debounce?.cancel();
     if (ok != true || email.text.trim().isEmpty || !mounted) return;
     try {
-      final app = context.read<AppState>();
       final res = await ApiClient.instance.post('${app.basePath}/staff', {
         'email': email.text.trim(),
-        if (name.text.trim().isNotEmpty) 'name': name.text.trim(),
-        if (password.text.trim().isNotEmpty) 'password': password.text.trim(),
+        if (lookupStatus == 'new' && name.text.trim().isNotEmpty) 'name': name.text.trim(),
+        if (lookupStatus == 'new' && password.text.trim().isNotEmpty) 'password': password.text.trim(),
         'role': role,
         if (role == 'STAFF') 'permissions': perms,
       });
@@ -199,6 +258,26 @@ class _StaffScreenState extends State<StaffScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_canManage) {
+      return Scaffold(
+        backgroundColor: AppColors.surface,
+        appBar: AppBar(title: Text(context.tr('staff.title'))),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              const Icon(Icons.lock_outline, size: 64, color: Colors.black12),
+              const SizedBox(height: 8),
+              Text(context.tr('staff.restrictedTitle'),
+                  textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              Text(context.tr('staff.restrictedSubtitle'),
+                  textAlign: TextAlign.center, style: const TextStyle(color: Colors.black45, fontSize: 12)),
+            ]),
+          ),
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(title: Text(context.tr('staff.title'))),
