@@ -217,6 +217,90 @@ that failed before the fix — and it worked first try: INV-0002 created
 (₹250, confirmed on screen). Closing as FIXED for real, not just
 code-reviewed.
 
+### MOB-002 — add_party_screen.dart missing double-submit guard (duplicate customer/supplier risk)
+Status: FIXED
+Evidence: `add_entry_screen.dart:49` has `if (busy) return;` at the top of
+`_save()`, with a comment explaining exactly why: "the button disables on
+rebuild after setState, but a fast double-tap can fire both pointer-up
+events before that rebuild lands." `add_party_screen.dart`'s `_save()` is
+structurally identical (full-screen form, persistent bottom button calling
+`_save()` directly, `busy` bool that only gates the button's `onPressed`)
+but was missing that same guard — the exact race the sibling file was
+already fixed for. Checked the other 3 create flows (bills/cashbook/items)
+first: they use a different, safe pattern (button just does
+`Navigator.pop(ctx, true)`, the actual API call happens once after the
+sheet closes), so they're not exposed to this — only add_party_screen.dart
+shares add_entry_screen.dart's vulnerable shape.
+Caveat on rigor: I could not reproduce the actual race condition on-device
+— sequential `adb shell input tap` calls can't fire two genuinely
+simultaneous pointer-up events, so I can't force the pre-fix window closed
+at the right sub-frame timing. Marking this CONFIRMED on code evidence (an
+identical pattern, already diagnosed and fixed once in the same codebase)
+rather than a live repro of the race itself — flagging that distinction
+per the honesty rules rather than overclaiming.
+Fix: added the identical `if (busy) return;` guard + comment to
+`add_party_screen.dart:_save()`. Verified live after rebuild+reinstall that
+the normal (single-tap) path still works: created a real customer
+("SanityCheck"), appeared in the list immediately, no regression.
+
+### MOB-003 — JWT access/refresh tokens stored unencrypted
+Status: OPEN — flagging for the user, not fixing unilaterally
+Evidence: `api_client.dart:104-126` — `loadTokens`/`saveTokens`/`clearTokens`
+all use plain `SharedPreferences` (`bk_access`, `bk_refresh`) via the
+`shared_preferences` package. On Android this is an unencrypted XML file
+under the app's private data dir — not readable by other apps under normal
+sandboxing, but readable in plaintext with root, `adb backup` (if not
+disabled), or physical extraction on a lost/stolen device. These are
+long-lived rotating tokens granting full access to a business's financial
+data. Cleared correctly on logout (`clearTokens`) and session-expiry
+(`_doRefresh`'s failure path) — the gap is specifically "not encrypted at
+rest," not "not cleared."
+Not fixing without a decision from the user: migrating to
+`flutter_secure_storage` (Android Keystore / iOS Keychain backed) is the
+right fix, but it's a new dependency + touches the auth path for every
+user, and existing installs would need their SharedPreferences-stored
+tokens migrated or those users silently logged out on update — a real
+UX/security tradeoff that deserves a decision, not a rushed change buried
+in an audit.
+
+[A 00:20] User asked me to help on mobile too, specifically "flow and API
+connection." Checked `api_client.dart` isn't something you're mid-editing
+(no uncommitted diff, not touched today before I looked) before touching
+it — logging one real finding below, fixed and executed-verified (not
+device-verified — no adb/emulator in this environment, see caveat).
+
+### MOB-004 — Concurrent 401s race independent token-refresh calls, can spuriously log the user out
+Status: FIXED
+Evidence: `api_client.dart`'s `_tryRefresh()` had no in-flight dedup — every
+`_send()` call that hit a 401 independently POSTed `/auth/refresh` with
+the *same* refresh token. `backend/src/modules/auth/auth.service.js:76`
+revokes the old refresh token the instant it issues a new pair (single-use
+rotation). So: two requests in flight when the access token expires (e.g.
+a screen firing several list loads in parallel, or the app resuming from
+background) both get 401, both call `_tryRefresh()`, both POST the same
+token — call 1 succeeds and revokes it, call 2's `findFirst` then sees
+`stored.revoked` (or the row already gone) and gets `401 "Refresh token
+revoked or expired"`, which the client's failure path treats as a dead
+session: `clearTokens()` + `onSessionExpired?.call()` — logging the user
+out even though call 1 had just renewed the session successfully seconds
+earlier. Same bug class the web client (`api/client.ts`) already guards
+against via `refreshing ||= axios.post(...)` — mobile had no equivalent.
+Fix: added a shared `Future<void>? _refreshing`, so every concurrent 401
+awaits the same in-flight refresh instead of racing (mirrors the web
+pattern exactly).
+Caveat on rigor: could not reproduce live on a physical device (no
+adb/emulator available in this session, unlike B's setup) or run the
+Flutter widget/integration test suite (none exists for this file). Instead
+extracted the exact before/after dedup logic into a standalone Dart script
+and ran it directly (`dart run`): the pre-fix pattern made 5 real
+concurrent calls for 5 concurrent 401s; the post-fix pattern made exactly
+1 call for 5, and still made a fresh call for each of 2 *sequential*
+(non-overlapping) refreshes afterward (3 total, not stuck deduped
+forever). `flutter analyze` clean on the file and the full `lib/` tree
+(pre-existing unrelated `deprecated_member_use` infos only, none new).
+Marking CONFIRMED+FIXED on that basis, not on-device — flagging the
+distinction rather than overclaiming device verification I didn't do.
+
 ## Contracts
 
 Format: `CONTRACT-NNN` — what's inconsistent between web and mobile, which

@@ -211,7 +211,27 @@ class ApiClient {
     return 'Request failed (status $status)';
   }
 
+  // Refresh tokens are single-use server-side (auth.service.js revokes the
+  // old one the instant it issues a new pair) — if two requests race into a
+  // 401 at once (e.g. a screen firing several list loads in parallel right
+  // as the access token expires), each independently POSTing the same
+  // refresh token would have the second one rejected as "already revoked",
+  // spuriously logging out a user whose session the first call had just
+  // successfully renewed. Sharing one in-flight refresh (same pattern as
+  // the web client's `refreshing ||= axios.post(...)`) makes every
+  // concurrent 401 await the same outcome instead of racing.
+  Future<void>? _refreshing;
+
   Future<void> _tryRefresh() async {
+    _refreshing ??= _doRefresh();
+    try {
+      await _refreshing;
+    } finally {
+      _refreshing = null;
+    }
+  }
+
+  Future<void> _doRefresh() async {
     final res = await _client.post(
       _uri('/auth/refresh'),
       headers: {'Content-Type': 'application/json'},
