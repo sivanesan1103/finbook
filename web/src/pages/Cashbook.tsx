@@ -40,11 +40,20 @@ export default function Cashbook() {
     setLoading(true);
     setForbidden(false);
     try {
-      const [list, sum] = await Promise.all([
-        api.get(base, { params: { date, paymentMode: mode, limit: 100 } }),
-        api.get(`${base}/summary`),
-      ]);
-      setEntries(list.data.data);
+      // A single page (limit:100) isn't enough to total the day correctly —
+      // a busy shop can log more than 100 entries in one day. Page through
+      // all of them before computing totals, same as Reports.tsx does for
+      // its cashbook report.
+      const all: CashbookEntry[] = [];
+      let page = 1, pages = 1;
+      do {
+        const res = await api.get(base, { params: { date, paymentMode: mode, page, limit: 100 } });
+        all.push(...res.data.data);
+        pages = res.data.meta.pages;
+        page++;
+      } while (page <= pages && page <= 50);
+      const sum = await api.get(`${base}/summary`);
+      setEntries(all);
       setSummary(sum.data.data);
     } catch (e) {
       if (isForbidden(e)) setForbidden(true); else toast(apiMessage(e), 'error');

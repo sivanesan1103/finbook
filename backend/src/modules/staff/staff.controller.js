@@ -94,6 +94,14 @@ export const update = asyncHandler(async (req, res) => {
   if (member.role === 'OWNER' && req.body.role && req.body.role !== 'OWNER') {
     throw ApiError.badRequest('Cannot change the owner role');
   }
+  // Adding a member with role PARTNER is OWNER-only (see `add`) precisely
+  // because a PARTNER gets full business access — this route must enforce
+  // the same rule for role *changes*, or a PARTNER could reach the same
+  // outcome by PATCHing an existing STAFF member's role instead of POSTing
+  // a new one, silently bypassing the OWNER-only gate.
+  if (req.body.role && req.body.role !== member.role && req.membership.role !== 'OWNER') {
+    throw ApiError.forbidden('Only the owner can change a member\'s role');
+  }
   const updated = await prisma.businessMember.update({
     where: { id: member.id },
     data: req.body,

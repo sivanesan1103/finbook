@@ -40,6 +40,7 @@ export default function Expenses() {
   const confirm = useConfirm();
   const [rows, setRows] = useState<Expense[]>([]);
   const [total, setTotal] = useState(0);
+  const [monthTotal, setMonthTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
   const [search, setSearch] = useState('');
@@ -69,9 +70,18 @@ export default function Expenses() {
     setLoading(true);
     setForbidden(false);
     try {
-      const list = await api.get(base, { params: { limit: 100 } });
+      const now = new Date();
+      const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+      const [list, month] = await Promise.all([
+        api.get(base, { params: { limit: 100 } }),
+        // "This month" needs the backend's aggregate, not a client-side sum
+        // over the (possibly truncated, limit:100) page of all-time rows —
+        // a business with >=100 expenses this month would otherwise undercount.
+        api.get(base, { params: { from: monthStart, limit: 1 } }),
+      ]);
       setRows(list.data.data);
       setTotal(list.data.summary.totalAmount);
+      setMonthTotal(month.data.summary.totalAmount);
     } catch (e) {
       if (isForbidden(e)) setForbidden(true); else toast(apiMessage(e), 'error');
     } finally {
@@ -224,11 +234,6 @@ export default function Expenses() {
     if (selectedOnly && qtyOf(i.id) === 0) return false;
     return i.name.toLowerCase().includes(itemSearch.trim().toLowerCase());
   });
-
-  const monthTotal = rows
-    .filter((r) => new Date(r.entryDate).getMonth() === new Date().getMonth()
-      && new Date(r.entryDate).getFullYear() === new Date().getFullYear())
-    .reduce((s, r) => s + Number(r.amount), 0);
 
   const selectedId = pane.type === 'detail' ? pane.expense.id : pane.type === 'edit' ? pane.expense.id : undefined;
   const gross = grossOf(picked);

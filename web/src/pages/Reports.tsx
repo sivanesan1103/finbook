@@ -76,7 +76,11 @@ export default function Reports() {
   const [salesData, setSalesData] = useState<{ totals: { count: number; billed: number; collected: number; pending: number }; entries: SalesRow[] } | null>(null);
 
   const base = `/businesses/${business?.id}`;
-  const dateParams = { from, to: to + 'T23:59:59' };
+  // Send date-only strings — the backend's istDayEnd(new Date(q.to)) already
+  // expands `to` to 23:59:59.999 IST of that calendar day. Appending a bare
+  // "T23:59:59" (no offset) used to get parsed as the *server's* local time,
+  // which on a UTC-TZ server pushed `to` a full day forward.
+  const dateParams = { from, to };
 
   const setPeriodAndRange = (p: Period) => {
     setPeriod(p);

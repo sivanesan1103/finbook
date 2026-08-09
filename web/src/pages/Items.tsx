@@ -46,8 +46,19 @@ export default function Items() {
     setLoading(true);
     setForbidden(false);
     try {
-      const res = await api.get(base, { params: { limit: 500 } });
-      setRows(res.data.data);
+      // The backend clamps `limit` to 100 regardless of what's asked for
+      // (see pagination.js) — a catalogue over 100 items would otherwise be
+      // silently truncated here, undercounting stock value and low-stock
+      // count. Page through all of it, same as Cashbook/Reports do.
+      const all: Item[] = [];
+      let page = 1, pages = 1;
+      do {
+        const res = await api.get(base, { params: { page, limit: 100 } });
+        all.push(...res.data.data);
+        pages = res.data.meta.pages;
+        page++;
+      } while (page <= pages && page <= 50);
+      setRows(all);
     } catch (e) {
       if (isForbidden(e)) setForbidden(true); else toast(apiMessage(e), 'error');
     } finally {
