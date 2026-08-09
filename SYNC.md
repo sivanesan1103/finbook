@@ -539,3 +539,53 @@ scheme, and the certificate SHA-256 matches v18's exactly
 than requiring an uninstall (Android refuses same-package-name installs
 across different signing keys). APK + README release-table row added
 following the existing convention.
+
+[A 02:25] Two more user-requested fixes, both went to production + a new
+mobile build.
+
+**WhatsApp share domain fix**: `env.publicWebUrl` (used to build the
+`/t/:token` public share link sent over WhatsApp) had no `PUBLIC_WEB_URL`
+set on the Pi, so it silently fell back to the old hardcoded default
+`https://finbook.sivaprj.online` in `config/env.js` — the app moved to
+`finbook.online` a while back. Fixed by adding `PUBLIC_WEB_URL:
+"https://finbook.online"` to the Pi's docker-compose.yml (env-only, no
+code/image change, just `docker compose up -d api`). Verified by reading
+the resolved value straight out of the running container's config.
+Noticed `CORS_ORIGINS` on the Pi is *also* still the old domain
+(mismatched from `deploy/.env.production.example`, which says
+`finbook.online`) — left untouched since it wasn't asked for and touches
+a much bigger surface than one share link; flagging it for whoever wants
+to look at it.
+
+**Paid invoice deletion**: user asked to delete 2 specific PAID invoices,
+hit the app's own safety block ("Cannot delete an invoice with payments
+recorded against it"), then asked to remove that block permanently
+instead of a one-off. Confirmed scope explicitly first (permanent
+change, and yes to also removing the linked payment + cashbook entry —
+that block existed specifically to prevent those going orphaned).
+Implemented `reverseInvoicePayments()` in `invoices.controller.js`,
+shared by both `cancel` and `softDelete`: deletes the matching cashbook
+entry (businessId + `Payment for invoice {invoiceNo}` description —
+invoiceNo is unique per business so this is an exact match, not fuzzy),
+deletes the Payment row(s), zeroes `amountPaid`. Web (`Invoices.tsx`) and
+mobile (`invoice_detail_screen.dart`) both had the Cancel button hidden
+for PAID status — removed that too, and both platforms' confirm dialogs
+now explicitly warn how much will be reversed when there's a payment,
+instead of the old fixed be nothing to say about it.
+Verified live against a local instance before touching production:
+created a real invoice, paid it fully, deleted it — cashbook entry
+confirmed gone via API before/after; separately paid a second invoice
+and cancelled it — status CANCELLED, amountPaid back to 0, cashbook entry
+gone. `tsc`+vite build clean, `flutter analyze` clean.
+Deployed backend+web to the Pi (diffed against baseline first, matched
+exactly, fresh backup taken, only api+web containers recreated, db
+untouched, both domains verified responding after). Cut mobile v20
+(1.0.0+23) with this fix — same signing-certificate verification as v19,
+added to `releases/v20/`.
+
+Also: mid-session, `releases/v3` through `v19` got deleted from git
+directly on GitHub (commit `fc206ea`, author was the github.com noreply
+identity, not this environment — almost certainly the user cleaning up
+repo size via the web UI, each APK is ~54MB). Rebased on top of it before
+pushing rather than fighting it; v20 is the first release APK back in
+the tree since.
