@@ -81,10 +81,14 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
   }
 
   Future<void> _cancel() async {
+    final paid = invoice!.amountPaid > 0;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(context.tr('invoiceDetail.cancelInvoiceTitle', {'no': invoice!.invoiceNo})),
+        content: paid
+            ? Text(context.tr('invoiceDetail.cancelPaidWarning', {'amount': inr(invoice!.amountPaid)}))
+            : null,
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('invoiceDetail.no'))),
           TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('invoiceDetail.yesCancel'))),
@@ -102,11 +106,14 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
   }
 
   Future<void> _delete() async {
+    final paid = invoice!.amountPaid > 0;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(context.tr('invoiceDetail.deleteInvoiceTitle', {'no': invoice!.invoiceNo})),
-        content: Text(context.tr('invoiceDetail.cannotUndo')),
+        content: Text(paid
+            ? '${context.tr('invoiceDetail.deletePaidWarning', {'amount': inr(invoice!.amountPaid)})} ${context.tr('invoiceDetail.cannotUndo')}'
+            : context.tr('invoiceDetail.cannotUndo')),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('invoiceDetail.cancel'))),
           TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('invoiceDetail.delete'))),
@@ -262,7 +269,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                   ]),
                 ),
               ],
-              if (inv.status != 'CANCELLED' && inv.status != 'PAID')
+              if (inv.status != 'CANCELLED')
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: OutlinedButton(onPressed: _cancel, child: Text(context.tr('invoiceDetail.cancelInvoiceButton'))),

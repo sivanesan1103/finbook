@@ -245,6 +245,8 @@ const Map<String, String> en = {
   'invoiceDetail.yesCancel': 'Yes, cancel',
   'invoiceDetail.deleteInvoiceTitle': 'Delete invoice {no}?',
   'invoiceDetail.cannotUndo': 'This cannot be undone.',
+  'invoiceDetail.cancelPaidWarning': '{amount} is paid against this invoice. Cancelling will remove that payment and its matching cashbook entry too.',
+  'invoiceDetail.deletePaidWarning': '{amount} is paid against this invoice. Deleting will remove that payment and its matching cashbook entry too.',
   'invoiceDetail.delete': 'Delete',
   'invoiceDetail.pdf': 'PDF',
   'invoiceDetail.collectPaymentButton': 'COLLECT PAYMENT',

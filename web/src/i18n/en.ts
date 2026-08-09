@@ -563,6 +563,8 @@ export const en = {
   'invoices.saveInvoice': 'Save Invoice',
   'invoices.confirmCancel': 'Cancel invoice {no}?',
   'invoices.confirmDelete': 'Delete invoice {no}? This cannot be undone.',
+  'invoices.confirmCancelPaid': 'Invoice {no} has {amount} paid against it. Cancelling will remove that payment and its matching cashbook entry too. Continue?',
+  'invoices.confirmDeletePaid': 'Invoice {no} has {amount} paid against it. Deleting will remove that payment and its matching cashbook entry too. This cannot be undone. Continue?',
   'invoices.addCustomerFirst': 'Add a customer first — invoices need a party to bill to.',
   'invoices.invoiceCreated': 'Invoice created',
   'invoices.paymentRecorded': 'Payment recorded',

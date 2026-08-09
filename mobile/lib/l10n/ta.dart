@@ -245,6 +245,8 @@ const Map<String, String> ta = {
   'invoiceDetail.yesCancel': 'ஆம், ரத்துசெய்',
   'invoiceDetail.deleteInvoiceTitle': 'விலைப்பட்டியல் {no}-ஐ நீக்கவா?',
   'invoiceDetail.cannotUndo': 'இதை மீட்டெடுக்க முடியாது.',
+  'invoiceDetail.cancelPaidWarning': 'இந்த விலைப்பட்டியலுக்கு {amount} செலுத்தப்பட்டுள்ளது. ரத்துசெய்தால் அந்தப் பணம் மற்றும் அதற்கான பணப்பதிவும் நீக்கப்படும்.',
+  'invoiceDetail.deletePaidWarning': 'இந்த விலைப்பட்டியலுக்கு {amount} செலுத்தப்பட்டுள்ளது. நீக்கினால் அந்தப் பணம் மற்றும் அதற்கான பணப்பதிவும் நீக்கப்படும்.',
   'invoiceDetail.delete': 'நீக்கு',
   'invoiceDetail.pdf': 'PDF',
   'invoiceDetail.collectPaymentButton': 'பணம் வசூலி',

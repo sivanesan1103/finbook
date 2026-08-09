@@ -565,6 +565,8 @@ export const ta: Record<TranslationKey, string> = {
   'invoices.saveInvoice': 'விலைப்பட்டியலைச் சேமி',
   'invoices.confirmCancel': 'விலைப்பட்டியல் {no}-ஐ ரத்துசெய்யவா?',
   'invoices.confirmDelete': 'விலைப்பட்டியல் {no}-ஐ நீக்கவா? இதை மீட்டெடுக்க முடியாது.',
+  'invoices.confirmCancelPaid': 'விலைப்பட்டியல் {no}-க்கு {amount} செலுத்தப்பட்டுள்ளது. ரத்துசெய்தால் அந்தப் பணம் மற்றும் அதற்கான பணப்பதிவும் நீக்கப்படும். தொடரவா?',
+  'invoices.confirmDeletePaid': 'விலைப்பட்டியல் {no}-க்கு {amount} செலுத்தப்பட்டுள்ளது. நீக்கினால் அந்தப் பணம் மற்றும் அதற்கான பணப்பதிவும் நீக்கப்படும். இதை மீட்டெடுக்க முடியாது. தொடரவா?',
   'invoices.addCustomerFirst': 'முதலில் ஒரு வாடிக்கையாளரைச் சேர்க்கவும் — விலைப்பட்டியலுக்கு ஒரு நபர் தேவை.',
   'invoices.invoiceCreated': 'விலைப்பட்டியல் உருவாக்கப்பட்டது',
   'invoices.paymentRecorded': 'பணம் செலுத்துதல் பதிவு செய்யப்பட்டது',

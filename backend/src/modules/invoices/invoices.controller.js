@@ -94,6 +94,23 @@ const revertStock = async (txn, invoice) => {
   await txn.invoice.update({ where: { id: invoice.id }, data: { stockDeducted: false } });
 };
 
+// Cancelling/deleting a paid invoice used to be blocked outright, specifically
+// to avoid leaving its payment(s) and matching cashbook cash-in entry behind
+// as orphans (still showing money received for a sale that no longer
+// exists). By request, that block is now lifted — but the reversal it was
+// protecting against still has to happen, so do it explicitly: cashbook
+// entries for invoice payments carry no invoiceId FK (unlike expense/ledger
+// entries), only a `Payment for invoice ${invoiceNo}` description, so that's
+// the only way to find them. invoiceNo is unique per business, so matching
+// on (businessId, description) is exact, not a fuzzy guess.
+const reverseInvoicePayments = async (txn, invoice) => {
+  if (Number(invoice.amountPaid) <= 0) return;
+  await txn.cashbookEntry.deleteMany({
+    where: { businessId: invoice.businessId, description: `Payment for invoice ${invoice.invoiceNo}` },
+  });
+  await txn.payment.deleteMany({ where: { invoiceId: invoice.id } });
+};
+
 export const cancel = asyncHandler(async (req, res) => {
   await prisma.$transaction(async (txn) => {
     const invoice = await txn.invoice.findFirst({
@@ -102,19 +119,14 @@ export const cancel = asyncHandler(async (req, res) => {
         businessId: req.business.id,
         docType: docTypeOf(req),
         deletedAt: null,
-        status: { notIn: ['PAID', 'CONVERTED'] },
+        status: { notIn: ['CONVERTED'] },
       },
       include: { items: true },
     });
     if (!invoice) throw ApiError.badRequest('Invoice not found or already settled');
-    // Cancelling would otherwise leave payments/cashbook entries recorded
-    // against a sale that no longer exists — block it instead of guessing
-    // at refund semantics.
-    if (Number(invoice.amountPaid) > 0) {
-      throw ApiError.badRequest('Cannot cancel an invoice with payments recorded against it');
-    }
+    await reverseInvoicePayments(txn, invoice);
     await revertStock(txn, invoice);
-    await txn.invoice.update({ where: { id: invoice.id }, data: { status: 'CANCELLED' } });
+    await txn.invoice.update({ where: { id: invoice.id }, data: { status: 'CANCELLED', amountPaid: 0 } });
   });
   logActivity(req, 'INVOICE_CANCELLED', 'Invoice', req.params.invoiceId);
   ok(res, { cancelled: true });
@@ -127,11 +139,9 @@ export const softDelete = asyncHandler(async (req, res) => {
       include: { items: true },
     });
     if (!invoice) throw ApiError.notFound('Invoice not found');
-    if (Number(invoice.amountPaid) > 0) {
-      throw ApiError.badRequest('Cannot delete an invoice with payments recorded against it — cancel is also blocked for the same reason');
-    }
+    await reverseInvoicePayments(txn, invoice);
     await revertStock(txn, invoice);
-    await txn.invoice.update({ where: { id: invoice.id }, data: { deletedAt: new Date() } });
+    await txn.invoice.update({ where: { id: invoice.id }, data: { deletedAt: new Date(), amountPaid: 0 } });
   });
   logActivity(req, 'INVOICE_DELETED', 'Invoice', req.params.invoiceId);
   ok(res, { deleted: true });

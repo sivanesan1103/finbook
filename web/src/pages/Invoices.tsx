@@ -139,7 +139,10 @@ export default function Invoices() {
   };
 
   const cancelInvoice = async (invoice: Invoice) => {
-    if (!(await confirm({ message: t('invoices.confirmCancel', { no: invoice.invoiceNo }), danger: true }))) return;
+    const message = Number(invoice.amountPaid) > 0
+      ? t('invoices.confirmCancelPaid', { no: invoice.invoiceNo, amount: inr(invoice.amountPaid) })
+      : t('invoices.confirmCancel', { no: invoice.invoiceNo });
+    if (!(await confirm({ message, danger: true }))) return;
     try {
       await api.post(`${base}/invoices/${invoice.id}/cancel`);
       toast(t('invoices.invoiceCancelled'));
@@ -149,7 +152,10 @@ export default function Invoices() {
   };
 
   const removeInvoice = async (invoice: Invoice) => {
-    if (!(await confirm({ message: t('invoices.confirmDelete', { no: invoice.invoiceNo }), danger: true }))) return;
+    const message = Number(invoice.amountPaid) > 0
+      ? t('invoices.confirmDeletePaid', { no: invoice.invoiceNo, amount: inr(invoice.amountPaid) })
+      : t('invoices.confirmDelete', { no: invoice.invoiceNo });
+    if (!(await confirm({ message, danger: true }))) return;
     try {
       await api.delete(`${base}/invoices/${invoice.id}`);
       toast(t('invoices.invoiceDeleted'));
@@ -384,7 +390,7 @@ export default function Invoices() {
                   )
                 )}
 
-                {inv.status !== 'CANCELLED' && inv.status !== 'PAID' && (
+                {inv.status !== 'CANCELLED' && (
                   <button className="w-full mt-3 py-2 rounded-lg text-sm font-semibold text-slate-500 hover:bg-slate-50 border border-slate-200"
                     onClick={() => cancelInvoice(inv)}>
                     {t('invoices.cancelInvoice')}
