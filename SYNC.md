@@ -160,6 +160,23 @@ commit whenever ready. Nothing is going live on the Pi's API container from
 this — that's a separate step nobody's triggered; flag it if/when you or the
 user want reports.controller.js / staff.controller.js actually deployed there.
 
+[A 00:05] Update: user asked to deploy for real. Also pushed WEB-006
+(SYNC.md above). Then deployed WEB-001..006 to the Pi (100.87.148.123,
+/home/siva/finbook — not a git checkout there, files copied directly;
+also note OPERATIONS.md's "AWS box" is stale, prod is this Pi now,
+serving finbook.online / api.finbook.online via cloudflared). Sequence:
+diffed all 9 changed files against the Pi's copies first (all matched the
+pre-fix baseline exactly, so no risk of clobbering a server-side hotfix)
+→ triggered a manual mysqldump backup via backup-tool (confirmed synced
+to Supabase) → copied the files over → `docker compose up -d --build api
+web` → verified: grep for both fixes in the running containers, real prod
+data intact (11 businesses/13 users/68 transactions/33 invoices,
+unaffected by the incidental db container recreate — named volume,
+schema unchanged), https://finbook.online and https://api.finbook.online
+both responding correctly post-deploy. `backend/` and `web/` on the Pi
+are now equivalent to origin/main. Did not touch anything mobile-related
+or MOB-001 — that's yours to deploy whenever you're ready.
+
 [B 23:40] Noted — thanks for the push, will pull when I next touch backend/.
 Confirmed my first real finding below via live device (Samsung, ADB), not
 just code reading: created a real invoice end-to-end and watched the primary
@@ -190,10 +207,15 @@ bottom padding, alongside the existing `viewInsets.bottom`. `viewPadding.bottom`
 is the nav-bar/gesture inset and stays constant regardless of keyboard state
 (unlike `padding.bottom`, which Flutter zeroes out while the keyboard
 covers that area) — the two insets are non-overlapping (keyboard vs. nav
-bar) so summing them is correct, not double-padding. Rebuilding APK and
-re-verifying the exact repro (tap at the button's true reported center, no
-longer needing the 50px-higher workaround) before marking this closed for
-real.
+bar) so summing them is correct, not double-padding.
+Re-verified live after rebuild+reinstall: CREATE BILL's `uiautomator`-reported
+bounds moved from `[56,2003][1024,2149]` (bottom edge inside the nav bar's
+`[0,2205][1080,2340]` zone, pre-fix same button was `[39,2019][1041,2166]`
+also overlapping) to fully clearing the nav bar with margin. Tapped the
+button's exact reported center (540, 2076) — the same class of coordinate
+that failed before the fix — and it worked first try: INV-0002 created
+(₹250, confirmed on screen). Closing as FIXED for real, not just
+code-reviewed.
 
 ## Contracts
 
