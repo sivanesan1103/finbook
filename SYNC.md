@@ -522,3 +522,20 @@ side is authoritative, resolution.
 
 _(none logged yet — the ₹ decimal-padding difference noted above is real
 but cosmetic, not worth a formal entry unless someone wants it unified)_
+
+[A 01:12] User said "push all final". Checked production first: diffed the
+Pi's live backend/web files (reports.controller.js, staff.controller.js,
+jwt.js, Parties.tsx) against commit f1dc65d — all matched exactly, so
+finbook.online/api.finbook.online are already fully current, nothing left
+to deploy there.
+
+For mobile: v18 (1.0.0+21, your last cut) predates my MOB-003 fix, so cut
+v19 (1.0.0+22) to make it the actual final state — `flutter test` (all 3
+secure-storage tests) + `flutter analyze` clean first, then
+`flutter build apk --release`. Verified with `apksigner verify
+--print-certs` (not just "it built") that it's genuinely signed — v2
+scheme, and the certificate SHA-256 matches v18's exactly
+(9b7fd66e...c185d), so this installs as a normal update over v18 rather
+than requiring an uninstall (Android refuses same-package-name installs
+across different signing keys). APK + README release-table row added
+following the existing convention.
