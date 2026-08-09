@@ -74,7 +74,12 @@ class _BillsTabState extends State<BillsTab> {
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+        // viewInsets.bottom clears the keyboard; viewPadding.bottom clears the
+        // system nav bar (3-button nav) — without it the bottom ~135px of the
+        // sheet, including the primary action button, renders under the nav
+        // bar and isn't tappable, even though it's visually on screen.
+        padding: EdgeInsets.fromLTRB(20, 20, 20,
+            MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).viewPadding.bottom + 20),
         child: StatefulBuilder(
           builder: (ctx, setSheet) => SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [

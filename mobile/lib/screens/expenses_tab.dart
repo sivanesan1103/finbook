@@ -144,7 +144,11 @@ class _ExpensesTabState extends State<ExpensesTab> {
               .toList();
 
           return Padding(
-            padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+            // viewPadding.bottom clears the system nav bar (3-button nav) —
+            // without it the primary action button renders under the nav bar
+            // and isn't tappable.
+            padding: EdgeInsets.fromLTRB(20, 20, 20,
+                MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).viewPadding.bottom + 20),
             child: selected == null
                 // ── Step 1: pick or create an expense item ──
                 ? ConstrainedBox(

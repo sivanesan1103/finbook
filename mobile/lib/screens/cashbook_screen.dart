@@ -39,11 +39,25 @@ class _CashbookScreenState extends State<CashbookScreen> {
     final api = ApiClient.instance;
     final d = date.toIso8601String().substring(0, 10);
     try {
-      final list = await api.get('${app.basePath}/cashbook?date=$d&paymentMode=$mode&limit=100');
+      // Page through every entry for the selected day/mode — the backend
+      // hard-clamps limit to 100 (backend/src/utils/pagination.js), so a
+      // single-page fetch would silently undercount the IN/OUT totals below
+      // once a day has more than 100 entries. Capped at 50 pages (5,000
+      // entries/day) as a sanity bound, same as the web fix for this.
+      final all = <CashEntry>[];
+      var page = 1;
+      while (true) {
+        final list = await api
+            .get('${app.basePath}/cashbook?date=$d&paymentMode=$mode&limit=100&page=$page');
+        all.addAll((list['data'] as List).map((e) => CashEntry.fromJson(e)));
+        final pages = (list['meta']?['pages'] as num?)?.toInt() ?? 1;
+        if (page >= pages || page >= 50) break;
+        page++;
+      }
       final sum = await api.get('${app.basePath}/cashbook/summary');
       if (!mounted) return;
       setState(() {
-        entries = (list['data'] as List).map((e) => CashEntry.fromJson(e)).toList();
+        entries = all;
         totalBalance = (sum['data']['totalBalance'] as num).toDouble();
         todayBalance = (sum['data']['todayBalance'] as num).toDouble();
       });
@@ -68,7 +82,10 @@ class _CashbookScreenState extends State<CashbookScreen> {
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+        // viewPadding.bottom clears the system nav bar (3-button nav) — without
+        // it the Save button renders under the nav bar and isn't tappable.
+        padding: EdgeInsets.fromLTRB(20, 20, 20,
+            MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).viewPadding.bottom + 20),
         child: StatefulBuilder(
           builder: (ctx, setSheet) => Column(mainAxisSize: MainAxisSize.min, children: [
             Text(

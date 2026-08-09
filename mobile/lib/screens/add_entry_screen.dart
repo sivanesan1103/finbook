@@ -84,6 +84,8 @@ class _AddEntryScreenState extends State<AddEntryScreen> {
                 : gave
                     ? context.tr('addEntry.youGaveTo', {'name': widget.party.name})
                     : context.tr('addEntry.youGotFrom', {'name': widget.party.name}),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
       ),
       bottomNavigationBar: SafeArea(

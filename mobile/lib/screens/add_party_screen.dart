@@ -67,6 +67,11 @@ class _AddPartyScreenState extends State<AddPartyScreen> {
   }
 
   Future<void> _save() async {
+    // The button disables on rebuild after setState, but a fast double-tap
+    // can fire both pointer-up events before that rebuild lands — guard
+    // re-entrancy explicitly instead of relying on the disabled state alone
+    // (same race add_entry_screen.dart already guards against).
+    if (busy) return;
     setState(() => busy = true);
     try {
       final app = context.read<AppState>();

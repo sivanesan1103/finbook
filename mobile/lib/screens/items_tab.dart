@@ -40,10 +40,23 @@ class _ItemsTabState extends State<ItemsTab> with SingleTickerProviderStateMixin
     if (app.business == null) return;
     setState(() => loading = true);
     try {
-      final res = await ApiClient.instance.get('${app.basePath}/items?limit=200');
+      // The backend hard-clamps limit to 100 regardless of what's requested
+      // (backend/src/utils/pagination.js) — the limit=200 here was never
+      // actually honored, so a catalogue past 100 items silently truncated
+      // and stockValue/low-stock count below undercounted. Page through
+      // everything instead, capped at 50 pages as a sanity bound.
+      final all = <Item>[];
+      var page = 1;
+      while (true) {
+        final res = await ApiClient.instance.get('${app.basePath}/items?limit=100&page=$page');
+        all.addAll((res['data'] as List).map((i) => Item.fromJson(i)));
+        final pages = (res['meta']?['pages'] as num?)?.toInt() ?? 1;
+        if (page >= pages || page >= 50) break;
+        page++;
+      }
       if (!mounted) return;
       setState(() {
-        items = (res['data'] as List).map((i) => Item.fromJson(i)).toList();
+        items = all;
       });
     } catch (e) {
       if (mounted) showSnack(context, e.toString(), error: true);
@@ -72,7 +85,10 @@ class _ItemsTabState extends State<ItemsTab> with SingleTickerProviderStateMixin
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+        // viewPadding.bottom clears the system nav bar (3-button nav) — without
+        // it the Save button renders under the nav bar and isn't tappable.
+        padding: EdgeInsets.fromLTRB(20, 20, 20,
+            MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).viewPadding.bottom + 20),
         child: StatefulBuilder(
           builder: (ctx, setSheet) => SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
