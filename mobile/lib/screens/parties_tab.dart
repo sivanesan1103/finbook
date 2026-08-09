@@ -22,6 +22,8 @@ class _PartiesTabState extends State<PartiesTab>
   List<Party> parties = [];
   PartySummary summary = PartySummary();
   bool loading = true;
+  bool loadingMore = false;
+  bool hasMore = false;
 
   String get type => tabCtrl.index == 0 ? 'CUSTOMER' : 'SUPPLIER';
 
@@ -44,18 +46,52 @@ class _PartiesTabState extends State<PartiesTab>
       final q = searchCtrl.text.isEmpty
           ? ''
           : '&search=${Uri.encodeComponent(searchCtrl.text)}';
-      final list =
-          await api.get('${app.basePath}/parties?type=$type&limit=100$q');
+      final list = await api
+          .get('${app.basePath}/parties?type=$type&page=1&limit=100$q');
       final sum = await api.get('${app.basePath}/parties/summary?type=$type');
       if (!mounted) return;
+      final meta = list['meta'] as Map;
       setState(() {
         parties = (list['data'] as List).map((p) => Party.fromJson(p)).toList();
         summary = PartySummary.fromJson(sum['data']);
+        hasMore = (meta['page'] as int) < (meta['pages'] as int);
         loading = false;
       });
     } catch (e) {
       if (mounted) {
         setState(() => loading = false);
+        showSnack(context, e.toString(), error: true);
+      }
+    }
+  }
+
+  // A business with >100 parties couldn't see the rest of the list otherwise
+  // — the "You will give/get" header already reads from a real backend
+  // aggregate (/parties/summary), only this browsable list was ever capped
+  // at one page. Same gap as web's WEB-006, same fix.
+  Future<void> _loadMore() async {
+    final app = context.read<AppState>();
+    if (app.business == null || loadingMore) return;
+    setState(() => loadingMore = true);
+    try {
+      final api = ApiClient.instance;
+      final q = searchCtrl.text.isEmpty
+          ? ''
+          : '&search=${Uri.encodeComponent(searchCtrl.text)}';
+      final nextPage = (parties.length ~/ 100) + 1;
+      final list = await api.get(
+          '${app.basePath}/parties?type=$type&page=$nextPage&limit=100$q');
+      if (!mounted) return;
+      final meta = list['meta'] as Map;
+      setState(() {
+        parties.addAll(
+            (list['data'] as List).map((p) => Party.fromJson(p)).toList());
+        hasMore = (meta['page'] as int) < (meta['pages'] as int);
+        loadingMore = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() => loadingMore = false);
         showSnack(context, e.toString(), error: true);
       }
     }
@@ -72,8 +108,11 @@ class _PartiesTabState extends State<PartiesTab>
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setD) => Padding(
-          padding: EdgeInsets.fromLTRB(
-              20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+          // viewPadding.bottom clears the system nav bar (3-button nav) —
+          // without it the Create button renders under the nav bar and isn't
+          // tappable.
+          padding: EdgeInsets.fromLTRB(20, 20, 20,
+              MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).viewPadding.bottom + 20),
           child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -338,9 +377,24 @@ class _PartiesTabState extends State<PartiesTab>
                             ])
                       : ListView.separated(
                           padding: const EdgeInsets.only(bottom: 90),
-                          itemCount: parties.length,
+                          itemCount: parties.length + (hasMore ? 1 : 0),
                           separatorBuilder: (_, __) => const Divider(height: 1),
                           itemBuilder: (_, i) {
+                            if (i == parties.length) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 16),
+                                child: Center(
+                                  child: loadingMore
+                                      ? const CircularProgressIndicator()
+                                      : OutlinedButton(
+                                          onPressed: _loadMore,
+                                          child: Text(
+                                              context.tr('partiesTab.loadMore')),
+                                        ),
+                                ),
+                              );
+                            }
                             final p = parties[i];
                             return ListTile(
                               tileColor: Colors.white,

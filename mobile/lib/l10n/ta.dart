@@ -371,6 +371,7 @@ const Map<String, String> ta = {
   'partiesTab.request': '↙ கோரிக்கை',
   'partiesTab.advance': 'முன்பணம்',
   'partiesTab.settled': 'தீர்க்கப்பட்டது',
+  'partiesTab.loadMore': 'மேலும் காட்டு',
 
   // login screen
   'login.appName': 'FinBook',

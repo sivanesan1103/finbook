@@ -371,6 +371,7 @@ const Map<String, String> en = {
   'partiesTab.request': '↙ REQUEST',
   'partiesTab.advance': 'ADVANCE',
   'partiesTab.settled': 'SETTLED',
+  'partiesTab.loadMore': 'Load more',
 
   // login screen
   'login.appName': 'FinBook',

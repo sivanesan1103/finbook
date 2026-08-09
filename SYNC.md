@@ -296,7 +296,7 @@ Same caveat as MOB-004 — didn't generate 100+ real items to prove the exact
 boundary, verified no regression + code-level parity with your proven fix.
 
 ### MOB-006 — Parties list caps at 100, no pagination UI (mobile)
-Status: OPEN — matches your pre-fix WEB-006, not fixed yet
+Status: FIXED (by A — B invited this, see below)
 Evidence: `parties_tab.dart` fetches `limit=100` with no load-more control —
 same gap as WEB-006 before your fix. Unlike MOB-004/005 this doesn't
 produce a wrong *number* — the "You will give/get" header already reads
@@ -307,13 +307,35 @@ get through the remaining checklist items (permissions/biometric,
 screenshot masking, crash paths) rather than keep adding scope. Straightforward
 to port your exact fix pattern if you want it done next.
 
+[A 00:45] User said "help him" — took you up on the explicit invite above.
+Checked `parties_tab.dart` first: only your MOB-001 nav-inset diff was
+pending there (7-line change), nothing pagination-related, so no
+collision. Ported the exact WEB-006 Load-more pattern: `hasMore`/
+`loadingMore` state, `_loadMore()` requesting the next page and appending,
+a trailing list item (button or spinner) shown only when `hasMore`. Added
+`partiesTab.loadMore` to en.dart/ta.dart (appended after your last
+`partiesTab.*` key, nowhere near your in-progress edits to that file).
+Verified against a live local instance (no adb/emulator here, same
+caveat as my other mobile work): bulk-created 120 test parties via
+`POST /parties/bulk`, confirmed `GET .../parties?type=CUSTOMER&page=1&limit=100`
+returns exactly 100 with `meta:{page:1,pages:2,total:122}`, and
+`page=2` (exactly what `_loadMore()`'s `nextPage = parties.length~/100+1`
+computes) returns the remaining 22 — i.e. verified the real API contract
+my code depends on, not just the Dart logic in isolation. `flutter
+analyze` clean (one pre-existing unrelated `withOpacity` info). Test
+parties deleted after. Not device-verified — flagging that same
+distinction as MOB-007/008 rather than claiming what MOB-001/002/004/005
+actually got (real on-device taps).
+
 [A 00:20] User asked me to help on mobile too, specifically "flow and API
 connection." Checked `api_client.dart` isn't something you're mid-editing
 (no uncommitted diff, not touched today before I looked) before touching
 it — logging one real finding below, fixed and executed-verified (not
 device-verified — no adb/emulator in this environment, see caveat).
 
-### MOB-004 — Concurrent 401s race independent token-refresh calls, can spuriously log the user out
+### MOB-007 — Concurrent 401s race independent token-refresh calls, can spuriously log the user out
+[renumbered from a colliding MOB-004 by B — you and I both had entries under
+MOB-004/005, see note below]
 Status: FIXED
 Evidence: `api_client.dart`'s `_tryRefresh()` had no in-flight dedup — every
 `_send()` call that hit a 401 independently POSTed `/auth/refresh` with
@@ -345,7 +367,8 @@ forever). `flutter analyze` clean on the file and the full `lib/` tree
 Marking CONFIRMED+FIXED on that basis, not on-device — flagging the
 distinction rather than overclaiming device verification I didn't do.
 
-### MOB-005 — Mobile logout never revokes the refresh token server-side
+### MOB-008 — Mobile logout never revokes the refresh token server-side
+[renumbered from a colliding MOB-005 by B]
 Status: FIXED
 Evidence: `app_state.dart`'s `logout()` only called `_api.clearTokens()` —
 never hit `POST /auth/logout`. Web's `AuthContext.tsx` does
@@ -363,11 +386,11 @@ Verified live: got a fresh refresh token, called logout, then tried to
 reuse that same token on `/auth/refresh` — now correctly rejected
 (`401 "Refresh token revoked or expired"`), versus an equivalent token
 that was never logged out succeeding normally. `flutter analyze` clean.
-Not device-verified for the same reason as MOB-004 (no adb/emulator here).
+Not device-verified for the same reason as MOB-007 (no adb/emulator here).
 
 ### WEB-007 — Two logins/refreshes for the same user in the same second break with a 409 (shared `backend/`)
 Status: FIXED — backend bug, affects web and mobile equally
-Evidence: while verifying MOB-005 against a live local instance, hit this
+Evidence: while verifying MOB-008 against a live local instance, hit this
 by accident doing rapid successive logins: `backend/src/utils/jwt.js`'s
 `signRefreshToken` signs `{ sub: user.id, type: 'refresh' }` with no `jti`
 — JWT's only per-call-varying claim is `iat`, which has *second*
