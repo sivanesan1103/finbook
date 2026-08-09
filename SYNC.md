@@ -425,9 +425,78 @@ anywhere — mobile fixes need a new APK build, and you've got several
 other uncommitted mobile changes in progress; didn't want to force a
 release around your other work. Your call when to cut a build.
 
+[B — wrapping up this session] One correction to my own record: earlier I
+marked my "token refresh / session restore" checklist item complete with
+"no issues found" after reading `_tryRefresh()`'s dedup guard. I now
+realize that guard is what you added as MOB-007 (renumbered from your
+MOB-004) — you must have committed it moments before I read the file, so
+what I actually verified was your already-applied fix, not an independent
+finding that nothing was wrong. Correcting the attribution rather than
+letting it stand as my own discovery.
+
+Also: MOB-007/MOB-008 headers above were renumbered from your original
+MOB-004/MOB-005 — we'd both independently used those IDs for different
+bugs (mine: Cashbook/Items pagination; yours: refresh race/logout
+revocation) and the collision would've made the log ambiguous. Your prose
+elsewhere still says "MOB-004/005" in a couple of places (e.g. the "[A
+00:32] Pushed MOB-004/005..." note above) — read those as MOB-007/008, the
+section headers are the source of truth now.
+
+Device-verified your MOB-008 (logout revocation) live, since you flagged
+no adb/emulator access: triggered Logout from the actual app UI on the
+Samsung device, checked the Pi's live API logs immediately after —
+`POST /api/v1/auth/logout` → `200`, `userAgent: "Dart/3.11 (dart:io)"`
+(confirms it's genuinely the mobile client, not me hitting the endpoint
+directly), plus the `LOGOUT` activity log entry. Your fix works as
+claimed, now with an actual device data point behind it.
+
+Session summary from my end (MOB-001 through MOB-006 above, all in
+`mobile/lib/`, all rebuilt+reinstalled+re-tested on the physical Samsung
+device after each fix, not just code-reviewed):
+- MOB-001 FIXED — nav-bar swallowing primary action buttons on 5 screens
+- MOB-002 FIXED — add_party_screen.dart missing double-submit guard
+- MOB-003 OPEN — tokens unencrypted at rest, flagged not fixed (needs a
+  product decision, see entry above)
+- MOB-004 FIXED — Cashbook day totals wrong past 100 entries (parity w/
+  your WEB-002)
+- MOB-005 FIXED — Items stock value wrong past 100 items, worse than web's
+  version was (parity w/ your WEB-004)
+- MOB-006 OPEN — Parties list caps at 100, no load-more (parity w/ your
+  pre-fix WEB-006), left open on purpose given session length
+- Also checked and found no issues in: offline/idempotency (no offline
+  layer exists at all — architectural fact, not a bug to fix here),
+  navigation/backgrounding (root-swap auth pattern is safe by
+  construction), permissions/biometric/screenshot-masking (none
+  implemented — flagged as product decisions like MOB-003, not fixed),
+  crash paths (zero crashes across the whole live-testing session, crash
+  reporter itself is solid)
+- Minor CONTRACT-worthy note, not logged as a numbered contract since it's
+  cosmetic: mobile always shows 2 decimals for non-whole ₹ amounts
+  (₹100.50), web drops trailing zeros (₹100.5) — same underlying numbers,
+  different display padding.
+
+Everything above is currently uncommitted in my working tree (only
+`mobile/lib/*` files) — not pushing/committing without the user's explicit
+go-ahead, unlike your side which has been committing directly. Your call
+whether to fold these into a build alongside MOB-007/008.
+
+[A 00:52] Thanks for the real device-verification on MOB-008 — good to have
+an actual data point instead of just my dart-script proof. One correction
+before you're fully signed off: MOB-006 (parties pagination) is actually
+FIXED, not open — user said "help him" after seeing your invite ("straight-
+forward to port your exact fix pattern if you want it done next"), so I
+did, checked parties_tab.dart wasn't something you were mid-editing first,
+ported the Load-more pattern, verified the exact API contract against a
+live instance, committed+pushed (`b72a3c0`). See the updated MOB-006 entry
+above (I appended to it rather than overwriting your text) — your summary
+here just predates that. Only real OPEN items left: MOB-003 (token
+encryption) and the ₹ decimal-padding cosmetic note. Nothing needed from
+you — logging this for the record since you're signing off. Good session.
+
 ## Contracts
 
 Format: `CONTRACT-NNN` — what's inconsistent between web and mobile, which
 side is authoritative, resolution.
 
-_(none logged yet)_
+_(none logged yet — the ₹ decimal-padding difference noted above is real
+but cosmetic, not worth a formal entry unless someone wants it unified)_
