@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -94,6 +95,16 @@ class ApiClient {
   String? _access;
   String? _refresh;
 
+  // MOB-003: tokens used to live in plain SharedPreferences (an unencrypted
+  // XML file on Android) — readable with root, adb backup, or physical
+  // extraction on a lost device. flutter_secure_storage backs onto the
+  // Android Keystore / iOS Keychain instead. `resetOnError` recovers from a
+  // corrupt keystore entry (e.g. after certain OS-level backup/restore
+  // flows) by wiping just the secure store rather than crashing app boot.
+  static const _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(resetOnError: true),
+  );
+
   /// Set by AppState at startup — called whenever a token refresh fails
   /// (expired refresh token, or the account it belongs to no longer
   /// exists) so the UI can drop back to the login screen immediately
@@ -102,9 +113,29 @@ class ApiClient {
   void Function()? onSessionExpired;
 
   Future<void> loadTokens() async {
+    _access = await _secureStorage.read(key: 'bk_access');
+    _refresh = await _secureStorage.read(key: 'bk_refresh');
+    if (_access == null && _refresh == null) {
+      await _migrateFromSharedPreferences();
+    }
+  }
+
+  /// One-time migration for installs that logged in before secure storage
+  /// was added — moves any existing SharedPreferences tokens into secure
+  /// storage instead of forcing every existing session to log out on
+  /// upgrade. Safe to call repeatedly: it's a no-op once the legacy keys
+  /// are gone.
+  Future<void> _migrateFromSharedPreferences() async {
     final prefs = await SharedPreferences.getInstance();
-    _access = prefs.getString('bk_access');
-    _refresh = prefs.getString('bk_refresh');
+    final legacyAccess = prefs.getString('bk_access');
+    final legacyRefresh = prefs.getString('bk_refresh');
+    if (legacyAccess == null || legacyRefresh == null) return;
+    _access = legacyAccess;
+    _refresh = legacyRefresh;
+    await _secureStorage.write(key: 'bk_access', value: legacyAccess);
+    await _secureStorage.write(key: 'bk_refresh', value: legacyRefresh);
+    await prefs.remove('bk_access');
+    await prefs.remove('bk_refresh');
   }
 
   bool get hasSession => _access != null;
@@ -112,14 +143,17 @@ class ApiClient {
   Future<void> saveTokens(String access, String refresh) async {
     _access = access;
     _refresh = refresh;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('bk_access', access);
-    await prefs.setString('bk_refresh', refresh);
+    await _secureStorage.write(key: 'bk_access', value: access);
+    await _secureStorage.write(key: 'bk_refresh', value: refresh);
   }
 
   Future<void> clearTokens() async {
     _access = null;
     _refresh = null;
+    await _secureStorage.delete(key: 'bk_access');
+    await _secureStorage.delete(key: 'bk_refresh');
+    // Defensive: clears any leftover legacy keys too, in case clearTokens()
+    // runs before loadTokens() ever had a chance to migrate them.
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('bk_access');
     await prefs.remove('bk_refresh');

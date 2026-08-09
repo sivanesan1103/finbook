@@ -244,24 +244,46 @@ the normal (single-tap) path still works: created a real customer
 ("SanityCheck"), appeared in the list immediately, no regression.
 
 ### MOB-003 — JWT access/refresh tokens stored unencrypted
-Status: OPEN — flagging for the user, not fixing unilaterally
+Status: FIXED — user said "you decide" on the open tradeoff below, decided to fix it
 Evidence: `api_client.dart:104-126` — `loadTokens`/`saveTokens`/`clearTokens`
-all use plain `SharedPreferences` (`bk_access`, `bk_refresh`) via the
+all used plain `SharedPreferences` (`bk_access`, `bk_refresh`) via the
 `shared_preferences` package. On Android this is an unencrypted XML file
 under the app's private data dir — not readable by other apps under normal
 sandboxing, but readable in plaintext with root, `adb backup` (if not
 disabled), or physical extraction on a lost/stolen device. These are
 long-lived rotating tokens granting full access to a business's financial
 data. Cleared correctly on logout (`clearTokens`) and session-expiry
-(`_doRefresh`'s failure path) — the gap is specifically "not encrypted at
+(`_doRefresh`'s failure path) — the gap was specifically "not encrypted at
 rest," not "not cleared."
-Not fixing without a decision from the user: migrating to
-`flutter_secure_storage` (Android Keystore / iOS Keychain backed) is the
-right fix, but it's a new dependency + touches the auth path for every
-user, and existing installs would need their SharedPreferences-stored
-tokens migrated or those users silently logged out on update — a real
-UX/security tradeoff that deserves a decision, not a rushed change buried
-in an audit.
+Fix: migrated to `flutter_secure_storage` (^9.2.2, Android Keystore / iOS
+Keychain backed, `resetOnError: true` so a corrupt keystore entry wipes
+just the secure store instead of crashing app boot). The exact tradeoff
+flagged before (existing sessions silently logged out on upgrade) is
+handled: `loadTokens()` falls back to a one-time migration
+(`_migrateFromSharedPreferences`) that moves any legacy
+SharedPreferences tokens into secure storage and deletes the legacy keys
+— an existing logged-in user stays logged in through the upgrade instead
+of hitting a surprise login screen. `clearTokens()` defensively wipes both
+stores.
+Verified without a device: no adb/emulator in this environment, and
+flutter_secure_storage needs OS Keystore/Keychain access that a plain
+`dart run` script can't reach — so wrote a real `flutter_test` unit test
+(`test/api_client_secure_storage_test.dart`) that mocks the actual
+`plugins.it_nomads.com/flutter_secure_storage` platform channel with an
+in-memory map (verified the channel name + method contract by reading the
+plugin's own platform-interface source, not guessing) plus
+`SharedPreferences.setMockInitialValues`. Three cases, all passing: (1)
+fresh `saveTokens` writes to secure storage and confirms nothing lands in
+SharedPreferences, (2) a simulated pre-fix install (tokens only in
+SharedPreferences) survives `loadTokens()` with `hasSession` still true,
+the values now in secure storage, and the legacy keys gone, (3) an
+already-migrated install reads straight through. `flutter analyze` clean
+across the whole tree (same 34 pre-existing unrelated infos, nothing new).
+This is real test coverage of the actual `ApiClient` singleton's
+migration logic, not a reimplementation in isolation — but still not an
+on-device confirmation that Android Keystore/iOS Keychain integration
+itself works, which only a real device can prove. Flagging that
+distinction rather than claiming more than I verified.
 
 [B — Lists audit] Your WEB-002/004/006 pagination-cap findings were a strong
 signal to check mobile for the identical pattern — it has it, in two places
