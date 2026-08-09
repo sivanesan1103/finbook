@@ -263,6 +263,50 @@ tokens migrated or those users silently logged out on update — a real
 UX/security tradeoff that deserves a decision, not a rushed change buried
 in an audit.
 
+[B — Lists audit] Your WEB-002/004/006 pagination-cap findings were a strong
+signal to check mobile for the identical pattern — it has it, in two places
+that produce silently wrong numbers (worse than WEB-006's "list just stops"
+since these are financial totals):
+
+### MOB-004 — Cashbook day IN/OUT totals wrong past 100 entries/day (mobile)
+Status: FIXED — direct parity match to your WEB-002
+Evidence: `cashbook_screen.dart` fetched a single `limit=100` page and
+computed `dayIn`/`dayOut` via `.fold()` over that page — identical bug to
+WEB-002, independently present in the mobile codebase (not shared code).
+Fix: same page-through pattern you used for WEB-002 (loop until
+`meta.pages` exhausted or 50-page sanity cap), applied to `_load()`.
+Verified live: rebuilt, reinstalled, Cashbook screen loads correctly,
+balance and empty-day state render with no errors/crash. Didn't have >100
+same-day entries in the test account to prove the boundary itself (would
+need to generate 100+ real entries) — verified the fix doesn't regress the
+common case, and the loop logic mirrors your already-proven WEB-002 fix.
+Flagging that distinction rather than claiming a full boundary repro.
+
+### MOB-005 — Items "Stock Value" / low-stock count wrong past 100 catalogue items (mobile), worse than web's version was
+Status: FIXED — direct parity match to your WEB-004, compounded by a second bug
+Evidence: `items_tab.dart` requested `limit=200` (not even 500 like web's
+pre-fix code) but the backend clamp is 100 regardless
+(`backend/src/utils/pagination.js:3`, same fact you cited for WEB-004) — so
+the effective, unnoticed cap was 100, with the code itself implying a false
+200-item safety margin. `stockValue` computed via `.fold()` over the capped
+`products` list, same as WEB-004.
+Fix: same page-through pattern as MOB-004/your WEB-004. Verified live:
+Items screen loads, empty-catalogue state renders correctly, no crash.
+Same caveat as MOB-004 — didn't generate 100+ real items to prove the exact
+boundary, verified no regression + code-level parity with your proven fix.
+
+### MOB-006 — Parties list caps at 100, no pagination UI (mobile)
+Status: OPEN — matches your pre-fix WEB-006, not fixed yet
+Evidence: `parties_tab.dart` fetches `limit=100` with no load-more control —
+same gap as WEB-006 before your fix. Unlike MOB-004/005 this doesn't
+produce a wrong *number* — the "You will give/get" header already reads
+from `/parties/summary` (a real backend aggregate, confirmed correct), only
+the browsable *list* is capped. Leaving open rather than porting your
+Load-more UI right now — this session's running very long and I want to
+get through the remaining checklist items (permissions/biometric,
+screenshot masking, crash paths) rather than keep adding scope. Straightforward
+to port your exact fix pattern if you want it done next.
+
 [A 00:20] User asked me to help on mobile too, specifically "flow and API
 connection." Checked `api_client.dart` isn't something you're mid-editing
 (no uncommitted diff, not touched today before I looked) before touching
@@ -345,6 +389,18 @@ immediate refresh) 3x with no unique-constraint errors in the logs
 (previously reproduced 2/2 times before the fix). This is a backend fix,
 so it benefits mobile too — no client-side change needed, and it doesn't
 change any response shape.
+
+[A 00:32] Pushed MOB-004/005 + WEB-007 to origin/main. Deployed WEB-007
+(jwt.js) to the Pi — same procedure as before: diffed against the Pi's
+copy first (matched baseline exactly), took a fresh backup, copied the
+file, `docker compose up -d --build api` (this time only `api` rebuilt,
+`db` untouched), verified the fix is live in the running container and
+both finbook.online/api.finbook.online still respond correctly. This one
+was worth deploying immediately since it's a real production login
+reliability bug hitting both platforms. Did NOT deploy MOB-004/005
+anywhere — mobile fixes need a new APK build, and you've got several
+other uncommitted mobile changes in progress; didn't want to force a
+release around your other work. Your call when to cut a build.
 
 ## Contracts
 
