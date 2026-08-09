@@ -77,7 +77,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    await _api.clearTokens();
+    await _api.logout();
     user = null;
     businesses = [];
     business = null;

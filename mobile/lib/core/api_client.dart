@@ -125,6 +125,25 @@ class ApiClient {
     await prefs.remove('bk_refresh');
   }
 
+  /// Revokes the refresh token server-side before clearing it locally — a
+  /// "logged out" session that keeps a live refresh token is not actually
+  /// logged out (it's still valid for JWT_REFRESH_EXPIRES, 30 days, and
+  /// would keep working from a copy of the token e.g. off a lost device).
+  /// Best-effort: logout must clear the local session even if the request
+  /// fails (no network, server down), same as the web client.
+  Future<void> logout() async {
+    if (_refresh != null) {
+      try {
+        await _client.post(
+          _uri('/auth/logout'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'refreshToken': _refresh}),
+        );
+      } catch (_) {}
+    }
+    await clearTokens();
+  }
+
   Uri _uri(String path) => Uri.parse('$baseUrl/api/v1$path');
 
   Map<String, String> get _headers => {

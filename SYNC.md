@@ -301,6 +301,51 @@ forever). `flutter analyze` clean on the file and the full `lib/` tree
 Marking CONFIRMED+FIXED on that basis, not on-device — flagging the
 distinction rather than overclaiming device verification I didn't do.
 
+### MOB-005 — Mobile logout never revokes the refresh token server-side
+Status: FIXED
+Evidence: `app_state.dart`'s `logout()` only called `_api.clearTokens()` —
+never hit `POST /auth/logout`. Web's `AuthContext.tsx` does
+(`api.post('/auth/logout', { refreshToken: tokens.refresh })`). Verified
+against a live local instance: a "logged out" refresh token, if never
+revoked, still successfully exchanges for new tokens on `/auth/refresh`
+(tested — 200 OK) — so a mobile "logout" only cleared local storage while
+leaving the session usable server-side for the full 30-day
+`JWT_REFRESH_EXPIRES` window (e.g. from a copy of the token pulled off a
+lost/backed-up device).
+Fix: added `ApiClient.logout()` — POSTs the refresh token to
+`/auth/logout` (best-effort, swallows failures so offline logout still
+clears local state) then clears tokens; `AppState.logout()` now calls it.
+Verified live: got a fresh refresh token, called logout, then tried to
+reuse that same token on `/auth/refresh` — now correctly rejected
+(`401 "Refresh token revoked or expired"`), versus an equivalent token
+that was never logged out succeeding normally. `flutter analyze` clean.
+Not device-verified for the same reason as MOB-004 (no adb/emulator here).
+
+### WEB-007 — Two logins/refreshes for the same user in the same second break with a 409 (shared `backend/`)
+Status: FIXED — backend bug, affects web and mobile equally
+Evidence: while verifying MOB-005 against a live local instance, hit this
+by accident doing rapid successive logins: `backend/src/utils/jwt.js`'s
+`signRefreshToken` signs `{ sub: user.id, type: 'refresh' }` with no `jti`
+— JWT's only per-call-varying claim is `iat`, which has *second*
+resolution. Two refresh-token issuances for the same user within the same
+wall-clock second (double-tap retry, a flaky-network client retry, two
+devices logging in near-simultaneously, or just fast automated testing)
+produce a byte-identical JWT string. The second
+`prisma.refreshToken.create()` then hits the unique constraint on
+`refresh_tokens_token_key` (confirmed via server logs: `Unique constraint
+failed on the constraint: refresh_tokens_token_key`), surfacing to the
+client as an opaque `409 "A record with that value already exists"` —
+login/refresh fails outright despite valid credentials.
+Fix: added a random `jti` (crypto.randomUUID()) to the refresh token
+payload, guaranteeing uniqueness regardless of `iat` collisions. Verified
+live: 5 rapid-fire logins for the same user in the same second, all
+previously would have had ~even odds of colliding — all 5 now succeed
+with distinct tokens; repeated the exact original repro (login →
+immediate refresh) 3x with no unique-constraint errors in the logs
+(previously reproduced 2/2 times before the fix). This is a backend fix,
+so it benefits mobile too — no client-side change needed, and it doesn't
+change any response shape.
+
 ## Contracts
 
 Format: `CONTRACT-NNN` — what's inconsistent between web and mobile, which
