@@ -138,6 +138,7 @@ store-upload-only or secret material, not something apps install directly.
 | v3 | 1.0.0+5 | 2026-07-23 | OTP verification flow; WhatsApp channel removed (SMS-only); production Android signing config; graceful non-JSON API error handling | [`releases/v3/FinBook-v3-signed.apk`](releases/v3/FinBook-v3-signed.apk) |
 | v4 | 1.0.0+6 | 2026-07-25 | Staff/party/invoice permission hardening; IST/UTC day-boundary fixes in cashbook & reports; report PDF redesign; fixed duplicate-submission bugs (cashbook/expenses) and infinite-spinner-on-permission-denied bugs across web + mobile | [`releases/v4/FinBook-v4-signed.apk`](releases/v4/FinBook-v4-signed.apk) |
 | v5 | 1.0.0+7 | 2026-07-26 | Full logging/observability stack (Loki + Promtail + Grafana) with a segmented dashboard; Discord alerting for server/DB errors, client crashes, and failed logins; web + mobile now report crashes to the backend | [`releases/v5/FinBook-v5-signed.apk`](releases/v5/FinBook-v5-signed.apk) |
+| v17 | 1.0.0+20 | 2026-08-09 | Staff and Cashbook screens now check server-side permissions up front and show a clear "no access" state instead of an empty list or endless spinner for a staff member who lacks the permission; add-staff email lookup mirrors the web flow (skips name/password for an address that already has a FinBook account) | [`releases/v17/FinBook-v17-signed.apk`](releases/v17/FinBook-v17-signed.apk) |
 
 ## Maintenance directions
 
