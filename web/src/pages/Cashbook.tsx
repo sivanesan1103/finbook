@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { api, apiMessage, isForbidden } from '../api/client';
 import type { CashbookEntry } from '../types';
-import { EmptyState, LockedState, Money, PAYMENT_MODES as MODES, MODE_LABEL_KEYS, Spinner, localDateStr, useConfirm, useToast } from '../components/ui';
+import { EmptyState, LockedState, Modal, Money, PAYMENT_MODES as MODES, MODE_LABEL_KEYS, Spinner, localDateStr, useConfirm, useToast } from '../components/ui';
 
 const fmtTime = (d: string | Date) =>
   new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
@@ -119,7 +119,7 @@ export default function Cashbook() {
 
   return (
     <div className="flex h-full">
-      {/* ── Left: list ── */}
+      {/* ── List (full width — the form/detail panel below is a modal so it works on any screen size) ── */}
       <div className="flex-1 min-w-0 flex flex-col h-full min-h-0">
         <div className="p-6 pb-0 shrink-0">
           <h1 className="text-xl font-bold mb-4">📔 {t('cashbook.title')}</h1>
@@ -224,24 +224,18 @@ export default function Cashbook() {
         )}
       </div>
 
-      {/* ── Right: panel ── */}
-      <div className="w-[400px] shrink-0 border-l border-slate-200 bg-white overflow-y-auto hidden lg:block">
-        {pane.type === 'none' && (
-          <div className="h-full flex flex-col items-center justify-center text-slate-400">
-            <span className="text-6xl mb-3">👥</span>
-            <p className="font-semibold text-slate-600">{t('cashbook.noTransactionSelected')}</p>
-          </div>
-        )}
-
+      {/* ── Form / detail panel — a modal overlay so it's reachable on every screen size, not just desktop widths ── */}
+      <Modal
+        open={pane.type === 'form'}
+        onClose={() => setPane({ type: 'none' })}
+        title={pane.type === 'form' ? (
+          <span className={pane.dir === 'IN' ? 'text-give' : 'text-get'}>
+            {pane.editing ? t('cashbook.editPrefix') : ''}{pane.dir === 'IN' ? t('cashbook.inEntry') : t('cashbook.outEntry')}
+          </span>
+        ) : ''}
+      >
         {pane.type === 'form' && (
-          <div className="p-5">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className={`font-bold text-lg ${pane.dir === 'IN' ? 'text-give' : 'text-get'}`}>
-                {pane.editing ? t('cashbook.editPrefix') : ''}{pane.dir === 'IN' ? t('cashbook.inEntry') : t('cashbook.outEntry')}
-              </h3>
-              <button className="text-slate-400 hover:text-slate-700 text-2xl leading-none" onClick={() => setPane({ type: 'none' })}>×</button>
-            </div>
-
+          <div>
             <label className="label">{t('cashbook.amount')}</label>
             <div className="relative mb-4">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
@@ -278,9 +272,15 @@ export default function Cashbook() {
             </button>
           </div>
         )}
+      </Modal>
 
+      <Modal
+        open={pane.type === 'detail'}
+        onClose={() => setPane({ type: 'none' })}
+        title={pane.type === 'detail' ? (pane.entry.direction === 'IN' ? t('cashbook.inEntry') : t('cashbook.outEntry')) : ''}
+      >
         {pane.type === 'detail' && (
-          <div>
+          <div className="-m-5">
             <div className={`p-5 flex items-center justify-between border-b border-slate-100 bg-gradient-to-br ${
               pane.entry.direction === 'IN' ? 'from-give/10' : 'from-get/10'} to-white`}>
               <div className="flex items-center gap-3 min-w-0">
@@ -325,7 +325,7 @@ export default function Cashbook() {
             </div>
           </div>
         )}
-      </div>
+      </Modal>
     </div>
   );
 }

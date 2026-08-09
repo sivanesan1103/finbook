@@ -102,7 +102,7 @@ export function LockedState() {
   return <EmptyState icon="🔒" title={t('common.noAccessTitle')} subtitle={t('common.noAccessSubtitle')} />;
 }
 
-export function Modal({ open, title, onClose, children, wide = false }: { open: boolean; title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
+export function Modal({ open, title, onClose, children, wide = false }: { open: boolean; title: ReactNode; onClose: () => void; children: ReactNode; wide?: boolean }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
