@@ -438,6 +438,7 @@ export const en = {
   'parties.confirmDeleteEntry': 'Delete this entry?',
   'parties.reminderSentSms': 'Payment reminder sent via SMS.',
   'parties.reminderSentDev': 'Payment reminder logged (SMS not configured — see backend log).',
+  'parties.loadMore': 'Load more',
 
   // items
   'items.products': 'Products',

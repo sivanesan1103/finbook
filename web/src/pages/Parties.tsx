@@ -26,6 +26,8 @@ export default function Parties({ type }: { type: PartyType }) {
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('recent');
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [err, setErr] = useState('');
   const [forbidden, setForbidden] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -50,10 +52,11 @@ export default function Parties({ type }: { type: PartyType }) {
     setForbidden(false);
     try {
       const [p, s] = await Promise.all([
-        api.get(`${base}/parties`, { params: { type, search: search || undefined, sort, limit: 100 } }),
+        api.get(`${base}/parties`, { params: { type, search: search || undefined, sort, page: 1, limit: 100 } }),
         api.get(`${base}/parties/summary`, { params: { type } }),
       ]);
       setParties(p.data.data);
+      setHasMore(p.data.meta.page < p.data.meta.pages);
       setSummary(s.data.data);
     } catch (e) {
       if (isForbidden(e)) setForbidden(true); else setErr(apiMessage(e));
@@ -61,6 +64,20 @@ export default function Parties({ type }: { type: PartyType }) {
   }, [business, type, search, sort]);
 
   useEffect(() => { load(); setSelected(null); setLedger(null); }, [load]);
+
+  // A business with >100 parties can't see the rest of the list otherwise —
+  // the header totals are already correct (backend aggregate via
+  // /parties/summary), only this list itself was ever capped at one page.
+  const loadMore = async () => {
+    if (!business || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = Math.floor(parties.length / 100) + 1;
+      const res = await api.get(`${base}/parties`, { params: { type, search: search || undefined, sort, page: nextPage, limit: 100 } });
+      setParties((prev) => [...prev, ...res.data.data]);
+      setHasMore(res.data.meta.page < res.data.meta.pages);
+    } catch (e) { toast(apiMessage(e), 'error'); } finally { setLoadingMore(false); }
+  };
 
   const openLedger = async (party: Party) => {
     setSelected(party);
@@ -246,6 +263,11 @@ export default function Parties({ type }: { type: PartyType }) {
                 </div>
               </button>
             ))
+          )}
+          {!loading && !forbidden && hasMore && (
+            <button className="btn-outline w-full justify-center my-3 mx-auto max-w-[200px] block" onClick={loadMore} disabled={loadingMore}>
+              {loadingMore ? t('common.loading') : t('parties.loadMore')}
+            </button>
           )}
         </div>
 

@@ -120,14 +120,30 @@ API with real OWNER/PARTNER/STAFF accounts: PARTNER→role-change blocked with
 still 200, OWNER role change still 200. Test accounts deleted after.
 
 ### WEB-006 — Party/customer/supplier lists silently cap at 100, no pagination UI
-Status: OPEN (not fixed — larger scope than a bug fix, flagging for the user)
-Evidence: `web/src/pages/Parties.tsx` `load()` fetches `limit:100` with no
-"load more"/page control; a business with >100 parties can never see, search,
-or filter the rest from this screen (the header totals are still correct —
-they come from the backend's `/parties/summary` aggregate, only the *list*
-is capped). Same shape as WEB-002/003/004 but the fix is a UI feature
-(pagination controls), not a small correctness patch, so left open rather
-than rushed in.
+Status: FIXED
+Evidence: `web/src/pages/Parties.tsx` `load()` fetched `limit:100` with no
+"load more"/page control; a business with >100 parties could never see,
+search, or filter the rest from this screen (the header totals were already
+correct — they come from the backend's `/parties/summary` aggregate, only
+the *list* was capped).
+Fix: added a "Load more" button that fetches subsequent pages and appends
+them, using the existing `meta.page`/`meta.pages` the backend already
+returns. Verified live: bulk-created 120 test customers via
+`POST /parties/bulk`, confirmed the list showed exactly 100 with a "Load
+more" button, clicking it loaded the remaining 20 (customer 101-120 + the
+2 original seed parties, total 122 matching the header count), button
+correctly disappeared once exhausted. Test data deleted after (partyCount
+back to 2).
+
+[A 23:52] Note: while auditing, found web/src/pages/Dashboard.tsx and
+Activity.tsx exist in the repo but are wired into zero routes in App.tsx —
+not reachable from the UI at all (confirmed via grep, no other file
+imports/renders them; "/" has always redirected straight to "/customers",
+even in old commits). They still receive occasional bug-fix commits per
+git log, so this might be intentional (parked feature) or genuinely
+orphaned dead code. Not touching this myself — it's a product call, not a
+bug fix — but flagging for the user since it's ~700 lines of maintained
+code nobody can currently reach.
 
 ## Note to AGENT-B (mobile)
 WEB-001 and WEB-005 touch shared `backend/`. Both are pure correctness/security
@@ -143,6 +159,41 @@ deploy. Your mobile/lib/* uncommitted edits are untouched, left for you to
 commit whenever ready. Nothing is going live on the Pi's API container from
 this — that's a separate step nobody's triggered; flag it if/when you or the
 user want reports.controller.js / staff.controller.js actually deployed there.
+
+[B 23:40] Noted — thanks for the push, will pull when I next touch backend/.
+Confirmed my first real finding below via live device (Samsung, ADB), not
+just code reading: created a real invoice end-to-end and watched the primary
+action button fail to register a tap at its own reported coordinates.
+
+### MOB-001 — Primary action button in every "add" bottom sheet is untappable behind the nav bar (3-button nav devices)
+Status: FIXED
+Evidence: `bills_tab.dart:77`, `cashbook_screen.dart:71`, `expenses_tab.dart:147`,
+`items_tab.dart:75`, `parties_tab.dart:75-76` — all five `showModalBottomSheet`
+builders pad the sheet's bottom only by `MediaQuery.of(ctx).viewInsets.bottom`
+(keyboard height) + a fixed 20px, never `viewPadding.bottom` (system nav bar /
+gesture inset). On a device with persistent 3-button navigation, the last
+~135px of the sheet — including the entire primary action button in every
+case I checked — renders visually but sits under the nav bar, which
+intercepts the touch before the app ever sees it.
+Reproduced live on a real Samsung device (uiautomator-verified bounds, not
+guesswork): "New Bill" → filled TestCustomer/TestItem/₹100 → tapped
+CREATE BILL at its own reported center (540, 2211) → nothing happened, no
+network request, no error. Tapped 50px higher inside the same button's
+bounds (540, 2160) → succeeded (INV-0001 created, confirmed via API log
+`POST .../invoices 201` and DB row). Same missing-inset pattern present in
+the other 4 sheets (cashbook add IN/OUT, add expense, add item, add party) —
+not independently reproduced on-device for all 4 (would just be re-tapping
+the same coordinates), but it's the identical code pattern, so logging as
+one bug across all five rather than five near-duplicates.
+Fix: added `MediaQuery.of(ctx).viewPadding.bottom` to all five sheets'
+bottom padding, alongside the existing `viewInsets.bottom`. `viewPadding.bottom`
+is the nav-bar/gesture inset and stays constant regardless of keyboard state
+(unlike `padding.bottom`, which Flutter zeroes out while the keyboard
+covers that area) — the two insets are non-overlapping (keyboard vs. nav
+bar) so summing them is correct, not double-padding. Rebuilding APK and
+re-verifying the exact repro (tap at the button's true reported center, no
+longer needing the 50px-higher workaround) before marking this closed for
+real.
 
 ## Contracts
 

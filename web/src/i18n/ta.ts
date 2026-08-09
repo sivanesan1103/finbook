@@ -440,6 +440,7 @@ export const ta: Record<TranslationKey, string> = {
   'parties.confirmDeleteEntry': 'இந்த பதிவை நீக்கவா?',
   'parties.reminderSentSms': 'பணம் செலுத்தும் நினைவூட்டல் SMS மூலம் அனுப்பப்பட்டது.',
   'parties.reminderSentDev': 'நினைவூட்டல் பதிவு செய்யப்பட்டது (SMS அமைக்கப்படவில்லை — பேக்கெண்ட் லாக்கைப் பார்க்கவும்).',
+  'parties.loadMore': 'மேலும் காட்டு',
 
   // items
   'items.products': 'பொருட்கள்',
